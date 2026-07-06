@@ -23,7 +23,7 @@ Reports are different, they're an explanation for the user to read immediately a
 
 ## Secrets
 
-API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, readable from inside both the Claude and Codex sandboxes. When a command needs a key, source the file in that same command: `. ~/.agents/secrets.env && <command>`. Codex strips `*_KEY`/`*_TOKEN`/`*_SECRET`/`*_PASSWORD` from the inherited environment, so exporting secrets in shell profiles doesn't work. Never commit this file or print its contents.
+API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, readable from inside both the Claude and Codex sandboxes. Claude sessions usually have these variables in the environment already (inherited from the launching terminal); Codex strips `*_KEY`/`*_TOKEN`/`*_SECRET`/`*_PASSWORD` from the inherited environment, so in Codex source the file in the command that needs it: `. ~/.agents/secrets.env && <command>`. Never commit this file or print its contents.
 
 ## Workflow
 
@@ -52,5 +52,6 @@ Obsidian and Vivaldi both auto-reload .md files. In Vivaldi this is done with th
 This must run outside the sandbox (`open` needs LaunchServices access, which the sandbox blocks).
 
 The Obsidian CLI is also installed for richer vault operations — read/create/append, search, properties, tasks, backlinks (`obsidian help` for the full list). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must also run outside the sandbox.
+
 
 Let me know if you run into workflow issues with anything in this doc, or think something in this doc should be changed or explained better.

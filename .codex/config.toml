@@ -16,6 +16,7 @@ notify = ["/Users/akelly/.codex/computer-use/Codex Computer Use.app/Contents/Sha
 [permissions.workspace_sandbox.filesystem]
 ":minimal" = "read" # minimal access required for codex to operate
 "~/.agents" = "read" # agent skills and secrets.env
+"~/.zprofile" = "read" # commands run via zsh -l, which sources ~/.zprofile and thus ~/.agents/secrets.env
 ":tmpdir" = "write"     # $TMPDIR, usually /var/folders/.../T on macOS
 ":slash_tmp" = "write"  # /tmp
 "/opt/homebrew" = "read" # allow running brew installed tools
