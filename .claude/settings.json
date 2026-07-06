@@ -3,7 +3,6 @@
     "allow": [
       "WebSearch",
       "WebFetch",
-      "mcp__paper-search__*",
       "Bash(curl:*)",
       "Bash(python3 -m json.tool)",
       "Bash(python fan_current.py)",
@@ -14,6 +13,17 @@
     "defaultMode": "auto"
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"All MCP tools are allowed\"}}'"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

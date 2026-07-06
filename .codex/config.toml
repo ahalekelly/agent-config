@@ -57,11 +57,13 @@ default_tools_approval_mode = "approve"
 [mcp_servers.mcmaster-carr]
 command = "uv"
 args = ["run", "--directory", "/Users/akelly/Git/mcmaster-agent", "mcmaster-mcp"]
+default_tools_approval_mode = "approve"
 
 # Secrets live in ~/.agents/secrets.env (not in git); servers that need one source it via a sh wrapper.
 [mcp_servers.parts]
 command = "sh"
 args = ["-c", ". \"$HOME/.agents/secrets.env\" && exec uvx parts-mcp"]
+default_tools_approval_mode = "approve"
 
 [mcp_servers.patents]
 command = "uv"
@@ -91,6 +93,7 @@ CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
 [mcp_servers.digikey]
 command = "uv"
 args = ["run", "--directory", "/Users/akelly/Git/digikey_mcp", "python", "digikey_mcp_server.py"]
+default_tools_approval_mode = "approve"
 
 [plugins."documents@openai-primary-runtime"]
 enabled = true
