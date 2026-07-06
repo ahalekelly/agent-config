@@ -1,0 +1,72 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "mcp__paper-search__*",
+      "Bash(curl:*)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python fan_current.py)",
+      "Bash(python3 fan_current.py)",
+      "Bash(make chrome-extension *)",
+      "Bash(make brave-install *)"
+    ],
+    "defaultMode": "auto"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "front=\"$(lsappinfo info -only name \"$(lsappinfo front)\" 2>/dev/null)\"; mine=\"${ITERM_SESSION_ID##*:}\"; case \"$front\" in *iTerm*) active=\"$(osascript -e 'tell application \"iTerm2\" to tell current window to tell current session to get id' 2>/dev/null)\"; [ -n \"$mine\" ] && [ \"$mine\" = \"$active\" ] && exit 0 ;; esac; afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "clangd-lsp@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "opencairn@opencairn": true
+  },
+  "extraKnownMarketplaces": {
+    "obsidian-skills": {
+      "source": {
+        "source": "github",
+        "repo": "kepano/obsidian-skills"
+      }
+    },
+    "opencairn": {
+      "source": {
+        "source": "github",
+        "repo": "OpenCairn/OpenCairn"
+      }
+    }
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "filesystem": {
+      "allowWrite": [
+        "~/.cache/uv"
+      ]
+    }
+  },
+  "cleanupPeriodDays": 3650,
+  "effortLevel": "high",
+  "awaySummaryEnabled": false,
+  "tui": "fullscreen",
+  "skipWorkflowUsageWarning": true,
+  "theme": "light",
+  "verbose": true,
+  "preferredNotifChannel": "auto",
+  "autoCompactEnabled": true,
+  "switchModelsOnFlag": false,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "model": "claude-fable-5[1m]"
+}

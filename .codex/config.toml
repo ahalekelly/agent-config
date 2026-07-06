@@ -1,0 +1,163 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+personality = "friendly"
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
+plan_mode_reasoning_effort = "xhigh"
+
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+default_permissions = "workspace_sandbox" # create a custom permissions profile
+approvals_reviewer = "auto_review" # set this to "user" to disable auto-review
+analytics.enabled = false
+
+notify = ["/Users/akelly/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+
+[permissions.workspace_sandbox.filesystem]
+":minimal" = "read" # minimal access required for codex to operate
+"~/.agents" = "read" # agent skills
+":tmpdir" = "write"     # $TMPDIR, usually /var/folders/.../T on macOS
+":slash_tmp" = "write"  # /tmp
+"/opt/homebrew" = "read" # allow running brew installed tools
+"/Library/Developer/CommandLineTools/usr/bin" = "read" # allow running xcode installed tools
+"~/.gitconfig" = "read" # required for git
+"~/.config/git" = "read" # required for git
+"~/.cache/uv" = "write" # required for uv
+"~/.npm/_logs" = "write" # required for npm
+
+[permissions.workspace_sandbox.filesystem.":workspace_roots"]
+"." = "read"
+"./**" = "write"
+".git" = "write"
+
+[permissions.workspace_sandbox.network]
+enabled = true
+mode = "full"
+
+[shell_environment_policy]
+inherit = "core"
+exclude = ["*_KEY", "*_TOKEN", "*_SECRET", "*_PASSWORD", "AWS_*"]
+
+[agents]
+max_threads = 10
+
+[apps.connector_69a3bc1ded54819199d1684e671e38b9.tools."paper search_search"]
+approval_mode = "approve"
+
+[mcp_servers.paper-search]
+command = "uv"
+args = ["run", "--directory", "/Users/akelly/Git/paper-search-mcp", "paper-search-mcp"]
+default_tools_approval_mode = "approve"
+
+[mcp_servers.mcmaster-carr]
+command = "uv"
+args = ["run", "--directory", "/Users/akelly/Git/mcmaster-agent", "mcmaster-mcp"]
+
+# Secrets live in ~/.codex/secrets.env (not in git); servers that need one source it via a sh wrapper.
+[mcp_servers.parts]
+command = "sh"
+args = ["-c", ". \"$HOME/.codex/secrets.env\" && exec uvx parts-mcp"]
+
+[mcp_servers.patents]
+command = "uv"
+args = ["run", "--directory", "/Users/akelly/Git/patent_mcp_server", "patent-mcp-server"]
+default_tools_approval_mode = "approve"
+disabled_tools = ["patentsview_search_patents", "patentsview_search_by_ipc", "patentsview_get_patent"]
+
+[mcp_servers.node_repl]
+args = []
+command = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node_repl"
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = "/Applications/Codex.app/Contents/Resources/cua_node/lib/node_modules"
+NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/akelly/.codex"
+CODEX_HOME = "/Users/akelly/.codex"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "60e4902788f207f88fd09344dfeafe07769488bdb2924bbb12b322c3b9d2b999"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
+BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
+BROWSER_USE_CODEX_APP_VERSION = "26.623.101652"
+CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
+
+[mcp_servers.digikey]
+command = "uv"
+args = ["run", "--directory", "/Users/akelly/Git/digikey_mcp", "python", "digikey_mcp_server.py"]
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."chrome@openai-bundled"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = true
+
+[[skills.config]]
+path = "/Users/akelly/.codex/skills/codex-primary-runtime/slides/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/akelly/.codex/skills/codex-primary-runtime/spreadsheets/SKILL.md"
+enabled = false
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
+
+[marketplaces.openai-bundled]
+last_updated = "2026-07-04T09:49:14Z"
+source_type = "local"
+source = "/Users/akelly/.codex/.tmp/bundled-marketplaces/openai-bundled"
+
+[marketplaces.openai-primary-runtime]
+last_updated = "2026-07-01T23:51:06Z"
+source_type = "local"
+source = "/Users/akelly/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[features]
+terminal_resize_reflow = true
+goals = true
+prevent_idle_sleep = true
+js_repl = false
+
+[desktop]
+ambient-suggestions-enabled = false
+mac-menu-bar-enabled = false
+followUpQueueMode = "steer"
+localeOverride = "en-US"
+preventSleepWhileRunning = true
+keepRemoteControlAwakeWhilePluggedIn = true
+git-pull-request-merge-method = "squash"
+conversationDetailMode = "STEPS_COMMANDS"
+
+#[sandbox_workspace_write]
+#network_access = true
+
+[desktop.custom_file_handlers.obsidian]
+label = "Obsidian"
+icon = "/Users/akelly/.codex/obsidian-icon.png"
+command = "/usr/bin/open"
+args = ["-b", "md.obsidian"]
+input = "path"
+supports_ssh = false
