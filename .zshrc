@@ -36,6 +36,7 @@ claudew() {
   DISABLE_AUTOUPDATER=1 _claude_with_profile "$HOME/.claude-work" "$@"
 }
 
-
 # PlatformIO CLI
 export PATH="$HOME/.platformio/penv/bin:$PATH"
+
+alias git-agent-cfg='git --git-dir=$HOME/Git/agent-config.git --work-tree=$HOME'

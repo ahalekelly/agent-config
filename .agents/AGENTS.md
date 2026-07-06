@@ -3,6 +3,7 @@ User Instructions:
 ## Code Style
 
 Write extremely easy to consume code, it should be "skimmable" and easy to understand. Optimize for how easy the code is to read.
+Prefer fewer states, fewer arguments, and required values over optional ones.
 Minimize possible states by reducing number of arguments, remove or narrow any state.
 Use discriminated unions to reduce number of states the code can be in.
 Exhaustively handle any objects with multiple different types, fail on unknown type.
@@ -10,11 +11,11 @@ Don't write defensive code, assume the values are always what types tell you the
 Verify data that gets loaded or passed into a function and don't be afraid to raise errors if it's incorrect. Always be highly opinionated about the parameters you pass around. Don't let things be optional if not strictly required.
 Remove any changes that are not strictly required.
 Bias for fewer lines of code.
-No complex or clever code.
 Don't break out into too many functions, that's hard to read.
 Use "if: raise" instead of try catches or default values when you do expect something to exist.
 Never pass overrides except strictly necessary, keep argument count low.
 Don't make arguments optional if they are actually required.
+When you refactor or remove some functionality, also remove any dead code created by that change.
 Make the code skimmable, avoid cleverness.
 
 Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs, the docs and code comments shouldn't mention, refer to, or imply previous versions of the code, or mention how the code is different now from how it was before. Warnings about pitfalls, confusing things, mistakes to avoid, can still be good though.
@@ -30,6 +31,10 @@ API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, read
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
 
 There are often multiple of you running on different tasks in the same project, don't interfere with the other one's work, don't try to infer what they're doing and finish it for them.
+
+If I give you steering instructions mid task, you should still complete the original task unless I said otherwise.
+
+If you find a bug in one place in the code, look for other places where that same class of bug could have occured. More generally, when you find a bug or learn something surprising, think about what that tells you about the state of the codebase and where it could be improved.
 
 Split distinct logical changes into separate commits. After making changes, you should typically commit before returning to the user. 
 
@@ -53,5 +58,5 @@ This must run outside the sandbox (`open` needs LaunchServices access, which the
 
 The Obsidian CLI is also installed for richer vault operations — read/create/append, search, properties, tasks, backlinks (`obsidian help` for the full list). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must also run outside the sandbox.
 
-
 Let me know if you run into workflow issues with anything in this doc, or think something in this doc should be changed or explained better.
+
