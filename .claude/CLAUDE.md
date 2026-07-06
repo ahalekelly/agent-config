@@ -1,6 +1,6 @@
-Shared instructions for all coding agents live in ~/.codex/AGENTS.md — edit them there, this file only adds Claude-specific sections.
+Shared instructions for all coding agents live in ~/.agents/AGENTS.md (Codex and Pi read it directly) — edit them there, this file only adds Claude-specific sections.
 
-@~/.codex/AGENTS.md
+@~/.agents/AGENTS.md
 
 ## Model Routing
 
