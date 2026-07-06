@@ -53,10 +53,10 @@ default_tools_approval_mode = "approve"
 command = "uv"
 args = ["run", "--directory", "/Users/akelly/Git/mcmaster-agent", "mcmaster-mcp"]
 
-# Secrets live in ~/.codex/secrets.env (not in git); servers that need one source it via a sh wrapper.
+# Secrets live in ~/.agents/secrets.env (not in git); servers that need one source it via a sh wrapper.
 [mcp_servers.parts]
 command = "sh"
-args = ["-c", ". \"$HOME/.codex/secrets.env\" && exec uvx parts-mcp"]
+args = ["-c", ". \"$HOME/.agents/secrets.env\" && exec uvx parts-mcp"]
 
 [mcp_servers.patents]
 command = "uv"

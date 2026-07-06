@@ -21,6 +21,10 @@ Documentation and code comments should be timeless, imagine you're writing them 
 
 Reports are different, they're an explanation for the user to read immediately after creation, and a point-in-time snapshot, they don't have to be timeless. Reports should have the datetime in the title.
 
+## Secrets
+
+API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, readable from inside both the Claude and Codex sandboxes. When a command needs a key, source the file in that same command: `. ~/.agents/secrets.env && <command>`. Codex strips `*_KEY`/`*_TOKEN`/`*_SECRET`/`*_PASSWORD` from the inherited environment, so exporting secrets in shell profiles doesn't work. Never commit this file or print its contents.
+
 ## Workflow
 
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
