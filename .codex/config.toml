@@ -35,9 +35,13 @@ notify = ["/Users/akelly/.codex/computer-use/Codex Computer Use.app/Contents/Sha
 enabled = true
 mode = "full"
 
+# Agent-ok keys (~/.agents/secrets.env) flow in from the launching environment.
+# Sensitive keys (~/.secrets.env) never reach that environment: the codex()
+# launcher in ~/.zshrc scrubs them and ~/.zprofile skips them in agent contexts.
 [shell_environment_policy]
-inherit = "core"
-exclude = ["*_KEY", "*_TOKEN", "*_SECRET", "*_PASSWORD", "AWS_*"]
+inherit = "all"
+ignore_default_excludes = true
+exclude = ["*_PASSWORD", "AWS_*"]
 
 [agents]
 max_threads = 10

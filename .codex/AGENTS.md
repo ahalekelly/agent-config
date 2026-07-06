@@ -23,7 +23,7 @@ Reports are different, they're an explanation for the user to read immediately a
 
 ## Secrets
 
-API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, readable from inside both the Claude and Codex sandboxes. Claude sessions usually have these variables in the environment already (inherited from the launching terminal); Codex strips `*_KEY`/`*_TOKEN`/`*_SECRET`/`*_PASSWORD` from the inherited environment, so in Codex source the file in the command that needs it: `. ~/.agents/secrets.env && <command>`. Never commit this file or print its contents.
+API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, readable from inside both the Claude and Codex sandboxes and normally already present in the command environment. If one is missing (e.g. in a desktop-launched session), source the file in the command that needs it: `. ~/.agents/secrets.env && <command>`. Never commit this file or print its contents.
 
 ## Workflow
 
