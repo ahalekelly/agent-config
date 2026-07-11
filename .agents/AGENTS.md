@@ -38,9 +38,9 @@ There are often multiple of you running on different tasks in the same project, 
 
 If I give you steering instructions mid task, you should still complete the original task unless I said otherwise.
 
-If you find a bug in one place in the code, look for other places where that same class of bug could have occured. More generally, when you find a bug or learn something surprising, think about what that tells you about the state of the codebase and where it indicates there are areas for improvement.
+If you find a bug in one place in the code, look for other places where that same class of bug could have occured. More generally, whenever you learn something surprising, like finding a bug, think about what that tells you about the state of the codebase and where it indicates there are areas for improvement, if they're small changes just do them, if they're big changes suggest them to me.
 
-Use web search to look things up.
+Don't be afraid to use web search to look things up.
 
 Split distinct logical changes into separate commits. After making changes, you should typically commit before returning to the user. 
 
