@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code status line:
-# directory | branch(*dirty) +added/-removed | tokens | cache hit/miss | last-request time | $cost | model
+# directory | branch(*dirty) +added/-removed | tokens | cache hit/miss | last-request time | $cost | 5h usage % | model
 
 input=$(cat)
 
@@ -56,7 +56,11 @@ cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
 cost_part=""
 [ -n "$cost" ] && cost_part=$(printf '$%.2f' "$cost")
 
-parts=("$base" "$git_part" "$tokens_part" "$cost_part" "$model")
+usage=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+usage_part=""
+[ -n "$usage" ] && usage_part="5h: $(printf '%.0f' "$usage")%"
+
+parts=("$base" "$git_part" "$tokens_part" "$cost_part" "$usage_part" "$model")
 line=""
 for part in "${parts[@]}"; do
   [ -z "$part" ] && continue
