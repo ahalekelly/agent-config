@@ -17,18 +17,16 @@ Your prompt must contain a plan file path, a working directory, and verification
 2. Run Codex in the background (it can take many minutes):
 
    ```sh
-   codex exec -C <workdir> -c 'default_permissions="workspace_sandbox"' -c 'model_reasoning_effort="<effort>"' -o <plan-file-path-without-file-extension>-codex-output.txt "Implement the plan below. It is also on disk at <plan-file-path> if you need to re-read it later. When done, summarize what you changed and anything you deviated on." < <plan-file-path>
+   codex exec -C <workdir> -c 'default_permissions="workspace_sandbox"' -c 'model_reasoning_effort="<effort>"' -c 'developer_instructions="You are implementing a plan as a subagent of an orchestrating agent. Do not run git commit or git push - the orchestrator reviews the diff and commits. This overrides any AGENTS.md workflow instructions about committing. Also follow any additional restrictions in the task prompt."' -o <plan-file-path>-codex-output.txt "Implement the plan below. It is also on disk at <plan-file-path> if you need to re-read it later. When done, summarize what you changed and anything you deviated on." < <plan-file-path>
    ```
 
-   `<effort>` is the reasoning effort from your prompt; use `high` if none was given.
+   `<effort>` is the reasoning effort from your prompt; use `high` if none was given. The `developer_instructions` override exists because repo AGENTS.md files often tell the agent to commit after changes; as a subagent it must leave committing to the orchestrator. Keep it verbatim unless the task prompt explicitly says Codex should commit. The output file path should be the same as the plan file but with the -codex-output.txt instead of the original .md extension.
 
-3. When it finishes, Read the `-o` output file and run `git status --short` and `git diff --stat` in the workdir.
-4. Run the verification commands from your prompt yourself via Bash (not inside Codex — builds and installs must run outside the Codex sandbox).
-5. If verification fails, run Codex once more with the failure output and ask it to fix; re-verify. Do not loop beyond that second attempt.
+3. Run `git status --short` and `git diff --stat`
 
 ## Report back
 
 - Codex's final message, verbatim
-- `git diff --stat` output
-- Verification results
+- The path of the output file
+- `git status --short` and `git diff --stat` output
 - If Codex errored (auth, crash, refusal), report the error verbatim and stop. Do not implement the plan yourself as a fallback
