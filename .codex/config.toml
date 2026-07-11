@@ -50,13 +50,13 @@ max_threads = 10
 approval_mode = "approve"
 
 [mcp_servers.paper-search]
-command = "uv"
-args = ["run", "--directory", "/Users/akelly/Git/paper-search-mcp", "paper-search-mcp"]
+command = "sh"
+args = ["-c", "exec uv run --directory \"$HOME/Git/paper-search-mcp\" paper-search-mcp"]
 default_tools_approval_mode = "approve"
 
 [mcp_servers.mcmaster-carr]
-command = "uv"
-args = ["run", "--directory", "/Users/akelly/Git/mcmaster-agent", "mcmaster-mcp"]
+command = "sh"
+args = ["-c", "exec uv run --directory \"$HOME/Git/mcmaster-agent\" mcmaster-mcp"]
 default_tools_approval_mode = "approve"
 
 # Secrets live in ~/.agents/secrets.env (not in git); servers that need one source it via a sh wrapper.
@@ -66,8 +66,8 @@ args = ["-c", ". \"$HOME/.agents/secrets.env\" && exec uvx parts-mcp"]
 default_tools_approval_mode = "approve"
 
 [mcp_servers.patents]
-command = "uv"
-args = ["run", "--directory", "/Users/akelly/Git/patent_mcp_server", "patent-mcp-server"]
+command = "sh"
+args = ["-c", "exec uv run --directory \"$HOME/Git/patent_mcp_server\" patent-mcp-server"]
 default_tools_approval_mode = "approve"
 disabled_tools = ["patentsview_search_patents", "patentsview_search_by_ipc", "patentsview_get_patent"]
 
@@ -93,8 +93,8 @@ SKY_CUA_SERVICE_PATH = "/Users/akelly/.codex/plugins/cache/openai-bundled/comput
 CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
 
 [mcp_servers.digikey]
-command = "uv"
-args = ["run", "--directory", "/Users/akelly/Git/digikey_mcp", "python", "digikey_mcp_server.py"]
+command = "sh"
+args = ["-c", "exec uv run --directory \"$HOME/Git/digikey_mcp\" python digikey_mcp_server.py"]
 default_tools_approval_mode = "approve"
 
 [mcp_servers.computer-use]
