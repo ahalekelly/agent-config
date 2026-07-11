@@ -7,12 +7,7 @@
     "allow": [
       "WebSearch",
       "WebFetch",
-      "Bash(curl:*)",
-      "Bash(python3 -m json.tool)",
-      "Bash(python fan_current.py)",
-      "Bash(python3 fan_current.py)",
-      "Bash(make chrome-extension *)",
-      "Bash(make brave-install *)"
+      "Bash(curl:*)"
     ],
     "defaultMode": "auto"
   },
@@ -132,7 +127,7 @@
   "awaySummaryEnabled": false,
   "tui": "fullscreen",
   "skipWorkflowUsageWarning": true,
-  "theme": "light",
+  "theme": "auto",
   "verbose": true,
   "preferredNotifChannel": "auto",
   "autoCompactEnabled": true,
