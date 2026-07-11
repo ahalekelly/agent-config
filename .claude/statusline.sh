@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code status line:
-# directory | branch(*dirty) +added/-removed | tokens | cache hit/miss | last-request time | $cost | 5h usage % (reset time) | model
+# directory | branch(*dirty) +added/-removed | tokens - cache hit/miss - last-request time | $cost | 5h usage % (reset time) | model
 
 input=$(cat)
 
@@ -46,10 +46,10 @@ if [ -n "$tokens" ]; then
     if [ -n "$ts" ]; then
       t="${ts%Z}"; t="${t%%.*}"
       epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%S" "$t" +%s 2>/dev/null)
-      [ -n "$epoch" ] && turn_time=" | $(date -r "$epoch" +%H:%M)"
+      [ -n "$epoch" ] && turn_time=" - $(date -r "$epoch" +%H:%M)"
     fi
   fi
-  tokens_part="${count} tokens | ${cache}${turn_time}"
+  tokens_part="${count} tokens - ${cache}${turn_time}"
 fi
 
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
