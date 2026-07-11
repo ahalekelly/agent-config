@@ -1,4 +1,8 @@
 {
+  "cleanupPeriodDays": 3650,
+  "env": {
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -12,6 +16,7 @@
     ],
     "defaultMode": "auto"
   },
+  "model": "fable",
   "hooks": {
     "PreToolUse": [
       {
@@ -22,6 +27,54 @@
             "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"All MCP tools are allowed\"}}'"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/tab-title.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/tab-title.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/tab-title.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/tab-title.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/tab-title.sh"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -29,11 +82,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "front=\"$(lsappinfo info -only name \"$(lsappinfo front)\" 2>/dev/null)\"; mine=\"${ITERM_SESSION_ID##*:}\"; case \"$front\" in *iTerm*) active=\"$(osascript -e 'tell application \"iTerm2\" to tell current window to tell current session to get id' 2>/dev/null)\"; [ -n \"$mine\" ] && [ \"$mine\" = \"$active\" ] && exit 0 ;; esac; afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &"
+            "command": "bash ~/.claude/tab-title.sh"
           }
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh"
   },
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true,
@@ -54,6 +111,12 @@
         "source": "github",
         "repo": "OpenCairn/OpenCairn"
       }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      }
     }
   },
   "sandbox": {
@@ -65,7 +128,6 @@
       ]
     }
   },
-  "cleanupPeriodDays": 3650,
   "effortLevel": "high",
   "awaySummaryEnabled": false,
   "tui": "fullscreen",
@@ -77,6 +139,5 @@
   "switchModelsOnFlag": false,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "skipAutoPermissionPrompt": true,
-  "model": "claude-fable-5[1m]"
+  "skipAutoPermissionPrompt": true
 }
