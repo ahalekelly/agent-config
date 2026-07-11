@@ -27,4 +27,4 @@ Include any context from your prompt about what the change is supposed to do in 
 
 ## Report back
 
-Codex's findings verbatim, plus one line stating the scope that was reviewed. If Codex errors, report the error verbatim.
+Codex's findings verbatim, ordered by severity, plus one line stating the scope that was reviewed. Keep Codex's uncertainty markers — if it labeled something an inference or open question, don't flatten that into an assertion. If there are no findings, say so explicitly. If Codex errors, report the error verbatim.
