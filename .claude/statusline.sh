@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code status line:
-# directory | branch(*dirty) +added/-removed | tokens - cache hit/miss - last-request time | $cost | 5h usage % (reset time) | model
+# directory | branch(*dirty) +added/-removed | tokens - last-request time | $cost | 5h usage % (reset time) | model
 
 input=$(cat)
 
@@ -23,7 +23,7 @@ if [ -n "$branch" ]; then
 fi
 
 tokens=$(echo "$input" | jq -r '.context_window.total_input_tokens // empty')
-cache_read=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
+# cache_read=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
 tokens_part=""
 if [ -n "$tokens" ]; then
   if [ "$tokens" -ge 1000 ]; then
@@ -31,11 +31,11 @@ if [ -n "$tokens" ]; then
   else
     count="${tokens}"
   fi
-  if [ "$cache_read" -gt 0 ]; then
-    cache="cache hit"
-  else
-    cache="cache miss"
-  fi
+  # if [ "$cache_read" -gt 0 ]; then
+  #   cache="cache hit"
+  # else
+  #   cache="cache miss"
+  # fi
   # The 1h prompt-cache TTL refreshes when each API request is *created*, so the
   # anchor is the last user/tool-result entry (sent just before the final request),
   # not the transcript mtime — mtime lags by the final response's streaming time.
@@ -49,7 +49,8 @@ if [ -n "$tokens" ]; then
       [ -n "$epoch" ] && turn_time=" - $(date -r "$epoch" +%H:%M)"
     fi
   fi
-  tokens_part="${count} tokens - ${cache}${turn_time}"
+  # tokens_part="${count} tokens - ${cache}${turn_time}"
+  tokens_part="${count} tokens${turn_time}"
 fi
 
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
