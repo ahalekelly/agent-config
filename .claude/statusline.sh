@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code status line:
-# directory | branch(*dirty) +added/-removed | tokens | cache hit/miss | last-request time | $cost | 5h usage % | model
+# directory | branch(*dirty) +added/-removed | tokens | cache hit/miss | last-request time | $cost | 5h usage % (reset time) | model
 
 input=$(cat)
 
@@ -58,7 +58,12 @@ cost_part=""
 
 usage=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 usage_part=""
-[ -n "$usage" ] && usage_part="5h: $(printf '%.0f' "$usage")%"
+if [ -n "$usage" ]; then
+  reset_epoch=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
+  reset=""
+  [ -n "$reset_epoch" ] && reset=" $(date -r "$reset_epoch" +%H:%M)"
+  usage_part="5h: $(printf '%.0f' "$usage")%${reset}"
+fi
 
 parts=("$base" "$git_part" "$tokens_part" "$cost_part" "$usage_part" "$model")
 line=""
