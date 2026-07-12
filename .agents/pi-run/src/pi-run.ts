@@ -247,13 +247,27 @@ async function rpcRun(session: Session, sessions: string, command: PromptCommand
       reject(error);
     };
     const finish = () => {
-      if (state.kind === "awaiting-result" && !abortRequested) {
-        failRun(new Error("Pi settled without an assistant result"));
-        return;
+      switch (state.kind) {
+        case "awaiting-result":
+          if (!abortRequested) {
+            failRun(new Error("Pi settled without an assistant result"));
+            return;
+          }
+          state = { kind: "settled", result: "Interrupted." };
+          stop();
+          return;
+        case "has-result":
+          state = { kind: "settled", result: state.result };
+          stop();
+          return;
+        case "failed":
+        case "settled":
+          return;
+        default: {
+          const unknownState: never = state;
+          fail(`Unknown RPC run state: ${String(unknownState)}`);
+        }
       }
-      const result = state.kind === "has-result" ? state.result : "Interrupted.";
-      state = { kind: "settled", result };
-      stop();
     };
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
