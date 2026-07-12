@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run /Users/akelly/.agents/hooks/prevent-rm.py"
+            "command": "/opt/homebrew/bin/uv run /Users/akelly/.agents/hooks/prevent-rm.py"
           }
         ]
       },

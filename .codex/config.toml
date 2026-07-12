@@ -42,6 +42,7 @@ mode = "full"
 inherit = "all"
 ignore_default_excludes = true
 exclude = ["*_PASSWORD", "AWS_*"]
+set = { PATH = "/Users/akelly/.agents/bin:/Users/akelly/.pi/agent/bin:/Users/akelly/.platformio/penv/bin:/Users/akelly/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/MacGPG2/bin:/Applications/iTerm.app/Contents/Resources/utilities:/Applications/Obsidian.app/Contents/MacOS:/Users/akelly/Git/codex-plugin-cc/bin:/Users/akelly/.agents/pi-run/bin" }
 
 [agents]
 max_threads = 10
@@ -191,6 +192,6 @@ matcher = "^Bash$"
 
 [[hooks.PreToolUse.hooks]]
 type = "command"
-command = "uv run /Users/akelly/.agents/hooks/prevent-rm.py"
+command = "/opt/homebrew/bin/uv run /Users/akelly/.agents/hooks/prevent-rm.py"
 timeout = 30
 statusMessage = "Checking for rm"
