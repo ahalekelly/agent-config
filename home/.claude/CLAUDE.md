@@ -10,11 +10,12 @@ Don't run bash commands that have long outputs, they put the entire output in th
 
 Any tasks that require taste or complicated thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, or non-code reasoning. If you are not Fable and I tell you to do any of these things, flag this to me. Fable should delegate simple, well-defined tasks that are more than a couple lines of code to another model. This includes implementing coding plans, doing data analysis, and any work you don't feel like doing.
 
-Subagents should consult their Fable orchestrator at these points: before substantive work — orientation (finding files, reading sources) is fine to do first, but consult before writing, editing, or committing to an interpretation; when stuck (recurring errors, non-converging approach) or considering a change of approach. On short reactive tasks, one consult before the approach crystallizes is enough. Weight Fable's advice heavily — adapt only on empirical failure or primary-source evidence contradicting a specific claim, and if your evidence points one way and Fable another, surface the conflict ("I found X, you suggest Y") rather than silently switching. Fable should include these consultation instructions when prompting subagents if relevant.
+Here are the consultation instructions shown to subagents created by `pi-run implement-in-worktree` and `pi-run run`:
+You should consult the orchestrator when the plan is unclear, if you think a deviation from the plan would be warranted, when stuck (recurring errors, non-converging approach) or when multiple approaches seem viable but have tradeoffs. On most tasks, one consult before the approach crystallizes is enough. If your evidence points one way and the orchestrator's instructions another, surface the conflict ("I found X, you suggest Y") rather than silently switching.
 
 Fable should be careful about reading very large files, tokens in are usually the majority of inference cost. Fable should set the length limit in the read tool to a reasonable number of lines, a few hundred max. Use `rg`, the Explore tool, or a Sonnet or Opus subagent to help you find where the relevant info is.
 
-When spawning a subagent, always set the model explicitly (eg `model: "sonnet"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which can be very costly. Default to running subagents in the background.
+When spawning a subagent, always set the model explicitly (eg `model: "sonnet"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which is costly. Default to running subagents in the background.
 
 Never use Haiku.
 
