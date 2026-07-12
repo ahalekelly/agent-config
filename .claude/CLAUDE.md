@@ -4,7 +4,7 @@ Shared instructions for all coding agents live in ~/.agents/AGENTS.md (Codex and
 
 ## Claude Code Specifics
 
-Don't use `cat` to read files, that puts the entire file contents in the chat with me.
+Don't run bash commands like `cat` that have long outputs, they put the entire output in the chat with me.
 
 ## Model Routing
 
@@ -14,6 +14,10 @@ Subagents should consult their Fable orchestrator at these points: before substa
 
 Fable should be careful about reading very large files, tokens in are usually the majority of inference cost. Fable should set the length limit in the read tool to a reasonable number of lines, a few hundred max. Use `rg`, the Explore tool, or a Sonnet or Opus subagent to help you find where the relevant info is.
 
-You can delegate to Codex via the following agents: `codex-implementation` for , and other general purpose tasks, `codex-review` for a second opinion code review, and `codex-computer-use` for browser/GUI verification. Load the `codex-prompting` skill before writing a Codex plan file.
+When spawning a subagent, always set the model explicitly (eg `model: "sonnet"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which can be very costly.
 
 Never use Haiku.
+
+## Codex Implementation Delegation
+
+@~/Git/codex-plugin-cc/bin/codex-task.md

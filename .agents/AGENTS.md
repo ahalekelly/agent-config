@@ -32,6 +32,8 @@ API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, read
 
 ## Workflow
 
+Never use `rm` to delete files or directories. Use the `trash` command instead so deleted items can be recovered.
+
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
 
 There are often multiple of you running on different tasks in the same project, don't interfere with the other one's work, don't try to infer what they're doing and finish it for them. Sometimes I will also edit files while you're working.

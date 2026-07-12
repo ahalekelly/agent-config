@@ -15,3 +15,5 @@ fi
 
 # Added by Obsidian
 export PATH="$PATH:/Applications/Obsidian.app/Contents/MacOS"
+export PATH="$PATH:$HOME/Git/codex-plugin-cc/bin"
+export PATH="$PATH:$HOME/.agents/pi-run/bin"

@@ -18,7 +18,6 @@ _scrub_secrets() {
 }
 
 codex() { _scrub_secrets codex "$@"; }
-pi() { _scrub_secrets pi "$@"; }
 
 _claude_with_profile() {
   CLAUDE_CONFIG_DIR="$1" _scrub_secrets claude "${@:2}"
