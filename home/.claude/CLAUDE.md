@@ -4,7 +4,7 @@ Shared instructions for all coding agents live in ~/.agents/AGENTS.md (Codex and
 
 ## Claude Code Specifics
 
-Don't run bash commands like `cat` that have long outputs, they put the entire output in the chat with me.
+Don't run bash commands that have long outputs, they put the entire output in the chat with me. Default to the `Read` tool instead of `cat` for reading files.
 
 ## Model Routing
 
