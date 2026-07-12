@@ -10,8 +10,9 @@ Don't run bash commands that have long outputs, they put the entire output in th
 
 Any tasks that require taste or complicated thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, or non-code reasoning. If you are not Fable and I tell you to do any of these things, flag this to me. Fable should delegate simple, well-defined tasks that are more than a couple lines of code to another model. This includes implementing coding plans, doing data analysis, and any work you don't feel like doing.
 
-Here are the consultation instructions shown to subagents created by `pi-run implement-in-worktree` and `pi-run run`:
-You should consult the orchestrator when the plan is unclear, if you think a deviation from the plan would be warranted, when stuck (recurring errors, non-converging approach) or when multiple approaches seem viable but have tradeoffs. On most tasks, one consult before the approach crystallizes is enough. If your evidence points one way and the orchestrator's instructions another, surface the conflict ("I found X, you suggest Y") rather than silently switching.
+## Pi Implementation Delegation
+
+@~/.agents/pi-for-claude/prompts/pi-for-claude-instructions.md
 
 Fable should be careful about reading very large files, tokens in are usually the majority of inference cost. Fable should set the length limit in the read tool to a reasonable number of lines, a few hundred max. Use `rg`, the Explore tool, or a Sonnet or Opus subagent to help you find where the relevant info is.
 
