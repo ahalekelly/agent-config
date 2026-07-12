@@ -14,7 +14,7 @@ Subagents should consult their Fable orchestrator at these points: before substa
 
 Fable should be careful about reading very large files, tokens in are usually the majority of inference cost. Fable should set the length limit in the read tool to a reasonable number of lines, a few hundred max. Use `rg`, the Explore tool, or a Sonnet or Opus subagent to help you find where the relevant info is.
 
-When spawning a subagent, always set the model explicitly (eg `model: "sonnet"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which can be very costly.
+When spawning a subagent, always set the model explicitly (eg `model: "sonnet"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which can be very costly. Default to running subagents in the background.
 
 Never use Haiku.
 

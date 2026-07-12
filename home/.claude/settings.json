@@ -132,7 +132,7 @@
   "tui": "fullscreen",
   "skipWorkflowUsageWarning": true,
   "theme": "auto",
-  "verbose": false,
+  "verbose": true,
   "preferredNotifChannel": "auto",
   "autoCompactEnabled": true,
   "switchModelsOnFlag": false,

@@ -26,19 +26,25 @@ Reports are different, they're an explanation for the user to read immediately a
 
 When creating Markdown files in greenfield projects, don't use newlines to hard-wrap, the markdown viewer's soft line wrapping is preferred.
 
+My requests are approximate. I am not the one coding; you are. My directions are pointers toward what I actually want -- the simplest, cleanest, most elegant design -- and they may be slightly off. That goal ALWAYS outranks my literal words.
+
+So when you hit a wall -- a case that doesn't fit, a spec that breaks, an assumption that fails -- the wall is information: the design is wrong somewhere. STOP. Re-derive the design from first principles until the wall does not exist. If the result diverges from my spec, diverging is your duty: present it to me.
+
+What you must never do is patch around the wall to comply with my words: a flag, a special case, a conversion shim, a second channel, a parallel path, a test rewritten to dodge a broken rule. The patch IS the failure. Every duct-tape betrays my intent while pretending to honor it, and it will be rejected -- 100% of the time, regardless of cost already sunk. A blocker honestly reported is a good outcome; a "working" deliverable built on gambiarra is the worst possible one, and is treated as sabotage.
+
 ## Secrets
 
 API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, readable from inside both the Claude and Codex sandboxes and normally already present in the command environment. If one is missing (e.g. in a desktop-launched session), source the file in the command that needs it: `. ~/.agents/secrets.env && <command>`. Never commit this file or print its contents.
 
 ## Workflow
 
-Never use `rm` to delete files or directories. Use the `trash` command instead so deleted items can be recovered.
+Never use `rm` to delete files or directories, use the `trash` command instead so deleted items can be recovered.
 
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
 
 There are often multiple of you running on different tasks in the same project, don't interfere with the other one's work, don't try to infer what they're doing and finish it for them. Sometimes I will also edit files while you're working.
 
-If I give you steering instructions mid task, you should still complete the original task unless I said otherwise.
+If I give you additional instructions mid task, you should still complete the original task unless I said otherwise. If I ask a question mid task, answer my question first, then resume what you were doing.
 
 If you find a bug in one place in the code, look for other places where that same class of bug could have occured. More generally, whenever you learn something surprising, like finding a bug, think about what that tells you about the state of the codebase and where it indicates there are areas for improvement, if they're small changes just do them, if they're big changes suggest them to me.
 
@@ -50,7 +56,7 @@ Typically commit at file granularity, don't stage part of a file. If one file en
 
 Make sure to keep docs up to date whenever something changes, but please keep user-facing docs succinct. If you notice a doc doesn't match the comitted code, update it, even if you're not the one who made it out of date. But if the doc doesn't match uncomitted changes done by another agent, no need to update the doc, they'll update the doc before they commit the code.
 
-If I ask you a question and it's ambiguous whether it's rhetorical, treat it as an actual question where I'm looking for an answer, not a rhetorical question that's asking you to make a change.
+If I ask you a question, treat it as an actual question where I'm looking for an answer, not a rhetorical question that's asking you to make a change.
 
 If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me.
 
