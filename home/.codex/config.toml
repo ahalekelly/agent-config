@@ -2,7 +2,7 @@
 
 personality = "friendly"
 model = "gpt-5.6-sol"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 plan_mode_reasoning_effort = "xhigh"
 
 sandbox_mode = "workspace-write"
@@ -17,6 +17,7 @@ notify = ["/Users/akelly/.agents/home/.codex/computer-use/Codex Computer Use.app
 [permissions.workspace_sandbox.filesystem]
 ":minimal" = "read" # minimal access required for codex to operate
 "~/.agents" = "read" # agent skills and secrets.env
+"~/.pi" = "read"
 "~/.zprofile" = "read" # commands run via zsh -l, which sources ~/.zprofile and thus ~/.agents/secrets.env
 ":tmpdir" = "write"     # $TMPDIR, usually /var/folders/.../T on macOS
 ":slash_tmp" = "write"  # /tmp
