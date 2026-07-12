@@ -1,3 +1,3 @@
-[submodule "pi-run"]
-	path = pi-run
-	url = https://github.com/ahalekelly/pi-run.git
+[submodule "pi-for-claude"]
+	path = pi-for-claude
+	url = https://github.com/ahalekelly/pi-for-claude.git
