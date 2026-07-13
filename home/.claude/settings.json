@@ -10,9 +10,13 @@
       "WebFetch",
       "Bash(curl:*)"
     ],
+    "deny": [
+      "Read(/Users/akelly/.pi/agent/auth.json)",
+      "Read(/Users/akelly/.agents/home/.pi/agent/auth.json)"
+    ],
     "defaultMode": "auto"
   },
-  "model": "fable",
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -121,9 +125,17 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowLocalBinding": true
+    },
     "filesystem": {
       "allowWrite": [
-        "~/.cache/uv"
+        "~/.cache/uv",
+        "/Users/akelly/.agents/home/.pi/agent/auth.json",
+        "/Users/akelly/.agents/home/.pi/agent/auth.json.lock"
+      ],
+      "allowRead": [
+        "/Users/akelly/.agents/home/.pi/agent/auth.json"
       ]
     }
   },
