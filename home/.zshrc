@@ -48,6 +48,16 @@ claudex() {
   claude --model gpt-5.6-sol "$@"
 }
 
+# Fable main loop with gpt-5.6-sol subagents, both routed through CLIProxyAPI
+# (requires both a Claude and a Codex OAuth credential in ~/.cli-proxy-api/).
+# claude.ai connectors don't load in proxied sessions.
+claudef() {
+  ANTHROPIC_BASE_URL=http://127.0.0.1:8317 \
+  ANTHROPIC_AUTH_TOKEN="$CLIPROXYAPI_KEY" \
+  CLAUDE_CODE_SUBAGENT_MODEL=gpt-5.6-sol \
+  claude --model claude-fable-5 "$@"
+}
+
 # PlatformIO CLI
 export PATH="$HOME/.platformio/penv/bin:$PATH"
 
