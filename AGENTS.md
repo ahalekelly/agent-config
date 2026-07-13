@@ -42,6 +42,8 @@ Never use `rm` to delete files or directories, use the `trash` command instead s
 
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
 
+Typescript and Rust are also nice languages.
+
 There are often multiple of you running on different tasks in the same project, don't interfere with the other one's work, don't try to infer what they're doing and finish it for them. Sometimes I will also edit files while you're working.
 
 If I give you additional instructions mid task, you should still complete the original task unless I said otherwise. If I ask a question mid task, answer my question first, then resume what you were doing.

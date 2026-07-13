@@ -27,6 +27,7 @@ notify = ["/Users/akelly/.agents/home/.codex/computer-use/Codex Computer Use.app
 "~/.config/git" = "read" # required for git
 "~/.cache/uv" = "write" # required for uv
 "~/.npm/_logs" = "write" # required for npm
+"~/.npm/_cacache" = "write" # required for npm
 
 [permissions.workspace_sandbox.filesystem.":workspace_roots"]
 "." = "read"

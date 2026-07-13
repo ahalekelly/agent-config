@@ -2,9 +2,11 @@
 .cc-writes/
 .agents/scratchpad/
 .agents/sessions/
-.DS_Store
+.agents/plans/
+.agents/worktrees/
 
 # macOS
+.DS_Store
 .AppleDouble
 .AppleDB
 .AppleDesktop
