@@ -1,0 +1,28 @@
+{
+  "lastChangelogVersion": "0.80.6",
+  "theme": "light/dark",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-terra",
+  "defaultThinkingLevel": "medium",
+  "sessionDir": ".agents/sessions",
+  "enabledModels": [
+    "openai-codex/gpt-5.6-sol",
+    "openai-codex/gpt-5.6-terra",
+    "openai-codex/gpt-5.6-luna",
+    "google/gemini-flash-latest"
+  ],
+  "packages": [
+    "npm:pi-web-access"
+  ],
+  "outputPad": 0,
+  "steeringMode": "all",
+  "followUpMode": "all",
+  "transport": "auto",
+  "showCacheMissNotices": true,
+  "enableInstallTelemetry": false,
+  "defaultProjectTrust": "always",
+  "doubleEscapeAction": "tree",
+  "extensions": [
+    "/Users/akelly/.agents/hooks/prevent-rm-pi.ts"
+  ]
+}
