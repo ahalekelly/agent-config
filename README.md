@@ -15,16 +15,19 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 
 ## How tracking works
 
-`.gitignore` is deny-all (`*`): nothing is tracked unless explicitly added with `git add -f`. This makes leaking runtime state or credentials into the repo an opt-in mistake rather than a default one. The flip side: `git add` on new files silently no-ops without `-f`, and already-tracked files need `git add -u`.
+`.gitignore` is deny-all (`*`): nothing is tracked unless explicitly added with `git add -f`. This makes leaking runtime state or credentials into the repo an opt-in mistake rather than a default one. The flip side: `git add` needs `-f` for new files, and even on tracked files it exits nonzero with an ignore warning (while still staging), so use `git add -u` for tracked changes.
 
-`home/.codex/config.toml` runs through a clean filter (`clean-codex-config.py`, wired in `.gitattributes`) that strips the machine-generated `[projects]` trust entries and marketplace timestamps Codex appends — activity history that must not be committed. The filter driver is per-clone git config; without it the file stages verbatim, so run the setup line below after cloning.
+`home/.codex/config.toml` runs through a clean filter (`clean-codex-config.py`, wired in `.gitattributes`) that strips the machine-generated `[projects]` trust entries and marketplace timestamps Codex appends — activity history that must not be committed. The filter driver is per-clone git config; the setup lines below configure it and mark it required, so a clone missing the filter fails loudly instead of staging the file verbatim.
 
 ## Setup on a new machine
 
 ```sh
 git clone --recurse-submodules https://github.com/ahalekelly/agent-config.git ~/.agents
 git -C ~/.agents config filter.codex-config.clean 'uv run "$HOME/.agents/clean-codex-config.py"'
+git -C ~/.agents config filter.codex-config.required true
 for f in .claude .claude-work .codex .pi .zprofile .zshrc; do ln -s ~/.agents/home/$f ~/$f; done
+(cd ~/.agents/pi-for-claude && npm install && npm link)   # builds dist/ and puts pi-for-claude on PATH
+pi-for-claude setup
 ```
 
 Then create `~/.agents/secrets.env` (agent-safe keys) and `~/.secrets.env` (keys agents must not see — the `claude`/`codex`/`pi` wrappers in `.zshrc` scrub these from the environment, and `.zprofile` only sources them in real user terminals).
