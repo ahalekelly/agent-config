@@ -26,6 +26,8 @@ The trick is that `~/.claude-work` is not a full second config — almost everyt
 
 ## Setup
 
+In this repo the profile directory lives at `~/.agents/home/.claude-work` (with `~/.claude-work` symlinked to it) and the symlink structure is tracked in git — only the per-profile files (`.claude.json`, `sessions/`, caches) stay untracked. To recreate it from scratch:
+
 ```zsh
 mkdir -p ~/.claude-work
 cd ~/.claude-work
