@@ -27,7 +27,7 @@ git -C ~/.agents config filter.codex-config.clean 'uv run "$HOME/.agents/clean-c
 for f in .claude .claude-work .codex .pi .zprofile .zshrc; do ln -s ~/.agents/home/$f ~/$f; done
 ```
 
-Then create `~/.agents/secrets.env` (agent-safe keys) and `~/.secrets.env` (keys agents must not see — the `claude`/`codex` wrappers in `.zshrc` scrub these from the environment, and `.zprofile` only sources them in real user terminals).
+Then create `~/.agents/secrets.env` (agent-safe keys) and `~/.secrets.env` (keys agents must not see — the `claude`/`codex`/`pi` wrappers in `.zshrc` scrub these from the environment, and `.zprofile` only sources them in real user terminals).
 
 ## Two Claude profiles
 
