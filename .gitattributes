@@ -1,0 +1,2 @@
+# Requires per-clone setup: git config filter.codex-config.clean 'uv run "$HOME/.agents/clean-codex-config.py"'
+home/.codex/config.toml filter=codex-config
