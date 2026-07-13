@@ -131,6 +131,7 @@
     "filesystem": {
       "allowWrite": [
         "~/.cache/uv",
+        "~/.Trash",
         "/Users/akelly/.agents/home/.pi/agent/auth.json",
         "/Users/akelly/.agents/home/.pi/agent/auth.json.lock"
       ],
