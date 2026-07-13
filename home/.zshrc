@@ -45,16 +45,19 @@ claudex() {
   CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1 \
   CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY=3 \
   ENABLE_TOOL_SEARCH=false \
+  ENABLE_CLAUDEAI_MCP_SERVERS=false \
   claude --model gpt-5.6-sol "$@"
 }
 
 # Fable main loop with gpt-5.6-sol subagents, both routed through CLIProxyAPI
 # (requires both a Claude and a Codex OAuth credential in ~/.cli-proxy-api/).
-# claude.ai connectors don't load in proxied sessions.
+# claude.ai connectors can't work in proxied sessions, so they're switched off
+# explicitly to silence the startup warning.
 claudef() {
   ANTHROPIC_BASE_URL=http://127.0.0.1:8317 \
   ANTHROPIC_AUTH_TOKEN="$CLIPROXYAPI_KEY" \
   CLAUDE_CODE_SUBAGENT_MODEL=gpt-5.6-sol \
+  ENABLE_CLAUDEAI_MCP_SERVERS=false \
   claude --model claude-fable-5 "$@"
 }
 
