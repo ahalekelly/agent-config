@@ -35,6 +35,19 @@ claudew() {
   DISABLE_AUTOUPDATER=1 _claude_with_profile "$HOME/.claude-work" "$@"
 }
 
+# Claude Code on GPT via CLIProxyAPI (brew service, 127.0.0.1:8317).
+# CLIPROXYAPI_KEY comes from ~/.agents/secrets.env; the config lives at
+# /opt/homebrew/etc/cliproxyapi.conf and the Codex OAuth token in ~/.cli-proxy-api/.
+claudex() {
+  ANTHROPIC_BASE_URL=http://127.0.0.1:8317 \
+  ANTHROPIC_AUTH_TOKEN="$CLIPROXYAPI_KEY" \
+  CLAUDE_CODE_SUBAGENT_MODEL=gpt-5.6-sol \
+  CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1 \
+  CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY=3 \
+  ENABLE_TOOL_SEARCH=false \
+  claude --model gpt-5.6-sol "$@"
+}
+
 # PlatformIO CLI
 export PATH="$HOME/.platformio/penv/bin:$PATH"
 
