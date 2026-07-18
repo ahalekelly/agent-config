@@ -5,8 +5,9 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 ## Layout
 
 - `AGENTS.md` — shared instructions for all agents. Claude loads it via `@` from its CLAUDE.md; Codex and Pi read it through symlinks (`home/.codex/AGENTS.md`, `home/.pi/agent/AGENTS.md`).
-- `home/` — the real dotfiles, symlinked from `$HOME`: `.claude`, `.claude-work`, `.codex`, `.pi`, `.zprofile`, `.zshrc`. Only the config worth versioning is tracked; runtime state (sessions, caches, credentials) stays untracked.
-- `hooks/` — rm guards: `prevent-rm.py` (Claude and Codex PreToolUse hook) and `prevent-rm-pi.ts` (Pi extension) block `rm` and point agents at `trash`.
+- `home/` — the real dotfiles (macOS), symlinked from `$HOME`: `.claude`, `.claude-work`, `.codex`, `.pi`, `.zprofile`, `.zshrc`. Only the config worth versioning is tracked; runtime state (sessions, caches, credentials) stays untracked.
+- `home-windows/` — the Windows equivalent of `home/`: `.claude` and `.codex`, junction-linked from `$HOME`. The statusline is `statusline.py` there (the shell version needs jq and BSD date).
+- `hooks/` — rm guards: `prevent-rm.py` (Claude and Codex PreToolUse hook) and `prevent-rm-pi.ts` (Pi extension) block `rm` and point agents at `trash`; `allow-mcp.py` auto-allows MCP tools from Claude's PreToolUse.
 - `bin/` — shims prepended to agents' PATH; `bin/rm` refuses to run as a last line of defense.
 - `skills/` — Claude skills, local-only (untracked); `home/.claude/skills` symlinks here.
 - `pi-for-claude/` — submodule: the Pi delegation wrapper.
@@ -31,6 +32,18 @@ pi-for-claude setup
 ```
 
 Then create `~/.agents/secrets.env` (agent-safe keys) and `~/.secrets.env` (keys agents must not see — the `claude`/`codex`/`pi` wrappers in `.zshrc` scrub these from the environment, and `.zprofile` only sources them in real user terminals).
+
+## Setup on a new Windows machine
+
+Requires Developer Mode (for native symlinks), git, uv, and node. In PowerShell, with Claude Code and Codex not running:
+
+```powershell
+git clone -c core.symlinks=true https://github.com/ahalekelly/agent-config.git "$env:USERPROFILE\.agents"
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.agents\setup-windows.ps1"
+npm install -g trash-cli
+```
+
+`setup-windows.ps1` configures the clean filter, then swaps `~\.claude` and `~\.codex` to junctions into `home-windows\`, moving any existing runtime state into the repo (kept untracked by the deny-all `.gitignore`; pre-existing config files are preserved as `*.pre-agents-repo`). Pi, the second Claude profile, and the zsh secrets-scrubbing wrappers are macOS-only and not set up on Windows. Syncing is manual: `git -C $env:USERPROFILE\.agents` add/commit/pull/push as needed.
 
 ## Two Claude profiles
 

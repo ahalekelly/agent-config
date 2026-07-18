@@ -1,0 +1,19 @@
+Shared instructions for all coding agents live in ~/.agents/AGENTS.md (Codex reads it through a symlink) — edit them there, this file only adds Claude-specific sections.
+
+@~/.agents/AGENTS.md
+
+## Claude Code Specifics
+
+Don't run bash commands that have long outputs, they put the entire output in the chat with me. Default to the `Read` tool instead of `cat` for reading files.
+
+Text written between tool calls is not displayed to me (Claude Code bug, anthropics/claude-code#75900). Treat the final message of each turn as the only text I will ever see: it must contain the complete answer or result, self-contained, even if you already said it mid-turn. Never end a turn on an aside or a message that assumes I read earlier text.
+
+Fable should be careful about reading very large files, tokens in are usually the majority of inference cost. Fable should set the length limit in the read tool to a reasonable number of lines, a few hundred max. Use `rg`, the Explore tool, or a Sonnet or Opus subagent to help you find where the relevant info is.
+
+When spawning a subagent, always set the model explicitly (eg `model: "sonnet"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which is costly. Default to running subagents in the background.
+
+Never use Haiku.
+
+## Windows Notes
+
+This is a Windows machine. `show-in-browser`, the Obsidian CLI, and `open` from AGENTS.md aren't installed here — to show me an .html or .md file, use `Start-Process <absolute-path>` from PowerShell. `trash` is npm's trash-cli and moves files to the Recycle Bin.

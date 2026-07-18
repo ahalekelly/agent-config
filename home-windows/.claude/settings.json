@@ -1,0 +1,51 @@
+{
+  "cleanupPeriodDays": 3650,
+  "env": {
+    "BASH_MAX_OUTPUT_LENGTH": "10000"
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Bash(curl:*)"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "claude-fable-5[1m]",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run C:/Users/akelly/.agents/hooks/prevent-rm.py"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run C:/Users/akelly/.agents/hooks/allow-mcp.py"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "uv run C:/Users/akelly/.agents/home-windows/.claude/statusline.py"
+  },
+  "effortLevel": "high",
+  "tui": "fullscreen",
+  "theme": "auto",
+  "verbose": true,
+  "preferredNotifChannel": "auto",
+  "autoCompactEnabled": true,
+  "switchModelsOnFlag": false,
+  "inputNeededNotifEnabled": true,
+  "skipWorkflowUsageWarning": true,
+  "skipAutoPermissionPrompt": true
+}
