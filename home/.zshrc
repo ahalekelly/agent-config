@@ -1,5 +1,8 @@
 alias axbrew='arch -x86_64 /usr/local/homebrew/bin/brew'
 
+# Color ls (and other BSD tools that honor it) when output is a terminal
+export CLICOLOR=1
+
 export STM32CubeMX_PATH=/Applications/STMicroelectronics/STM32CubeMX.app/Contents/Resources
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
