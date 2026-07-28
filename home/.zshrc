@@ -69,3 +69,5 @@ claudef() {
 export PATH="$HOME/.platformio/penv/bin:$PATH"
 
 alias git-agent-cfg='git -C "$HOME/.agents"'
+
+alias haclaude='ssh -t -p 2222 hassio@homeassistant.local "sudo docker exec -it addon_1016f397_claudecode tmux new -A -s claude -c /homeassistant '\''sh -c \"claude; exec sh\"'\''"'
