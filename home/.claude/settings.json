@@ -54,6 +54,14 @@
             "command": "bash ~/.claude/tab-title.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.agents/hooks/todo-capture.sh"
+          }
+        ]
       }
     ],
     "Notification": [
@@ -106,7 +114,8 @@
     "code-simplifier@claude-plugins-official": true,
     "playwright@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
-    "opencairn@opencairn": true
+    "opencairn@opencairn": true,
+    "swift-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "obsidian-skills": {
