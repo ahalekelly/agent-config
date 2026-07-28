@@ -20,7 +20,7 @@ Make the code skimmable, avoid cleverness.
 
 Do not implement fallback paths without explicit approval, if things aren't working they should fail loudly and provide clear error messages to the user.
 
-Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs, the docs and code comments shouldn't mention, refer to, or imply previous versions of the code, or mention how the code is different now from how it was before. Warnings about pitfalls, confusing things, mistakes to avoid, can still be good though.
+Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs, the docs and code comments shouldn't mention, refer to, or imply previous versions of the code. Do not mention in comments or docs how the code is different now from how it was before, except in a specific high level project changelog. Code comments can still include warnings about specific mistakes to avoid.
 
 Reports are different, they're an explanation for the user to read immediately after creation, and a point-in-time snapshot, they don't have to be timeless. Reports should have the datetime in the title.
 
@@ -58,7 +58,7 @@ Typically commit at file granularity, don't stage part of a file. If one file en
 
 Make sure to keep docs up to date whenever something changes, but please keep user-facing docs succinct. If you notice a doc doesn't match the comitted code, update it, even if you're not the one who made it out of date. But if the doc doesn't match uncomitted changes done by another agent, no need to update the doc, they'll update the doc before they commit the code.
 
-If I ask you a question, treat it as an actual question where I'm looking for an answer, not a rhetorical question that's asking you to make a change.
+If I ask a question with a question mark, it is an actual question where I'm looking for an answer, NOT a rhetorical question asking you to make a change. Answering the question is the entire deliverable. Investigation to find the answer is fine (reading, searching, throwaway tests in scratch dirs), but do not modify project files or anything else based on what you find. If the answer implies an obvious fix, state the fix and stop — I'll ask for it if I want it. This applies even when the fix is small, even when you're confident, and even to mid-task questions (answer first, then resume the original task).
 
 If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me.
 
@@ -66,11 +66,7 @@ If you're doing an in-depth report or want to include images or other visualizat
 
 To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` (outside the sandbox): it opens the file (deduping tabs), `focus` brings it forward, `last` moves its tab to the end to highlight it to me. Default to `last` but not `focus`, but if I tell you to do otherwise, make that the new default for the rest of that conversation. The extension live-reloads the visible page in place with zero flicker whenever you edit the file — no need to re-run the script to refresh. Pages with `<script>`s get a full (flashing) reload instead of the flicker-free swap.
 
-To show me a Markdown file, if it is not in an Obsidian vault, open it with Vivaldi. If it is, use the `obsidian://` URI scheme with a URL-encoded absolute path:
-
-```bash
-open "obsidian://open?path=~/Git/Repo/Note.md"
-```
+To show me a Markdown file, if it is not in an Obsidian vault, open it with Vivaldi. If it is, use `open "obsidian://open?path=~/Git/Repo/Note.md"`
 
 Obsidian and Vivaldi both auto-reload .md files. In Vivaldi this is done with the [markdown-viewer extension](https://github.com/simov/markdown-viewer). If we run into issues, let me know and we can try installing [md-reader](https://github.com/md-reader/md-reader) instead.
 
