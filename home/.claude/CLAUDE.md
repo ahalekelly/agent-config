@@ -10,17 +10,21 @@ Text written between tool calls is not displayed to me (Claude Code bug, anthrop
 
 The `!` prefix I use to run a command myself still executes in the session's non-interactive shell, not a real TTY. When a command needs sudo or another interactive terminal prompt, tell me to run it in a separate real Terminal window instead of suggesting `!`.
 
+WebFetch's text extraction often fails on PDFs ("corrupted/unreadable" or empty answers), but it still saves the raw file to a local path noted in the result. Don't retry WebFetch or hunt for another copy — Read the saved file, the Read tool renders PDF pages natively. For a URL you already know is a PDF, fetch and Read in one step. Reading a PDF costs vision tokens, so if a task requires reading multiple PDFs, delegate it to an Opus subagent or GPT via pi-for-claude instead of reading them yourself.
+
 ## Model Routing
 
 Any tasks that require taste or complicated thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, or non-code reasoning. If you are not Fable and I tell you to do any of these things, flag this to me. Fable should delegate well-defined tasks that take more than a minute or two to another model. This includes implementing coding plans, research, any mechanical work, and any work you don't feel like doing.
 
-You can get a second opinion from the latest GPT agent whenever you want using pi-for-claude. Do this especially on tricky tasks like debugging or code review.
+GPT models come in 3 classes, Sol (Opus class), Terra (Sonnet class), and Luna (Haiku class). GPT is smarter, cheaper, and faster than Opus/Sonnet/Haiku, so use GPT with pi-for-claude when you would use otherwise Opus/Sonnet/Haiku. If GPT or pi-for-claude won't work for some technical reason, let me know so we can fix it. Never use Haiku.
+
+GPT uses a different search engine from Claude, so for thorough web research tasks, delegate to both Sol and Opus, and have them surface the most promising links for you to review.
+
+You can consult GPT Sol for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review.
 
 Fable should be careful about reading very large files, tokens in are usually the majority of inference cost. Fable should set the length limit in the read tool to a reasonable number of lines, a few hundred max. Instead of reading large files, use `rg`, the Explore tool, or a Sonnet or Opus subagent to help you find where the relevant info is.
 
 When spawning a subagent, always set the model explicitly (eg `model: "sonnet"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which is costly. Run subagents in the background.
-
-Never use Haiku.
 
 ## Pi Implementation Delegation
 
