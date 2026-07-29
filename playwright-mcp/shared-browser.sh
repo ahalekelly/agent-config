@@ -1,8 +1,10 @@
 #!/bin/bash
 # Shared headless Chromium serving every Playwright MCP instance over CDP.
-# MCP instances attach with: --cdp-endpoint http://localhost:9222 --isolated
+# MCP instances attach with: --cdp-endpoint http://localhost:9377 --isolated
 # (--isolated is required: without it instances share the default context and
 # hijack each other's tabs).
+# Port 9377, deliberately not 9222: 9222 is the universal CDP default, and a
+# leaf must never attach to some other tool's debug browser (or vice versa).
 # `start` is idempotent: safe to fire blind before any fan-out. Ownership is
 # derived from the port itself — the listener whose command line names our
 # profile dir is ours; there is no pidfile to go stale. A foreign process on
@@ -11,7 +13,7 @@
 # loudly and the operator runs `shared-browser.sh start` again.
 set -euo pipefail
 
-PORT=9222
+PORT=9377
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PROFILE="$DIR/shared-browser-profile"
 LOG="$DIR/shared-browser.log"
