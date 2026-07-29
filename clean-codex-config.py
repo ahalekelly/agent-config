@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.9"
 # ///
-# git clean filter for .codex/config.toml (see info/attributes).
+# git clean filter for .codex/config.toml (see .gitattributes).
 # Codex appends a [projects."<path>"] trust entry for every directory it runs
 # in (single-quoted keys on Windows), and bumps last_updated timestamps under
 # [marketplaces.*] on refresh — machine-generated activity history that must
