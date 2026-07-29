@@ -12,7 +12,8 @@
     "google/gemini-flash-latest"
   ],
   "packages": [
-    "npm:pi-web-access"
+    "npm:pi-web-access",
+    "npm:pi-docparser"
   ],
   "outputPad": 0,
   "steeringMode": "all",
