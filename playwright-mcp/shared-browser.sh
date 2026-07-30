@@ -47,7 +47,9 @@ start() {
   BIN="$(ls -d "$HOME/Library/Caches/ms-playwright/chromium-"*"/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" 2> /dev/null | sort -V | tail -1)"
   [ -n "$BIN" ] && [ -x "$BIN" ] || { echo "ERROR: no Chrome for Testing build under ~/Library/Caches/ms-playwright (run npx playwright install chromium)" >&2; exit 1; }
   mkdir -p "$PROFILE"
-  nohup "$BIN" --headless "--remote-debugging-port=$PORT" "--user-data-dir=$PROFILE" --no-first-run >> "$LOG" 2>&1 &
+  # taskpolicy -c utility: every Chrome child inherits the QoS clamp, so
+  # headless work never competes with the user's foreground apps.
+  nohup taskpolicy -c utility "$BIN" --headless "--remote-debugging-port=$PORT" "--user-data-dir=$PROFILE" --no-first-run >> "$LOG" 2>&1 &
   for _ in $(seq 1 20); do
     if alive; then
       # The owner may be a concurrent `start`'s browser rather than our child

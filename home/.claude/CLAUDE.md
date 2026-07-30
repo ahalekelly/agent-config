@@ -14,6 +14,8 @@ WebFetch's text extraction often fails on PDFs ("corrupted/unreadable" or empty 
 
 Whenever posting on Github, put the "🤖 Generated with Claude Code" line at the top instead of the bottom so it's more clear to the reader.
 
+When background browser work (browser-leaf fan-outs) finishes, stop the shared daemon with `~/.agents/playwright-mcp/shared-browser.sh stop` (unsandboxed) — `start` is idempotent and cheap to rerun, and an idle daemon holds gigabytes of RAM.
+
 ## Model Routing
 
 Any tasks that require taste or complicated thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, or non-code reasoning. If you are not Fable and I tell you to do any of these things, flag this to me. Fable should delegate well-defined tasks that take more than a minute or two to another model. This includes implementing coding plans, research, any mechanical work, and any work you don't feel like doing.
