@@ -22,6 +22,8 @@ Do not implement fallback paths without explicit approval, if things aren't work
 
 Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs, the docs and code comments shouldn't mention, refer to, or imply previous versions of the code. Do not mention in comments or docs how the code is different now from how it was before, except in a specific high level project changelog. Code comments can still include warnings about specific mistakes to avoid.
 
+Timeless also means independent of the conversation that produced the edit: doc text must stand alone for a reader who never saw my request. Don't transplant your answer to my question into the doc — answer me in your reply, then write the doc from the document's own point of view. A sentence like "there is no separate definition of X" is an answer to someone who asked where X is defined; the doc version states the fact positively ("the scope of X is ..."). Test before saving: would this text make sense if it had always been in the doc?
+
 Reports are different, they're an explanation for the user to read immediately after creation, and a point-in-time snapshot, they don't have to be timeless. Reports should have the datetime in the title.
 
 When creating Markdown files in greenfield projects, don't use newlines to hard-wrap, the markdown viewer's soft line wrapping is preferred.
