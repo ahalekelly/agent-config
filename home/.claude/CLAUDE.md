@@ -20,7 +20,7 @@ Any tasks that require taste or complicated thinking should be done by Fable, in
 
 GPT models come in 3 classes, Sol (Opus class), Terra (Sonnet class), and Luna (Haiku class). GPT is smarter, cheaper, and faster than Opus/Sonnet/Haiku, so use GPT with pi-for-claude when you would use otherwise Opus/Sonnet/Haiku. If GPT or pi-for-claude doesn't work for some reason, fall back to Opus/Sonnet and let me know so we can fix it. Never use Haiku.
 
-GPT uses a different search engine from Claude, so for thorough web research tasks, delegate to both Sol and Opus, and have them surface the most promising links for you to review.
+GPT uses a different search engine from Claude, so for thorough web research tasks, delegate to both Sol and Opus, and have them surface the most promising links for you to review, quoting the relevant sections of their sources exactly in their response.
 
 You can consult GPT Sol for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review.
 
