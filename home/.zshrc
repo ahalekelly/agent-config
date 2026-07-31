@@ -39,10 +39,9 @@ claudew() {
   DISABLE_AUTOUPDATER=1 _claude_with_profile "$HOME/.claude-work" "$@"
 }
 
-# Agent view (background-session dispatch UI) per profile. Shadows /usr/bin/cc
-# (the C compiler) in interactive shells.
-cc() { claude agents "$@"; }
-cw() { claudew agents "$@"; }
+# Agent view (background-session dispatch UI) per profile.
+ca() { claude agents "$@"; }
+caw() { claudew agents "$@"; }
 
 # Claude Code on GPT via CLIProxyAPI (brew service, 127.0.0.1:8317).
 # CLIPROXYAPI_KEY comes from ~/.agents/secrets.env; the config lives at
