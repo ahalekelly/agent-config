@@ -2,7 +2,8 @@
   "cleanupPeriodDays": 3650,
   "env": {
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
-    "BASH_MAX_OUTPUT_LENGTH": "10000"
+    "BASH_MAX_OUTPUT_LENGTH": "10000",
+    "CLAUDE_CODE_IMMEDIATE_TOOLS": "WebFetch,WebSearch"
   },
   "permissions": {
     "allow": [
@@ -59,6 +60,14 @@
           {
             "type": "command",
             "command": "bash ~/.agents/hooks/todo-capture.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "date '+Temporal grounding: %A %Y-%m-%d %H:%M %Z'"
           }
         ]
       }
@@ -139,6 +148,7 @@
       "allowWrite": [
         "~/.cache/uv",
         "~/.Trash",
+        "~/.agents/.git",
         "/Users/akelly/.agents/home/.pi/agent/auth.json",
         "/Users/akelly/.agents/home/.pi/agent/auth.json.lock"
       ],
