@@ -4,6 +4,7 @@
 # has its own allowlist .gitignore — only curated config is tracked there.
 .DS_Store
 secrets.env
+web-bot-auth/private.pem
 node_modules/
 *.log
 
