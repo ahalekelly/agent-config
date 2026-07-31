@@ -22,7 +22,7 @@ The `home/` directory contains files intended to back their corresponding paths 
 ├── hooks/                    command guards shared by agent harnesses
 ├── bin/rm                    PATH-level guard against destructive deletion
 ├── clean-codex-config.py     Git clean filter for generated Codex settings
-├── skills/                   installed skills, ignored by Git
+├── skills/                   installed skills, all tracked (third-party ones vendored)
 ├── .skill-lock.json          tracked skill provenance and versions
 └── pi-for-claude/            Git submodule for Claude-to-Pi delegation
 ```
@@ -31,7 +31,7 @@ The main Claude, Codex, and Pi instruction files converge on `AGENTS.md`, so the
 
 ## What is versioned
 
-The root `.gitignore` ignores everything except the ignore file itself. Files become part of the repository only when deliberately added with `git add -f`. This makes the tracked set an explicit allowlist and prevents newly generated agent state from appearing as ordinary untracked files.
+The root `.gitignore` is a deny-list: everything is tracked by default except dependencies, logs, and agent runtime state. `home/` and `home-windows/` are the exception — the live runtime directories symlink or junction into them, so each carries its own deny-all `.gitignore` and files there become part of the repository only when deliberately added with `git add -f`. This keeps the runtime-adjacent tracked set an explicit allowlist and prevents newly generated agent state from appearing as ordinary untracked files.
 
 The important tracked areas are:
 
@@ -41,7 +41,7 @@ The important tracked areas are:
 - `home/.pi/agent/settings.json`: Pi models, packages, session location, and extensions.
 - `home/.zprofile` and `home/.zshrc`: environment setup, agent launchers, profile selection, and secret scrubbing.
 - `hooks/` and `bin/rm`: overlapping guards that reject `rm` and direct agents to use recoverable deletion through `trash`.
-- `.skill-lock.json`: the source and content identity of installed third-party skills. The installed `skills/` tree remains ignored.
+- `.skill-lock.json`: the source and content identity of installed third-party skills. The installed `skills/` tree is vendored in full.
 - `pi-for-claude`: a pinned submodule that lets Claude delegate implementation, review, and related work to Pi in isolated worktrees or in place.
 
 Everything else under the managed application directories should be assumed to be runtime state unless it has been explicitly force-added.

@@ -9,14 +9,14 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 - `home-windows/` — the Windows equivalent of `home/`: `.claude` and `.codex`, junction-linked from `$HOME`. The statusline is `statusline.py` there (the shell version needs jq and BSD date).
 - `hooks/` — rm guards: `prevent-rm.py` (Claude and Codex PreToolUse hook) and `prevent-rm-pi.ts` (Pi extension) block `rm` and point agents at `trash`; `allow-mcp.py` auto-allows MCP tools from Claude's PreToolUse.
 - `bin/` — shims prepended to agents' PATH; `bin/rm` refuses to run as a last line of defense.
-- `skills/` — Claude skills, local-only (untracked); `home/.claude/skills` symlinks here.
+- `skills/` — Claude skills, all tracked (third-party ones are vendored, with source and hash pinned in `.skill-lock.json`); `home/.claude/skills` symlinks here.
 - `pi-for-claude/` — submodule: the Pi delegation wrapper.
 - `secrets.env` — API keys agents may use, sourced by `.zprofile`. Never committed.
 - `migrate-agent-config-repo.sh` — the one-shot script that converted the original bare-repo setup into this layout.
 
 ## How tracking works
 
-`.gitignore` is deny-all (`*`): nothing is tracked unless explicitly added with `git add -f`. This makes leaking runtime state or credentials into the repo an opt-in mistake rather than a default one. The flip side: `git add` needs `-f` for new files, and even on tracked files it exits nonzero with an ignore warning (while still staging), so use `git add -u` for tracked changes.
+The root `.gitignore` is a normal deny-list: everything is tracked by default except dependencies, logs, and agent runtime state. The exception is `home/` and `home-windows/` — the live runtime dirs (`~/.claude` etc.) symlink or junction into them, so each carries its own deny-all (`*`) `.gitignore`, making leaking runtime state or credentials an opt-in mistake rather than a default one. Inside those two folders, new curated config files must be added with `git add -f`, and `git add` on an already-tracked file exits nonzero with an ignore warning (while still staging) — use `git add -u` for tracked changes there. Everywhere else, git behaves normally.
 
 `home/.codex/config.toml` runs through a clean filter (`clean-codex-config.py`, wired in `.gitattributes`) that strips the machine-generated `[projects]` trust entries and marketplace timestamps Codex appends — activity history that must not be committed. The filter driver is per-clone git config; the setup lines below configure it and mark it required, so a clone missing the filter fails loudly instead of staging the file verbatim.
 
@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.agents\setup-windows
 npm install -g trash-cli
 ```
 
-`setup-windows.ps1` configures the clean filter, then swaps `~\.claude` and `~\.codex` to junctions into `home-windows\`, moving any existing runtime state into the repo (kept untracked by the deny-all `.gitignore`; pre-existing config files are preserved as `*.pre-agents-repo`). Pi, the second Claude profile, and the zsh secrets-scrubbing wrappers are macOS-only and not set up on Windows. Syncing is manual: `git -C $env:USERPROFILE\.agents` add/commit/pull/push as needed.
+`setup-windows.ps1` configures the clean filter, then swaps `~\.claude` and `~\.codex` to junctions into `home-windows\`, moving any existing runtime state into the repo (kept untracked by `home-windows/`'s deny-all `.gitignore`; pre-existing config files are preserved as `*.pre-agents-repo`). Pi, the second Claude profile, and the zsh secrets-scrubbing wrappers are macOS-only and not set up on Windows. Syncing is manual: `git -C $env:USERPROFILE\.agents` add/commit/pull/push as needed.
 
 ## Two Claude profiles
 
