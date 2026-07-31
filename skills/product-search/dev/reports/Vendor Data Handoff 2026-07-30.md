@@ -1,6 +1,6 @@
 # Vendor Data Access — Handoff, 2026-07-30
 
-Session covered bot walls, headless engines, Amazon access, and platform storefront APIs. Living docs are already updated; this is the state-of-play and what to pick up next.
+Session covered headless engines, Amazon access, and platform storefront APIs. Living docs are already updated; this is the state-of-play and what to pick up next.
 
 ## The headline
 
@@ -19,7 +19,6 @@ So the browser is now the residue path, not the main one.
 
 | Doc | Holds |
 |---|---|
-| `playwright-mcp/Bot Walls and Browser Engines.md` | engine-per-wall table, detection markers, patchright, Firefox leaf config |
 | `product-search/SKILL.md` | source ladder, platform storefront API technique, pricing pass |
 | `product-search/vendors.md` | per-vendor cached facts incl. Amazon's access situation |
 | `product-search/dev/MEMORY.md` | benchmark data, agentic-commerce landscape, leads |
