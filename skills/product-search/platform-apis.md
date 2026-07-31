@@ -199,9 +199,13 @@ Signature-Agent: "https://lancelotlabs.org"
 kid: PtFPEn59EWaohh4V82GazSOYlIBm3LqPOhoLUu--1So
 ```
 
-Shopify documents a higher rate tier for correctly signed traffic, but the 2026-07-31 bounded trials did not prove that this identity received it. Signed and unsigned requests had the same statuses, body digests, response classification, and lack of throttling through the largest bounded run. No crossover or explicit tier signal appeared, so the better tier remains empirically unproven.
+The [live public key directory](https://lancelotlabs.org/.well-known/http-message-signatures-directory) was deployed and independently verified on 2026-07-31. Its HTTP 200 response carried the expected public JWK, `Signature`, `Signature-Input`, `Cache-Control: no-store`, the directory signature tag, and a ten-second lifetime. Independent Ed25519 verification succeeded using only the returned public JWK, and its RFC 7638 thumbprint matched the configured `kid`.
 
-The live public key directory on 2026-07-31 returned the expected public key but lacked the directory response's required `Signature` and `Signature-Input`. The Worker fix must be deployed and the directory plus Shopify traffic retested before claiming a complete deployed identity or a better observed tier.
+Shopify's [Storefront API limits](https://shopify.dev/docs/api/usage/limits#storefront-api-rate-limits) and [May 7, 2026 changelog](https://shopify.dev/changelog/bots-and-agents-should-identify-themselves-via-web-bot-auth) document the policy: unsigned anonymous bots receive the strictest limits and correctly signed Web Bot Auth traffic qualifies for higher limits. They do not document a validator endpoint, recognition header, entitlement response, or tier API for a particular identity; the [Storefront API reference](https://shopify.dev/docs/api/storefront/2026-04) exposes no such signal.
+
+The 2026-07-31 identity experiment sent exactly 100 identical product-only requests in two reversed-order rounds: 50 signed and 50 unsigned. Every request returned HTTP 200 with valid, stable product data. Neither mode produced throttling, `Retry-After`, or a rate-, limit-, throttle-, retry-, or tier-named response header. Because neither mode crossed an observable limit, recognition of this identity is strictly inconclusive; the experiment neither empirically confirms nor contradicts Shopify's documented higher-limit policy.
+
+One signed request to [Cloudflare's crawl-test endpoint](https://crawltest.com/cdn-cgi/web-bot-auth) returned HTTP 401. That endpoint tests Cloudflare recognition under [Cloudflare's Web Bot Auth profile](https://developers.cloudflare.com/bots/reference/bot-verification/web-bot-auth/), not Shopify recognition. Shopify explicitly states that Cloudflare enrollment is unnecessary, so this result is not Shopify evidence.
 
 ### Corpus result, 2026-07-31
 
