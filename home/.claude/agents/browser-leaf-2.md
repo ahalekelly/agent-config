@@ -1,6 +1,6 @@
 ---
 name: browser-leaf-2
-description: Headless-browser leaf agent for background web automation (lookups, extractions, form-driven flows). Owns a private isolated context in the shared headless browser daemon (start it first: ~/.agents/playwright-mcp/shared-browser.sh start), but only one concurrent invocation per leaf type — Claude Code shares identical inline MCP server configs across concurrent subagents, so run parallel leaves on distinct types (browser-leaf, browser-leaf-2 … browser-leaf-5, one type per concurrent leaf).
+description: Identical to browser-leaf — a distinct agent type so an additional concurrent browser leaf gets its own MCP session (Claude Code shares MCP sessions between same-type concurrent subagents). See browser-leaf for usage.
 model: sonnet
 mcpServers:
   - playwright:
