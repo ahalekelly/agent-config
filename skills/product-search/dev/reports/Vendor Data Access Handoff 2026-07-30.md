@@ -13,11 +13,7 @@ So the browser is now the residue path, not the main one.
 ## Also established
 
 - **DataDome blocks every headless engine tried** (seven configurations, live vendors). **Akamai does not** — plain Firefox clears it, as does a fingerprint-patched Chromium, which unlike Firefox can serve a CDP daemon.
-- **cloakbrowser is a fork of the free BSD-3 `fingerprint-chromium`**, which matches it on benchmark and tracks a newer Chromium. Prefer the upstream.
-- **Patchright is orthogonal**, patching the client layer over CDP attach; it cleans leaks but beats no additional wall, and does nothing for headless.
 - **Detection was wrong**: `403` is not the signal. AWS WAF challenges with **202**, CAPTCHAs **405**, Kasada opens **429**, Fastly blocks **406**, Radware and Queue-it redirect without leaving 2xx, Imperva sometimes serves blocks under **200**.
-- **Amazon is a policy boundary, not a technical wall** — it serves full product pages to declared bot UAs, while robots.txt disallows every declared AI agent by name. A GPT leaf's fetch reaches it because it doesn't consult robots.txt, from this machine.
-- **The Playwright plugin was disabled** — it defaulted to headed and opened a visible Chrome window. Lesson recorded: subagents inherit registered browser tools and will use them when search fails, so the constraint must live in the prompt, not in memory.
 
 ## Where things live
 
