@@ -26,6 +26,13 @@ codex() { _scrub_secrets codex "$@"; }
 pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
 
 _claude_with_profile() {
+  # Keep the display patches applied across CC updates (~/.agents/claude-patching).
+  # Nonzero exit = the check printed something worth reading; hold for an Enter
+  # before the TUI takes over the screen (interactive launches only).
+  if ! "$HOME/.agents/claude-patching/check-and-apply.sh" && [[ -t 0 && -t 1 ]]; then
+    printf 'Press Enter to launch Claude Code... '
+    read -r
+  fi
   CLAUDE_CONFIG_DIR="$1" _scrub_secrets claude "${@:2}"
 }
 
