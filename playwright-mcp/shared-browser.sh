@@ -1,5 +1,6 @@
 #!/bin/bash
-# Shared headless Chromium serving every Playwright MCP instance over CDP.
+# Shared headless fingerprint-chromium serving every Playwright MCP instance
+# over CDP.
 # MCP instances attach with: --cdp-endpoint http://localhost:9377 --isolated
 # (--isolated is required: without it instances share the default context and
 # hijack each other's tabs).
@@ -20,8 +21,10 @@ set -euo pipefail
 
 PORT=9377
 DIR="$(cd "$(dirname "$0")" && pwd)"
-PROFILE="$DIR/shared-browser-profile"
+PROFILE="$DIR/fingerprint-browser-profile"
 LOG="$DIR/shared-browser.log"
+BIN="$DIR/fingerprint-chromium/Chromium.app/Contents/MacOS/Chromium"
+FINGERPRINT=9849159
 IDLE_POLL=30  # seconds between watchdog polls
 IDLE_POLLS=10 # consecutive idle polls before auto-stop (10 × 30s = 5 min)
 
@@ -87,12 +90,18 @@ start() {
     lsof -i ":$PORT" -sTCP:LISTEN >&2
     exit 1
   fi
-  BIN="$(ls -d "$HOME/Library/Caches/ms-playwright/chromium-"*"/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" 2> /dev/null | sort -V | tail -1)"
-  [ -n "$BIN" ] && [ -x "$BIN" ] || { echo "ERROR: no Chrome for Testing build under ~/Library/Caches/ms-playwright (run npx playwright install chromium)" >&2; exit 1; }
+  [ -x "$BIN" ] || { echo "ERROR: fingerprint-chromium is not installed (run $DIR/install-fingerprint-chromium.sh)" >&2; exit 1; }
   mkdir -p "$PROFILE"
-  # taskpolicy -c utility: every Chrome child inherits the QoS clamp, so
+  # taskpolicy -c utility: every Chromium child inherits the QoS clamp, so
   # headless work never competes with the user's foreground apps.
-  nohup taskpolicy -c utility "$BIN" --headless "--remote-debugging-port=$PORT" "--user-data-dir=$PROFILE" --no-first-run >> "$LOG" 2>&1 &
+  nohup taskpolicy -c utility "$BIN" \
+    --headless \
+    "--fingerprint=$FINGERPRINT" \
+    --fingerprint-platform=macos \
+    --fingerprint-brand=Chrome \
+    "--remote-debugging-port=$PORT" \
+    "--user-data-dir=$PROFILE" \
+    --no-first-run >> "$LOG" 2>&1 &
   for _ in $(seq 1 20); do
     if alive; then
       # The owner may be a concurrent `start`'s browser rather than our child

@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This is reference material for the **product-search** workflow, which reads public catalog data from online vendors — shipping policies, stock status, list prices, and live cart shipping estimates — so a buyer can compare delivered cost across suppliers. The work is read-only: no accounts, no orders, no payment details, rate estimation only. The default headless browser these leaves use is a plain Chrome for Testing, the same engine Playwright ships.
+This is browser-engine reference material for **browser-leaf**, the general-purpose background web-automation agent. Product search is one heavily exercised example: it reads public catalog data, shipping policies, stock, prices, and cart estimates across suppliers. The same leaf is available for unrelated browsing and interaction tasks. Leaves are read-only by default; accounts, submissions, purchases, and other real-world side effects require explicit authorization in the task prompt. The default headless browser is fingerprint-chromium driven by the standard Playwright MCP over CDP.
 
-The friction this doc addresses is that many retailers put a **bot-detection system** (Cloudflare, Akamai, DataDome, and similar) in front of their storefront. These systems are tuned to flag automated traffic, and a stock headless browser trips them even on an ordinary read of a public shipping page — so the page returns a challenge or a blank shell instead of its content. The question here is purely practical: which browser engine and configuration renders these public pages reliably, and which sites are better served by their own JSON API or by published-policy text instead of a browser at all. Where a site's bot-detection can't be satisfied by a headless read, the workflow doesn't force it — it falls back to structured API data or documented policy, and reports the site as "blocked."
+The friction this doc addresses is that many sites put a **bot-detection system** (Cloudflare, Akamai, DataDome, and similar) in front of their content or interactive flows. These systems are tuned to flag automated traffic, and a stock headless browser can receive a challenge or blank shell instead of the page. The commercial sites visited by product-search provided the measured corpus, but the engine behavior and detection markers apply to any browser-leaf task. Where bot detection can't be satisfied by a headless read, use a purpose-built structured source when the task allows it or report the browser path as blocked.
 
 Findings here were measured on live commercial sites in July 2026; detection vendors tune continuously, so treat the ratings as a starting point and re-probe when a site that used to render stops rendering.
 
@@ -12,9 +12,9 @@ Findings here were measured on live commercial sites in July 2026; detection ven
 
 | Detection system | Path | Confidence |
 |---|---|---|
-| None / light | Shared Chromium daemon (the default leaf) | — |
+| None / light | Shared fingerprint-chromium daemon (the default leaf) | — |
 | Cloudflare | Usually just CDN, not a challenge. Try the default leaf first, escalate only on a real interstitial | untested in depth |
-| **Akamai** | **Launched-mode Firefox leaf** (recipe below), or **cloakbrowser headless** if you need Chromium | live-confirmed, both |
+| **Akamai** | **Default fingerprint-chromium leaf**, or launched-mode Firefox (recipe below) | live-confirmed, both |
 | **DataDome**, alone or stacked | No headless engine renders. Headed patchright/cloakbrowser driven via background computer-use, or skip the browser entirely | live-confirmed negative |
 | **PerimeterX** | Behaves like DataDome; headless Firefox is blocked | one live data point |
 
@@ -30,7 +30,7 @@ Where a browser isn't strictly required, the more reliable path is not to drive 
 
 ## What the leaf tooling can drive
 
-The leaves run `@playwright/mcp` (pinned in this directory) and today all attach to the shared Chromium daemon over CDP. That shapes what is reachable:
+The leaves run `@playwright/mcp` (pinned in this directory) and attach to the shared fingerprint-chromium daemon over CDP. That shapes what is reachable:
 
 - **CDP is Chromium-only.** Firefox cannot be driven over CDP, so a Firefox leaf must launch its own browser instead of attaching to the daemon. Functionally fine — leaves are isolated from each other anyway — but it costs a browser process per leaf, so the 2-tab rule matters more, not less.
 - **`--browser` accepts only `chrome`, `firefox`, `webkit`, `msedge`,** but **`--config` exposes the full Playwright `launchOptions`** — `executablePath`, `args`, `ignoreDefaultArgs`, `env`, plus `contextOptions`. Any engine whose configuration is a patched binary driven by launch flags is therefore reachable from the MCP alone, with no second driver process.
@@ -121,6 +121,7 @@ For raw scripts outside the MCP:
 - **camoufox** — `uv run --with camoufox python -m camoufox fetch`, then `from camoufox.sync_api import Camoufox; Camoufox(headless=True)`. Binary in `~/Library/Caches/camoufox`.
 - **tf-playwright-stealth** — `uv run --with tf-playwright-stealth --with playwright …`; `from playwright_stealth import stealth_sync; stealth_sync(page)` per page.
 - **cloakbrowser** — `pip install cloakbrowser`, free tier, no license; binary auto-downloads to `~/.cloakbrowser` (Chromium 145). `cloakbrowser.launch(headless=True)` returns a Playwright Browser.
+- **fingerprint-chromium** — `~/.agents/playwright-mcp/install-fingerprint-chromium.sh` installs the pinned macOS arm64 browser bundle; `shared-browser.sh start` launches it with the process fingerprint used by every default leaf.
 
 All browser launches must be unsandboxed — the sandbox has no network and Chrome can't write its profile files inside it.
 
@@ -128,4 +129,4 @@ All browser launches must be unsandboxed — the sandbox has no network and Chro
 
 Engine-vs-system scores come from a single [browsers-benchmark](https://github.com/techinz/browsers-benchmark) run (23 engine configs × 10 targets, n=1 per target — a snapshot, not a constant). Its headline result is that **headed dominates**: patchright headed renders on 10/10, and headless Chromium renders on no Akamai target at all. Its DataDome results do not survive contact with real sites, which is why the table above leads with live evidence.
 
-The live probes, the per-vendor map, and the benchmark data live in `~/.agents/skills/product-search/dev/` alongside the shipping-quote strategy they were gathered for.
+The live probes, per-vendor map, and benchmark data live in `~/.agents/skills/product-search/dev/` because product search supplied the test corpus. They are evidence for the general browser-leaf engine choice, not a restriction on its use.
