@@ -22,6 +22,8 @@ Who attaches: the five `browser-leaf*` Claude agent defs (`~/.claude/agents/brow
 
 No auto-restart by design: if the browser crashes, every attached MCP call fails loudly (clean `### Error` result within milliseconds, no hangs) and the operator starts it again. Contexts are cleaned up automatically — Chrome disposes a CDP-created context when its owning connection drops, so killed leaves leave nothing behind; `status` showing `contexts: 1` (the untouched default `chrome://new-tab-page`) means no leaks.
 
-The daemon is Chromium and CDP is Chromium-only, so anything needing a different engine — notably headless Firefox, which is the cheap way past Akamai — launches its own browser instead of attaching. [Bot Walls and Browser Engines](<Bot Walls and Browser Engines.md>) covers which engine clears which wall, the launched-mode Firefox leaf config, and how to identify the wall a site is running.
+Before reaching for a leaf at all, check whether a search, an API, or an MCP can answer the question — a browser costs far more tokens and wall-clock, and it is the only path a bot wall can block.
+
+CDP is Chromium-only, so a different *engine* — headless Firefox, say — has to launch its own browser rather than attach. A different Chromium *build* does not: swapping the binary this script launches for a fingerprint-patched Chromium keeps the whole shared-daemon architecture and gets past Akamai, which stock Chrome for Testing cannot. [Bot Walls and Browser Engines](<Bot Walls and Browser Engines.md>) covers which engine clears which wall, the builds worth using, the launched-mode Firefox leaf config, and how to identify the wall a site is running. Note that every context on one daemon shares a single fingerprint, so all attached leaves look like one device.
 
 Verified behavior and resource numbers: [Shared CDP Browser Phase 0 Result 2026-07-29](<Shared CDP Browser Phase 0 Result 2026-07-29.md>).

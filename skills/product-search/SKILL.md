@@ -36,6 +36,8 @@ When agents disagree, the primary document wins (a certificate has refuted a con
 
 ## Techniques
 
+Escalate by cost, not by habit: if web search can get the info, that's preferable over browser use, and a structured API or MCP is better still. Drive a browser only for what the cheaper sources genuinely cannot answer — a live cart quote, a stock figure that exists nowhere but the page, a form that has to be filled. A browser leaf costs far more tokens and wall-clock than a search, and it is the only path that bot walls can block.
+
 Choose per task; none are mandatory:
 
 - **Live product/retailer pages** — the primary source for stock and price claims, and capability claims on anything without a datasheet culture.
@@ -62,7 +64,7 @@ Only when asked to compare pricing across vendors — typically a second pass af
      - **pi-for-claude Terra** — equal accuracy, cheapest fresh tokens, slowest on deep checkouts. Only works launched *outside* the Claude sandbox (`nohup pi-for-claude run … &`) — the sandboxed-Monitor launch breaks its socket dir and DNS. It may raise consult questions mid-run even when told not to: watch the session's `.question.md` files and answer promptly or the run stalls up to 10 min.
      - **Sonnet browser-leaf** — most thorough, best at driving carts and shipping calculators for live quotes, ~2× codex tokens. Leaves attach as isolated contexts to the shared headless browser daemon: start it before the fan-out (`~/.agents/playwright-mcp/shared-browser.sh start`); leaves fail immediately with `ECONNREFUSED :9377` when it's down. Still one leaf per numbered type (`browser-leaf` … `browser-leaf-5`) — Claude Code multiplexes concurrent same-type subagents onto one MCP session, which would put them in one shared context (tested 2026-07-28); context isolation through the shared browser verified at 4 concurrent (2026-07-29). Never route leaves at the session-level Playwright plugin (one shared *headed* Chrome).
      - Sandboxed Bash has no network — the shared browser daemon and any other headless browser must launch unsandboxed. Leaves with cwd in a repo drop `.playwright-mcp/` artifacts there — gitignore or trash them. Batch drivers on macOS: bash 3.2 has no `wait -n`; throttle with `sleep` polling or the loop busy-spins.
-   - Bot walls: per-vendor status is cached in `vendors.md` — as of 2026-07, 13 of 29 tracked sites (the Akamai / DataDome / Cloudflare majors) block local headless browsers outright, several even for plain fetches. For walled vendors use API/MCP data or published-policy text; browser leaves are for the unwalled tail. Report a bot-wall as "blocked", not as a failed vendor.
+   - Bot walls: per-vendor status is cached in `vendors.md`. Which wall a vendor runs decides whether a leaf can reach it at all — **DataDome blocks every headless engine tried**, while **Akamai is beatable headless** by Firefox or a fingerprint-patched Chromium. `~/.agents/playwright-mcp/Bot Walls and Browser Engines.md` has the engine-per-wall table and the leaf configs. For DataDome vendors use API/MCP data or published-policy text. Report a bot-wall as "blocked", not as a failed vendor.
    - Dummy ship-to for estimates: Jordan Smith, Pacific Prototyping LLC, 747 Howard St, San Francisco, CA 94103, (415) 555-0132. Rate estimation only: never place an order, create an account, or enter payment details.
 4. Neither the orchestrator nor the search subagent uses the browser themselves — it's very token-heavy; it belongs in the per-vendor leaf agents.
 
