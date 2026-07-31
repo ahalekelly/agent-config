@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code status line:
-# directory | branch(*dirty) +added/-removed | tokens - last-request time | $cost | 5h usage % (reset time) | model
+# directory | branch(*dirty) +added/-removed | tokens - last-request time | $cost | 5h usage % (reset time) | profile | model
 
 input=$(cat)
 
@@ -66,7 +66,12 @@ if [ -n "$usage" ]; then
   usage_part="5h: $(printf '%.0f' "$usage")%${reset}"
 fi
 
-parts=("$base" "$git_part" "$tokens_part" "$cost_part" "$usage_part" "$model")
+# The claude/claudew wrappers pick the profile via CLAUDE_CONFIG_DIR; ~/.claude
+# is the default when unset.
+profile="personal"
+[[ "${CLAUDE_CONFIG_DIR:-}" == *claude-work* ]] && profile="work"
+
+parts=("$base" "$git_part" "$tokens_part" "$cost_part" "$usage_part" "$profile" "$model")
 line=""
 for part in "${parts[@]}"; do
   [ -z "$part" ] && continue
