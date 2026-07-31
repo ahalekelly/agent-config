@@ -20,6 +20,10 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 
 `home/.codex/config.toml` runs through a clean filter (`clean-codex-config.py`, wired in `.gitattributes`) that strips the machine-generated `[projects]` trust entries and marketplace timestamps Codex appends — activity history that must not be committed. The filter driver is per-clone git config; the setup lines below configure it and mark it required, so a clone missing the filter fails loudly instead of staging the file verbatim.
 
+## History
+
+The repo's history starts at the bare-repo-to-normal-repo conversion (2026-07-11). The full pre-conversion history is archived in the bare repo `~/Git/agent-config.git.before-normal-repo-20260711-233133` (local only, not pushed anywhere): `main` is the final pre-conversion state, and refs `bak1`/`bak2` are earlier stages of that day's history rewrite — `bak1` holds the only copy of `.agents/advisor-protocol.md`, the advisor-tool protocol extracted verbatim from the Claude Code binary.
+
 ## Setup on a new machine
 
 ```sh
