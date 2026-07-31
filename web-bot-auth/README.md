@@ -33,6 +33,8 @@ npx wrangler deploy
 node verify-directory.mjs
 ```
 
-The final command fetches the live HTTPS directory, verifies its content digest, JWK thumbprint, signature lifetime, cache lifetime, and Ed25519 response signature, then prints only non-secret validation metadata. Provision the secret before deploying code that requires it. Repeat the secret command only when intentionally replacing the Worker binding.
+`wrangler secret put` creates and immediately deploys a Worker version. For the first signed-directory deployment, run it before `wrangler deploy`: the unsigned Worker ignores the new binding, and Wrangler can then satisfy `[secrets].required` when deploying the signer. This is not a key-rotation procedure; changing the secret alone while signer code is live will fail its public-key match.
+
+The final command fetches the live HTTPS directory, verifies its content digest, JWK thumbprint, signature lifetime, cache lifetime, and Ed25519 response signature, then prints only non-secret validation metadata.
 
 Cloudflare verified-bot enrollment requires a valid signed directory and is performed after the live verifier succeeds. Shopify documents its signed Web Bot Auth rate tier as independent of Cloudflare enrollment. Directory validation neither proves nor changes Shopify's tier assignment.

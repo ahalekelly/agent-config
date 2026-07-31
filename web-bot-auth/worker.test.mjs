@@ -144,3 +144,9 @@ test("the committed directory contains no private key material", async () => {
     directory.keys[0].kid,
   );
 });
+
+test("Wrangler requires the private-key secret without storing its value", async () => {
+  const config = await readFile(new URL("./wrangler.toml", import.meta.url), "utf8");
+  assert.match(config, /\[secrets\]\nrequired = \["DIRECTORY_PRIVATE_KEY_PEM"\]/);
+  assert.doesNotMatch(config, /DIRECTORY_PRIVATE_KEY_PEM\s*=/);
+});
