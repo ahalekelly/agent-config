@@ -1,3 +1,6 @@
 [submodule "pi-for-claude"]
 	path = pi-for-claude
 	url = https://github.com/ahalekelly/pi-for-claude.git
+[submodule "browser-leaf"]
+	path = browser-leaf
+	url = https://github.com/ahalekelly/browser-leaf.git

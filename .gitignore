@@ -12,4 +12,3 @@ node_modules/
 .cc-writes/
 .agents/
 .playwright-mcp/
-/playwright-mcp/shared-browser-profile/
