@@ -22,7 +22,9 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 
 ## History
 
-The repo's history starts at the bare-repo-to-normal-repo conversion (2026-07-11). The full pre-conversion history is archived in the bare repo `~/Git/agent-config.git.before-normal-repo-20260711-233133` (local only, not pushed anywhere): `main` is the final pre-conversion state, and refs `bak1`/`bak2` are earlier stages of that day's history rewrite — `bak1` holds the only copy of `.agents/advisor-protocol.md`, the advisor-tool protocol extracted verbatim from the Claude Code binary.
+The repo's history is continuous through the bare-repo-to-normal-repo conversion (2026-07-11, `b8c99d9a`); commits before it use the old dotfile layout (`.claude/…`, `.codex/…`, `.agents/pi-run/…`), so `git log --follow` doesn't track files across the conversion. The exception is `pi-for-claude/`, which was split into its own repository at the conversion: the submodule's history starts there, and its earlier history is the `.agents/pi-run/` commits here.
+
+The bare repo `~/Git/agent-config.git.before-normal-repo-20260711-233133` (local only, never pushed) archives the history-rewrite work from the day of the conversion: refs `bak1`/`bak2` are intermediate rewrite stages, plus reflogs and a dangling pre-rewrite tip. `bak1` holds the only copy of `.agents/advisor-protocol.md`, the advisor-tool protocol extracted verbatim from the Claude Code binary.
 
 ## Setup on a new machine
 
