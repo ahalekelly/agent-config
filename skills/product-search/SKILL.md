@@ -36,7 +36,7 @@ When agents disagree, the primary document wins (a certificate has refuted a con
 
 ## Techniques
 
-Escalate by cost, not by habit: if web search can get the info, that's preferable over browser use, and a structured API or MCP is better still. Drive a browser only for what the cheaper sources genuinely cannot answer — a live cart quote, a stock figure that exists nowhere but the page, a form that has to be filled. A browser leaf costs far more tokens and wall-clock than a search, and it is the only path that bot walls can block.
+Escalate by cost, not by habit: if web search can get the info, that's preferable over browser use, and a structured API or MCP is better still. Web search returns the page text, so most of what a listing states — price, stock, specs — comes back without a browser at all. The dividing line is reading versus interacting: drive a browser only when the task needs interaction, such as a cart taken to a live shipping quote, a configurator clicked through, or a form that has to be filled. A browser leaf costs far more tokens and wall-clock than a search, and it is the only path that bot walls can block.
 
 Choose per task; none are mandatory:
 
