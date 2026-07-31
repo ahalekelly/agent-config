@@ -2,11 +2,7 @@ User Instructions:
 
 ## Config Layout
 
-`~/.agents` is a git repo holding shared configuration for all coding agents. `~/.claude` and `~/.codex` are symlinks into it (`~/.agents/home/.claude` and `~/.agents/home/.codex`), so each agent's config is version-controlled in one place.
-
-- **AGENTS.md** (this file) holds the shared instructions. Codex reads it through the `~/.codex/AGENTS.md` symlink, Pi reads it directly, and Claude includes it via the `@~/.agents/AGENTS.md` reference at the top of CLAUDE.md.
-- **CLAUDE.md**'s real file is `~/.agents/home/.claude/CLAUDE.md` and only adds Claude-specific sections on top of this file. The work profile shares it: `~/.claude-work` is another symlink into the repo, and its `CLAUDE.md` is a symlink to the `.claude` copy.
-- **Skills** are shared: `~/.claude/skills` is a symlink to `~/.agents/skills`, so a skill saved there is available in every project. Codex has its own separate `~/.codex/skills` directory. When writing skill files, use the real `~/.agents/skills` path — some tools refuse to write through the symlink.
+`~/.agents` is a git repo holding shared configuration for all coding agents; `~/.claude`, `~/.claude-work`, and `~/.codex` are symlinks into its `home/` directory. AGENTS.md (this file) holds the shared instructions; `home/.claude/CLAUDE.md` adds Claude-specific sections on top. Skills are shared across projects via the `~/.claude/skills` symlink — when writing skill files, use the real `~/.agents/skills` path, some tools refuse to write through the symlink.
 
 ## Code Style
 
