@@ -1,0 +1,34 @@
+# Preferred Vendors
+
+Tier is a soft ranking bias — a tiebreaker among comparable candidates, never a filter: the best product from any vendor still appears in the report, with its tier noted. Tiers: **preferred** (buy from these when possible) · **decent** (fine, no edge) · **last-resort** (only when nothing better exists). Unlisted vendors are unrated and judged on their own merits. Cached facts are dated snapshots — re-verify when stale or load-bearing.
+
+When no stocked part fits, custom fabrication is in scope as an option (e.g. CNC machining in China often beats Misumi on price and lead time) — surface it via the manufacturer-RFQ technique; specific fab services aren't tiered here.
+
+| Vendor | Categories | Tier | Why | Trust | Cached facts |
+|---|---|---|---|---|---|
+| Digi-Key | electronics | preferred | fast, reliable stock data | listings reliable | MCP for stock/price/parametrics — MCP credentials expired, all calls 401 (2026-07-30); Cloudflare bot-wall; no free shipping: $4.99 USPS Ground Advantage / $8.49 FedEx-UPS Ground / $13.99 Priority or 2-day / $26.99 overnight PM (2026-07) |
+| McMaster-Carr | mechanical/industrial | preferred | same-day ship, authoritative specs + CAD | listings authoritative | MCP available; no bot-wall; shows shipping before ordering — per-shipment weight pricing, typically ~$10 for small items (2026-07) |
+| Bolt Depot | fasteners | preferred | cheap hardware | listings reliable | Cloudflare bot-wall; live UPS rates at checkout, no published flat rate or free threshold (2026-07) |
+| Amazon | consumer goods, generic parts | preferred | free 1–2 day shipping, low prices | verify specs elsewhere — listings unreliable, commingled inventory | no browser bot-wall, but a browser is required: WebFetch 500s or returns a body-less shell and web search yields only the listing title, so price, stock, seller and Prime status come from none of them (2026-07). Free shipping ≥$35 non-Prime, Prime free (2026-07) |
+| Automation Direct | industrial automation, pneumatics, sensors | preferred | very good pricing | listings reliable | no bot-wall; free 2-day shipping over $49, $10 flat under (2026-07) |
+| eBay | used/surplus, cheap goods | preferred | another cheap-stuff channel alongside Amazon/AliExpress | verify everything | partial bot-check — homepage/help challenged, search fine; shipping seller-set (2026-07) |
+| DERNORD | tri-clamp/sanitary fittings | preferred | preferred tri-clamp brand; sold via Amazon | Amazon listing caveats apply | — |
+| Glacier Tanks | tri-clamp/sanitary fittings | decent | tri-clamp fittings vendor | listings reliable | Cloudflare bot-wall; free ground ≥$500 per secondary sources (2026-07) |
+| Mouser | electronics | decent | only when cheaper than Digi-Key or Digi-Key is out of stock | listings reliable | no MCP; Akamai+DataDome bot-wall; carrier pass-through rates, free threshold $50–100 (sources conflict) (2026-07) |
+| Master Electronics | electronics (long-tail stock) | decent | hard-to-find and long-tail parts | listings reliable | no MCP; Akamai bot-wall; $8.99 UPS Ground flat under 15 lb (2026-07) |
+| Arrow | electronics | decent | price check like Mouser; occasional free shipping, sometimes best price on ICs | listings reliable | no MCP; hard bot-wall (TLS/HTTP2 fingerprint reset); free FedEx Ground ≥$100 (2026-07) |
+| SparkFun | hobbyist modules | decent | documented modules at premium prices | listings authoritative | no bot-wall; free ≥$100 logged-in under 10 lb; $2 handling fee on all orders (2026-07) |
+| Pololu | motors, drivers, robotics electronics | decent | excellent first-party docs and test data; premium prices | listings authoritative | no bot-wall; free ≥$100 Pololu-brand ($75 add-on-eligible); ~$6.95 USPS Ground Advantage for 1 lb (live quote 2026-07) |
+| Mettle Air | pneumatics | decent | cheaper than McMaster when you can afford to wait; more reputable than Amazon | verify key specs | no bot-wall; rates login-gated at checkout; import/handling surcharge broken out at cart (2026-07) |
+| Omega | sensors, instrumentation | decent | authoritative specs, premium pricing | listings authoritative | Akamai bot-wall; flat rates: $10 UPS Ground ($8 for ≤$25 orders), 2-day $22 (2026-07) |
+| AliExpress | prototype-grade imports (mostly electronics, screws) | decent | cheap; some items only exist from no-name Chinese factories | verify everything | no API; no bot-wall on aliexpress.us; ~10–12 day shipping (2026-07) |
+| Alibaba | bulk/custom from manufacturers | decent | real RFQ + purchase channel for volume/custom parts | verify everything — listed MOQs and prices unreliable | real minimum order ~a couple hundred dollars; search/product pages CAPTCHA to headless browsers, homepage fine (2026-07) |
+| Zoro / Grainger | MRO/industrial | decent | Zoro is largely Grainger stock at lower prices with frequent coupons — always check Zoro pricing before recommending a Grainger part | listings reliable | both bot-walled (DataDome / Akamai); Zoro free ≥$50 signed-in, $5 flat under; Grainger threshold unclear (2026-07) |
+| GoBilda / ServoCity | robotics mechanicals | decent | robotics-mechanical ecosystem, premium vs raw imports; same parent company | listings reliable | no bot-wall; no free tier; ~$8 USPS Ground Advantage, $11.99 flat rate (live quotes 2026-07) |
+| StepperOnline (OMC) | steppers, servos | decent | cheap-but-documented motors | verify key specs | Cloudflare bot-wall; no free threshold; US warehouse 4–7 day, China orders express-only with duties pre-included (2026-07) |
+| Lowes / Home Depot | hardware-store goods | decent | on the commute — bulky items that would be expensive to ship; also online orders | listings reliable | Lowes fully bot-walled (Akamai), Home Depot homepage-only partial; both free ≥$45 ($5.99 / $8.99 under) (2026-07) |
+| Target | consumer goods | decent | nearby big-box, easy pickup | listings reliable | no bot-wall; free 2-day ≥$35, $5.99 under (2026-07) |
+| JLCMC | mechanical parts | decent | cheap parts but expensive shipping | listings reliable | no bot-wall; no free tier; ~$11 slow line (8–13 day) for 1 lb, express $26+ (2026-07) |
+| LCSC | electronics | last-resort | slower and more expensive shipping than AliExpress | listings reliable | Akamai bot-wall; free shipping only as monthly promos (~$499); dynamic checkout rates (2026-07) |
+| Adafruit | hobbyist modules | last-resort | pricing and shipping cost; good docs remain the draw | listings authoritative | no bot-wall; no domestic free threshold; ~$8–9 USPS Ground Advantage for 1 lb (2026-07) |
+| Misumi | configurable precision mechanical | last-resort | long lead times and pricing; custom precision parts often better CNC-machined in China | listings authoritative | Akamai bot-wall; per-order freight quotes, can be disproportionate on small orders (2026-07) |
