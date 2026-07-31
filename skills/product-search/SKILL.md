@@ -36,7 +36,12 @@ When agents disagree, the primary document wins (a certificate has refuted a con
 
 ## Techniques
 
-Escalate by cost, not by habit: if web search can get the info, that's preferable over browser use, and a structured API or MCP is better still. Web search returns the page text, so most of what a listing states — price, stock, specs — comes back without a browser at all. The dividing line is reading versus interacting: drive a browser only when the task needs interaction, such as a cart taken to a live shipping quote, a configurator clicked through, or a form that has to be filled. A browser leaf costs far more tokens and wall-clock than a search, and it is the only path that bot walls can block.
+Work down this ladder, and stop at the first rung that answers the question:
+
+1. **A distributor MCP** — structured stock, price, and parametric data straight from the vendor, no parsing and no wall to get past.
+2. **A vendor API**, where `vendors.md` records one that works. Its cached facts are the authority on which vendors have an MCP or API at all and whether it is currently usable — a listed MCP with dead credentials is not a path.
+3. **Web search** — second tier. It returns the page text, so most of what a listing states, including price, stock, and specs, comes back without a browser. Weaker than the first two because it is unstructured and can be stale.
+4. **A browser leaf** — last. The dividing line is reading versus interacting: reach for a browser only when the task needs interaction, such as a cart taken to a live shipping quote, a configurator clicked through, or a form that has to be filled. It costs far more tokens and wall-clock than a search, and it is the only path that bot walls can block.
 
 Choose per task; none are mandatory:
 
