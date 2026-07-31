@@ -50,7 +50,7 @@ When creating Python scripts, always use `uv run` and put PEP 723 headers at the
 
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
-A shared headless browser daemon serves Playwright MCP instances over CDP port 9377. Before attaching anything to it, read `~/.agents/playwright-mcp/README.md` for the attach recipe and resource rules (2-tab cap, stop after fan-outs).
+A shared headless browser daemon serves Playwright MCP instances over CDP port 9377. It lives in the `browser-leaf` submodule — before attaching anything to it, read `~/.agents/browser-leaf/README.md` for the attach recipe and resource rules (2-tab cap, stop after fan-outs). The submodule is a public repo, so keep private notes about it in `~/.agents/browser-leaf-reports/` rather than inside it.
 
 Typescript and Rust are also nice languages.
 

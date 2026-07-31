@@ -10,7 +10,7 @@ Scribd renders scanned documents as page images, but each page carries a hidden,
 ## Procedure
 
 1. **Find a Scribd copy**: search `site:scribd.com "<document title or designation>"`. User-uploaded copies of standards and out-of-print documents are common.
-2. **Drive a real browser**: use a browser leaf attached to the shared headless daemon (`~/.agents/playwright-mcp/shared-browser.sh start` first; see the background-browser-automation setup) or any Playwright session. Scribd works logged-out for most documents.
+2. **Drive a real browser**: use a browser leaf attached to the shared headless daemon (`~/.agents/browser-leaf/shared-browser.sh start` first; see the background-browser-automation setup) or any Playwright session. Scribd works logged-out for most documents.
 3. **Scroll-capture every page**: each page lives in `#outer_page_N` (N = 1…page count) containing a `.text_layer` element that populates only when near the viewport. Loop over N: `scrollIntoView` the page container, wait for its `.text_layer` to have non-trivial `textContent`, capture it, move on. ~100–200 ms per page is usually enough; re-poll rather than fixed-sleep on slow pages.
 4. **Reassemble and save**: concatenate in page order with page-break markers to a `.txt` file. Expect OCR-era artifacts (ligature damage, column interleaving, stray watermark texture strings).
 5. **Validate before trusting**: the text layer is OCR output of a scan. Cross-check the passages that matter against independently sourced quotes (regulator guidance, catalogues, other previews) before citing, and record which **edition** the copy is — user uploads are often superseded editions with different clause numbering.

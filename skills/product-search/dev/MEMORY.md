@@ -99,14 +99,14 @@ So the answer to "workflow-changing or niche for the tracked head?" is: **niche 
 
 ## Driving tooling — how to actually run these
 
-- **Playwright MCP (`@playwright/mcp` v0.0.78 in `~/.agents/playwright-mcp`)** supports `--browser firefox|chrome|webkit|msedge` + `--headless`. **Firefox works, but only in *launched* mode.** The current leaf setup attaches to a shared headless **Chromium** over CDP (`shared-browser.sh` + `--cdp-endpoint`), and **CDP is Chromium-only** — Firefox can't be driven over CDP. To use Firefox, a leaf must launch its own Firefox (`--browser firefox --headless --isolated`), dropping the shared-Chromium daemon for that path (functionally fine; leaves are isolated anyway).
+- **Playwright MCP (`@playwright/mcp` v0.0.78 in `~/.agents/browser-leaf`)** supports `--browser firefox|chrome|webkit|msedge` + `--headless`. **Firefox works, but only in *launched* mode.** The current leaf setup attaches to a shared headless **Chromium** over CDP (`shared-browser.sh` + `--cdp-endpoint`), and **CDP is Chromium-only** — Firefox can't be driven over CDP. To use Firefox, a leaf must launch its own Firefox (`--browser firefox --headless --isolated`), dropping the shared-Chromium daemon for that path (functionally fine; leaves are isolated anyway).
 - **camoufox / cloakbrowser are not `@playwright/mcp`-native.** `--browser` doesn't accept them. `--executable-path` to the camoufox binary gets the patched binary but not camoufox's fingerprint-injection launcher (its actual stealth) → hobbled. Use their own launchers or a dedicated MCP server.
 - **Relevant stealth MCP servers** (if driving via MCP rather than raw scripts): `stealth-browser-mcp` (vibheksoni — nodriver + CDP, ~97 tools, standalone page-driver); AdsPower LocalAPI MCP (official — profile manager that returns a CDP endpoint you attach Playwright to, not a page-driver); `patchright-mcp-lite` (drop-in patched Playwright).
 - **Background computer-use (the DataDome route):** Codex Computer Use on macOS (April 2026) and the open-source **`cua-driver` (trycua/cua)** drive a real headed app *behind* the current window with no focus steal / no cursor move / no Space switch — via SkyLight `SLEventPostToPid` + focus-without-raise. This is the macOS equivalent of "headed but invisible" (no native Xvfb on macOS). Costs: GUI/vision-level driving (slower, token-heavy, less deterministic than DOM/CDP), needs Accessibility + Screen Recording permissions, must run **unsandboxed** (desktop access, not the Claude/Codex sandbox).
 
 ## Reproduction & environment
 
-- **Plain Playwright Firefox:** installed via `~/.agents/playwright-mcp/node_modules/.bin/playwright install firefox` (node, `firefox-1534`) and `python -m playwright install firefox` (python-playwright, `firefox-1532`) in `~/Library/Caches/ms-playwright`. Drive with `firefox.launch({headless:true})`.
+- **Plain Playwright Firefox:** installed via `~/.agents/browser-leaf/node_modules/.bin/playwright install firefox` (node, `firefox-1534`) and `python -m playwright install firefox` (python-playwright, `firefox-1532`) in `~/Library/Caches/ms-playwright`. Drive with `firefox.launch({headless:true})`.
 - **camoufox:** `uv run --with camoufox python -m camoufox fetch` (binary in `~/Library/Caches/camoufox`), then `from camoufox.sync_api import Camoufox; Camoufox(headless=True)`.
 - **tf-playwright-stealth:** `uv run --with tf-playwright-stealth --with playwright …`; `from playwright_stealth import stealth_sync; stealth_sync(page)` per page (older API; package also exposes `Stealth`).
 - **cloakbrowser:** `pip install cloakbrowser` (or `uv run --with cloakbrowser`), runs **free tier, no license**; binary auto-downloads to `~/.cloakbrowser` (Chromium 145). API: `cloakbrowser.launch(headless=True)` → Playwright Browser.
@@ -133,8 +133,8 @@ Neither is usable as a data source: ACP governs checkout, while product discover
 3. `adspower_headless` is the last untested benchmark DataDome-passer (commercial) — low priority given cloakbrowser failed.
 4. Doc-state nit: the plot's "live-tested" rings cover only 2 of the 4 engines later tested (Firefox, camoufox); tf-stealth and cloakbrowser were tested afterward and not ring-annotated.
 
-## Shared pieces live in `~/.agents/playwright-mcp/`
+## Shared pieces live in the `browser-leaf` submodule
 
-The engine-vs-wall decision table, the launched-mode Firefox leaf config, the wall-detection markers, and the MCP driving constraints are general browser-tooling knowledge and live in [Bot Walls and Browser Engines](~/.agents/playwright-mcp/Bot%20Walls%20and%20Browser%20Engines.md). This folder keeps the vendor-specific wall map, the shipping-quote strategy, and the raw benchmark data. Update both when a finding changes which one it belongs to.
+The engine-vs-wall decision table, the launched-mode Firefox leaf config, the wall-detection markers, and the MCP driving constraints are general browser-tooling knowledge and live in [bot-detection.md](~/.agents/browser-leaf/docs/bot-detection.md); `browser-leaf` is a public repo, so anything vendor-specific or private stays out of it. This folder keeps the vendor-specific wall map, the shipping-quote strategy, and the raw benchmark data. Update both when a finding changes which one it belongs to.
 
 Still unpromoted: a reusable **wall-detection helper script** (the markers are documented, the script was never written).
