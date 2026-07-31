@@ -6,13 +6,15 @@ The port is 9377 rather than CDP's default 9222 so neither side collides with ot
 
 ```sh
 ~/.agents/playwright-mcp/shared-browser.sh start   # idempotent — exit 0 if our daemon is already up; safe to fire blind
-~/.agents/playwright-mcp/shared-browser.sh status  # pid + context count + open pages
-~/.agents/playwright-mcp/shared-browser.sh stop    # idempotent — refuses to kill a browser it didn't start
+~/.agents/playwright-mcp/shared-browser.sh status  # pid + watchdog + context count + open pages
+~/.agents/playwright-mcp/shared-browser.sh stop    # idempotent — refuses to kill a browser it didn't start; rarely needed, the watchdog stops idle daemons
 ```
 
 The script must run outside the sandbox (Chrome can't write its crashpad/profile files inside it, and sandboxed Bash has no network anyway). It resolves the newest Chrome for Testing build under `~/Library/Caches/ms-playwright` and logs to `shared-browser.log` beside itself. The daemon launches under `taskpolicy -c utility`, so every Chrome process is QoS-clamped below the user's foreground apps.
 
-Resource rules for anything that attaches: at most 2 tabs open per context, closed as soon as their content is extracted (each open tab holds a renderer process and hundreds of MB — a 14-tab session once reached ~6 GB RSS and froze the machine), and the orchestrator stops the daemon when a fan-out session ends rather than leaving it idle. The Claude leaf defs carry the tab rule; a codex exec leaf gets it only if the launch prompt includes it.
+Resource rules for anything that attaches: at most 2 tabs open per context, closed as soon as their content is extracted (each open tab holds a renderer process and hundreds of MB — a 14-tab session once reached ~6 GB RSS and froze the machine). The Claude leaf defs carry the tab rule; a codex exec leaf gets it only if the launch prompt includes it.
+
+Idle auto-stop: `start` also spawns a watchdog (an internal `watchdog` verb, one per browser pid) that counts established connections to the CDP port every 30s (via `lsof`, excluding the browser itself) and kills the browser after 5 minutes at zero. A leaf holds its CDP connection for exactly the lifetime of its MCP process, so zero clients means no leaf from any session is attached; connections are the signal rather than contexts or pages because a leaf between tabs has neither (and a pageless context created by another CDP connection is invisible to playwright's `contexts()`). Orchestrators should not run `stop` after a fan-out: the daemon is machine-wide, another session's leaves may still be attached, and shutdown is the watchdog's job. Known gap: a wedged leaf whose MCP process never exits keeps its connection and defers auto-stop indefinitely; `status` shows the attached-client count and open pages.
 
 Ownership is derived from the port, not a pidfile: the listener on 9377 whose command line names the script's profile dir is ours. That makes `start` safe under concurrent invocation (the race loser's Chrome dies on the profile lock and the loser reports the winner's daemon), lets `stop` find orphaned daemons, and makes any *foreign* process on 9377 — e.g. a headed Chrome launched with `--remote-debugging-port` — a hard error on every verb: `start` refuses to share it (leaves must never attach to a visible browser) and `stop` refuses to kill it.
 

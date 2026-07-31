@@ -11,12 +11,19 @@
 # the port is always fatal, and `stop` refuses to kill it.
 # No auto-restart by design: if the browser dies, attached MCP calls fail
 # loudly and the operator runs `shared-browser.sh start` again.
+# Auto-stop: `start` also spawns a watchdog that kills the browser after
+# 5 minutes with no attached CDP clients, so an idle daemon never outlives
+# its fan-out. A leaf holds its CDP connection for exactly the lifetime of
+# its MCP process, so zero established connections means no leaf from any
+# session is attached.
 set -euo pipefail
 
 PORT=9377
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PROFILE="$DIR/shared-browser-profile"
 LOG="$DIR/shared-browser.log"
+IDLE_POLL=30  # seconds between watchdog polls
+IDLE_POLLS=10 # consecutive idle polls before auto-stop (10 × 30s = 5 min)
 
 alive() { curl -s --max-time 2 "http://localhost:$PORT/json/version" > /dev/null; }
 
@@ -32,10 +39,46 @@ owner_pid() {
   done
 }
 
+# Number of distinct processes holding an established connection to the CDP
+# port, excluding the browser ($1) itself. 0 means no leaf is attached.
+# Counting connections rather than contexts or pages is deliberate: a leaf
+# between tabs has no pages, and a pageless context created by another CDP
+# connection is invisible to playwright's contexts() — but the leaf's CDP
+# connection itself is always there.
+client_count() {
+  lsof -t -i ":$PORT" -sTCP:ESTABLISHED 2> /dev/null | sort -u | grep -cvx "$1" || true
+}
+
+# Internal verb, spawned detached by `start`: stop the browser after
+# IDLE_POLLS consecutive polls with no attached clients. Pid-bound — it
+# exits the moment its browser is no longer the owned listener, so a stale
+# watchdog never touches a newer browser.
+watchdog() {
+  local browser_pid="$1" idle=0
+  echo "$(date '+%F %T') watchdog: watching browser pid $browser_pid"
+  while sleep "$IDLE_POLL"; do
+    [ "$(owner_pid)" = "$browser_pid" ] || exit 0
+    if [ "$(client_count "$browser_pid")" -eq 0 ]; then idle=$((idle + 1)); else idle=0; fi
+    if [ "$idle" -ge "$IDLE_POLLS" ]; then
+      echo "$(date '+%F %T') watchdog: no attached clients for $((IDLE_POLL * IDLE_POLLS))s, stopping browser pid $browser_pid"
+      kill "$browser_pid" 2> /dev/null || true
+      exit 0
+    fi
+  done
+}
+
+# One watchdog per browser pid; the pid in the command line both prevents
+# duplicates and lets `status` find it.
+spawn_watchdog() {
+  if ! pgrep -f "shared-browser.sh watchdog $1" > /dev/null 2>&1; then
+    nohup "$DIR/shared-browser.sh" watchdog "$1" >> "$LOG" 2>&1 &
+  fi
+}
+
 start() {
   if alive; then
     OWNER="$(owner_pid)"
-    [ -n "$OWNER" ] && { echo "shared browser already up: pid $OWNER, CDP http://localhost:$PORT"; exit 0; }
+    [ -n "$OWNER" ] && { spawn_watchdog "$OWNER"; echo "shared browser already up: pid $OWNER, CDP http://localhost:$PORT"; exit 0; }
     echo "ERROR: a foreign CDP browser is serving port $PORT — refusing to share it (see: lsof -i :$PORT)" >&2
     exit 1
   fi
@@ -56,7 +99,7 @@ start() {
       # (ours loses the profile lock and dies) — either way the daemon is up,
       # which is all `start` promises.
       OWNER="$(owner_pid)"
-      [ -n "$OWNER" ] && { echo "shared browser up: pid $OWNER, CDP http://localhost:$PORT"; exit 0; }
+      [ -n "$OWNER" ] && { spawn_watchdog "$OWNER"; echo "shared browser up: pid $OWNER, CDP http://localhost:$PORT"; exit 0; }
       echo "ERROR: lost port $PORT to a foreign CDP browser while starting (see: lsof -i :$PORT)" >&2
       exit 1
     fi
@@ -98,6 +141,15 @@ status() {
     exit 1
   fi
   echo "pid: $OWNER"
+  # head -1: the watchdog's own command substitutions fork subshells that
+  # briefly match the same pattern.
+  WD="$(pgrep -f "shared-browser.sh watchdog $OWNER" | head -1 || true)"
+  if [ -n "$WD" ]; then
+    echo "watchdog: pid $WD (auto-stop after $((IDLE_POLL * IDLE_POLLS))s with no attached clients)"
+  else
+    echo "watchdog: not running — browser will not auto-stop"
+  fi
+  echo "attached clients: $(client_count "$OWNER")"
   node -e "
     require('$DIR/node_modules/playwright-core').chromium.connectOverCDP('http://localhost:$PORT', { timeout: 5000 }).then(async (b) => {
       const cs = b.contexts();
@@ -113,5 +165,6 @@ case "${1:-}" in
   start) start ;;
   stop) stop ;;
   status) status ;;
+  watchdog) watchdog "${2:?watchdog needs the browser pid}" ;; # internal, spawned by start
   *) echo "usage: $0 start|stop|status" >&2; exit 2 ;;
 esac
