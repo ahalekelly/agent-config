@@ -35,7 +35,7 @@ async function responseFrom(worker, privateKeyPem) {
 test("signs a directory response that an independent verifier accepts", async () => {
   const { directory, privateKeyPem } = fixture();
   const response = await responseFrom(createWorker(directory), privateKeyPem);
-  const result = await verifyDirectoryResponse(response, TARGET, NOW);
+  const result = await verifyDirectoryResponse(response, NOW);
 
   assert.equal(result.keyId, directory.keys[0].kid);
   assert.equal(result.created, NOW);
@@ -50,8 +50,35 @@ test("covers the directory body with Content-Digest", async () => {
   const body = `${await response.text()} `;
 
   await assert.rejects(
-    verifyDirectoryResponse(new Response(body, { headers }), TARGET, NOW),
+    verifyDirectoryResponse(new Response(body, { headers }), NOW),
     /Content-Digest does not match/,
+  );
+});
+
+test("rejects a signature lifetime outside the production profile", async () => {
+  const { directory, privateKeyPem } = fixture();
+  const response = await responseFrom(createWorker(directory), privateKeyPem);
+  const headers = new Headers(response.headers);
+  headers.set(
+    "signature-input",
+    headers.get("signature-input").replace(`expires=${NOW + 300}`, `expires=${NOW + 301}`),
+  );
+
+  await assert.rejects(
+    verifyDirectoryResponse(new Response(await response.arrayBuffer(), { headers }), NOW),
+    /signature lifetime must be exactly 300 seconds/,
+  );
+});
+
+test("rejects a cache lifetime outside the production profile", async () => {
+  const { directory, privateKeyPem } = fixture();
+  const response = await responseFrom(createWorker(directory), privateKeyPem);
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", headers.get("cache-control").replace("max-age=60", "max-age=61"));
+
+  await assert.rejects(
+    verifyDirectoryResponse(new Response(await response.arrayBuffer(), { headers }), NOW),
+    /cache max-age must be exactly 60 seconds/,
   );
 });
 

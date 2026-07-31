@@ -35,4 +35,4 @@ node verify-directory.mjs
 
 The final command fetches the live HTTPS directory, verifies its content digest, JWK thumbprint, signature lifetime, cache lifetime, and Ed25519 response signature, then prints only non-secret validation metadata. Provision the secret before deploying code that requires it. Repeat the secret command only when intentionally replacing the Worker binding.
 
-Cloudflare verified-bot enrollment is a separate step performed after the live verifier succeeds. Shopify documents its signed Web Bot Auth rate tier as independent of Cloudflare enrollment, so this directory fix enables Cloudflare enrollment but does not itself prove or change Shopify's tier assignment.
+Cloudflare verified-bot enrollment requires a valid signed directory and is performed after the live verifier succeeds. Shopify documents its signed Web Bot Auth rate tier as independent of Cloudflare enrollment. Directory validation neither proves nor changes Shopify's tier assignment.
