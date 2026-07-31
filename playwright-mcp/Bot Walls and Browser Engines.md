@@ -81,16 +81,31 @@ Firefox builds are already installed under `~/Library/Caches/ms-playwright`. Ver
 
 ## Detecting the wall
 
-Load the homepage and inspect cookies and body. The MCP reports HTTP status in its navigate result, so a 403 is visible to a leaf without extra work.
+Load the homepage and inspect cookies, headers, body, and the **final URL**. The MCP reports HTTP status in its navigate result.
 
-| Wall | Markers |
-|---|---|
-| Akamai Bot Manager | cookies `_abck`, `bm_sz`, `ak_bmsc`, `bm_sv`, `bm_lso`; body contains `bazadebezolkohpepadr` or an `/akam/` script |
-| DataDome | cookie `datadome`; body contains `captcha-delivery` or `dd={` |
-| Cloudflare | cookies `__cf_bm`, `cf_clearance`, header `cf-ray` — often only CDN |
-| PerimeterX | cookies `_px*`, `pxcts` |
+**Never key a detector on "403 means blocked."** Most walls don't use it. AWS WAF's challenge is **202** with an often-empty body, which naive clients read as success; its CAPTCHA is **405**. Kasada's normal first challenge is **429**. Fastly's Next-Gen WAF blocks with **406**. Radware Bot Manager and Queue-it never return a non-2xx at all — they redirect to another host. Imperva sometimes serves its block page under a plain **200**. A short body with an empty title and a 200 status is a wall until proven otherwise; check the body, the final host, or a screenshot.
 
-A soft 200 challenge is possible, so a 200 alone doesn't prove the page is real — check the body or a screenshot when it matters.
+**Check the final host too.** Radware Bot Manager (`*.perfdrive.com`) and Queue-it (`*.queue-it.net`) are reached by redirect rather than by an inline block, so a 200 from an unexpected host is the whole signal.
+
+| Wall | Markers | Headless |
+|---|---|---|
+| Akamai Bot Manager | cookies `_abck`, `bm_sz`, `ak_bmsc`, `bm_sv`, `bm_lso`; body `bazadebezolkohpepadr` or an `/akam/` script. `Server: AkamaiGHost` is Kona Site Defender, a different product | beatable — see the table above |
+| DataDome | cookie `datadome`; body `captcha-delivery` or `dd={` | hard, no headless engine passes |
+| Cloudflare | cookies `__cf_bm`, `cf_clearance`, header `cf-ray` — often only CDN. Turnstile: `challenges.cloudflare.com/turnstile/v0/api.js`. Waiting Room: cookie `__cfwaitingroom` | usually passable |
+| PerimeterX / HUMAN | cookies `_px*`, `pxcts` | hard |
+| AWS WAF (Bot Control, Challenge, CAPTCHA) | cookie `aws-waf-token`, header `X-Aws-Waf-Token` cross-origin; response header `x-amzn-waf-action: challenge\|captcha`; **status 202 (challenge) or 405 (CAPTCHA)**; any script from `*.awswaf.com` (`challenge.js`, `captcha.js`); body `window.gokuProps`, `awsWafCookieDomainList`, `id="challenge-container"` | varies more than any other: Common level blocks on static signals like a `HeadlessChrome` UA with no JS at all, Targeted level fingerprints and is a genuine hard wall. Browserless solvers exist for the easier deployments |
+| Imperva / Incapsula | headers `X-Iinfo`, `X-CDN: Incapsula`; cookies `incap_ses*`, `visid_incap*`, `reese84` (bot protection), `___utmvc`; path `/_Incapsula_Resource`; body `Incapsula incident ID` | medium-hard; **block pages sometimes served as 200** |
+| Kasada | cookies `KP_UIDz`, `KP_UIDz-ssn`; headers `x-kpsdk-ct`, `x-kpsdk-cd`, `x-kpsdk-st`; script `ips.js` with sibling `/tl`, `/fp`, `/mfc` | hard — arguably the hardest here |
+| F5 Shape / Bot Defense | no fixed literal. Detect structurally: a cluster of same-prefix random-alnum headers on XHR and form POSTs, e.g. `x-<5-10 alnum>-a`, `-b`, `-c` | hard, and hard even to identify — its JS is a bytecode VM |
+| F5 BIG-IP ASM | cookie `TS[a-fA-F0-9]{6,8}`; `Server: big-ip`; body "the requested url was rejected" | easy-moderate |
+| Radware Bot Manager | **302 to `validate.perfdrive.com`**, query `ssk=support@shieldsquare.com` (constant, sufficient alone); title `Radware Captcha Page` | medium, but diverts to a 200 CAPTCHA page rather than blocking — silently ingested as success |
+| Queue-it | script `static.queue-it.net/script/queueclient.min.js`; cookie `QueueITAccepted-SDFrts345E-V3_*`; pre-queue `botdetect.min.js` | the queue is trivial; the pre-queue bot check flags headless directly |
+| Fastly Next-Gen WAF | **status 406** plus `X-Fastly-Request-ID` / `Server: Fastly` | easy-moderate, a rules WAF rather than a JS challenge |
+| Sucuri, Reblaze, Barracuda | `X-Sucuri-ID` / `X-Sucuri-Block`; cookie `rbzid`; cookie `BNI__BARRACUDA_LB_COOKIE` | easy |
+
+**Netacea leaves no client-side trace at all.** It is agentless and inspects traffic at the infrastructure level, so a protected site is indistinguishable from an unprotected one from the client. Absence of every marker above is not proof a site is unprotected.
+
+Note that `x-amzn-waf-action` and similar response headers are not readable from in-page `fetch()` — read them from the network layer (`response.headers()` in Playwright, a proxy, or a raw HTTP client).
 
 ## Running the engines directly
 
