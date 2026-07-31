@@ -1,5 +1,13 @@
 User Instructions:
 
+## Config Layout
+
+`~/.agents` is a git repo holding shared configuration for all coding agents. `~/.claude` and `~/.codex` are symlinks into it (`~/.agents/home/.claude` and `~/.agents/home/.codex`), so each agent's config is version-controlled in one place.
+
+- **AGENTS.md** (this file) holds the shared instructions. Codex reads it through the `~/.codex/AGENTS.md` symlink, Pi reads it directly, and Claude includes it via the `@~/.agents/AGENTS.md` reference at the top of CLAUDE.md.
+- **CLAUDE.md** is a regular file at `~/.claude/CLAUDE.md` (inside the repo via the `~/.claude` symlink) and only adds Claude-specific sections on top of this file.
+- **Skills** are shared: `~/.claude/skills` is a symlink to `~/.agents/skills`, so a skill saved there is available in every project. Codex has its own separate `~/.codex/skills` directory. When writing skill files, use the real `~/.agents/skills` path — some tools refuse to write through the symlink.
+
 ## Code Style
 
 Write extremely easy to consume code, it should be "skimmable" and easy to understand. Optimize for how easy the code is to read.
