@@ -1,3 +1,17 @@
 # Runtime state is ignored unless it is explicitly added with git add -f.
 *
 !/.gitignore
+
+# Tracked source folder: the whole playwright-mcp folder. Contents re-included,
+# runtime state re-excluded below.
+!/playwright-mcp/
+!/playwright-mcp/**
+
+# Never track dependencies, caches, browser profiles, logs, OS cruft, or
+# Claude Code runtime state, even inside the tracked folders above.
+node_modules/
+/playwright-mcp/.playwright-mcp/
+/playwright-mcp/shared-browser-profile/
+/playwright-mcp/shared-browser.log
+.cc-writes/
+.DS_Store
