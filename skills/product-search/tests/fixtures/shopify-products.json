@@ -1,0 +1,1 @@
+{"data":{"products":{"nodes":[{"title":"Valve","handle":"valve","onlineStoreUrl":"https://shop.example/products/valve","variants":{"nodes":[{"id":"gid://shopify/ProductVariant/123","title":"1 inch","sku":"V-1","barcode":"1001","availableForSale":true,"price":{"amount":"12.50","currencyCode":"USD"}}]}}]}}}

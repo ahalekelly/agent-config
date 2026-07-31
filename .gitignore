@@ -7,6 +7,8 @@ secrets.env
 web-bot-auth/private.pem
 node_modules/
 *.log
+__pycache__/
+*.py[cod]
 
 # Runtime state agents create when running inside this repo's folders.
 .claude/

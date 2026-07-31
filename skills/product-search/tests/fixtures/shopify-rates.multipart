@@ -1,0 +1,9 @@
+--graphql
+Content-Type: application/json
+
+{"data":{"cart":{"id":"gid://shopify/Cart/redacted"}},"hasNext":true}
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"path":["cart"],"data":{"deliveryGroups":{"nodes":[{"groupType":"ONE_TIME_PURCHASE","deliveryOptions":[{"handle":"ground","title":"Ground","code":"GROUND","description":"3-5 days","deliveryMethodType":"SHIPPING","estimatedCost":{"amount":"8.00","currencyCode":"USD"}},{"handle":"pickup","title":"Store pickup","code":"PICKUP","description":null,"deliveryMethodType":"PICK_UP","estimatedCost":{"amount":"0.00","currencyCode":"USD"}},{"handle":"none","title":"Unavailable method","code":null,"description":null,"deliveryMethodType":"NONE","estimatedCost":{"amount":"0.00","currencyCode":"USD"}}]}]}}}],"hasNext":false}
+--graphql--

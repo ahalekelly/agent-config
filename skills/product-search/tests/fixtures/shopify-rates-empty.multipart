@@ -1,0 +1,9 @@
+--graphql
+Content-Type: application/json
+
+{"data":{"cart":{"id":"gid://shopify/Cart/redacted"}},"hasNext":true}
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"path":["cart"],"data":{"deliveryGroups":{"nodes":[{"groupType":"ONE_TIME_PURCHASE","deliveryOptions":[]}]}}}],"hasNext":false}
+--graphql--

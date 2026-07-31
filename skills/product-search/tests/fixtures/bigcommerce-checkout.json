@@ -1,0 +1,11 @@
+{
+  "consignments": [{
+    "availableShippingOptions": [
+      {"id":"delivery","type":"fedEx","description":"FedEx Ground","cost":12,"costAfterDiscount":10,"available":true},
+      {"id":"pickup","type":"shipping_pickupinstore","description":"Store pickup","cost":0,"costAfterDiscount":0,"available":true},
+      {"id":"later","type":"freight","description":"WHOLESALE SHIPPING -- PAID LATER","cost":0,"costAfterDiscount":0,"available":true},
+      {"id":"unavailable","type":"ups","description":"UPS Ground","cost":20,"costAfterDiscount":20,"available":false,"errorMessage":"carrier unavailable"},
+      {"id":"fallback","type":"flat_fallback","description":"Carrier fallback","cost":9,"costAfterDiscount":9,"available":true}
+    ]
+  }]
+}
