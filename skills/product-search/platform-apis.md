@@ -205,6 +205,8 @@ Shopify's [Storefront API limits](https://shopify.dev/docs/api/usage/limits#stor
 
 The 2026-07-31 identity experiment sent exactly 100 identical product-only requests in two reversed-order rounds: 50 signed and 50 unsigned. Every request returned HTTP 200 with valid, stable product data. Neither mode produced throttling, `Retry-After`, or a rate-, limit-, throttle-, retry-, or tier-named response header. Because neither mode crossed an observable limit, recognition of this identity is strictly inconclusive; the experiment neither empirically confirms nor contradicts Shopify's documented higher-limit policy.
 
+A separate bounded differential sent exactly three sequential product queries: one unsigned, one validly signed through `send_signed`, and one with the signature deliberately corrupted. All three returned identical valid HTTP 200 product data, body digest, response size, relevant response-header classification, and `server-timing: anonymous`. This establishes that the request exposed no client-visible signature-validation or identity-recognition signal. It does not show that Shopify accepted the corrupted signature internally; an invalid or unrecognized signature may be handled as anonymous traffic.
+
 One signed request to [Cloudflare's crawl-test endpoint](https://crawltest.com/cdn-cgi/web-bot-auth) returned HTTP 401. That endpoint tests Cloudflare recognition under [Cloudflare's Web Bot Auth profile](https://developers.cloudflare.com/bots/reference/bot-verification/web-bot-auth/), not Shopify recognition. Shopify explicitly states that Cloudflare enrollment is unnecessary, so this result is not Shopify evidence.
 
 ### Corpus result, 2026-07-31
