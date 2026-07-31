@@ -19,18 +19,27 @@ The committed `patchright_headless` [results][results] mark Cloudflare and Price
 
 ## Proposed fix
 
-Return one of four outcomes:
+Replace `BypassTestResult.bypass` and `.error` with one required verdict:
 
-1. Navigation failure → `error`
-2. Known block evidence → `blocked`
-3. Positive application evidence → `passed`
-4. Neither → `inconclusive`
+```python
+Outcome = Literal["passed", "blocked", "inconclusive", "error"]
 
-Block evidence wins if both marker types exist. Store the matched evidence, report all four counts, and calculate the headline as `passed / attempted`.
+@dataclass(frozen=True)
+class Verdict:
+    outcome: Outcome
+    evidence: str
+```
+
+Change `navigate()` to either return after a document loads or raise the original browser or transport error. Remove its inconsistent `success` flag. A loaded HTTP 4xx/5xx page still reaches the checker.
+
+The runner maps a navigation exception to `error`. Otherwise the checker tests block markers, then positive application markers, then returns `inconclusive`. Block evidence wins.
+
+Derive markers from saved success and challenge HTML fixtures. Store the matched selector or error as evidence. Reports count all outcomes and score `passed / attempted`.
 
 ## Acceptance criteria
 
 - Blank, failed, or unfamiliar pages never pass.
+- Navigation implementations raise failures; loaded HTTP error pages reach the checker.
 - Every checker requires positive application evidence.
 - Fixtures test success, challenge, unknown, and overlapping evidence.
 - JSON and reports retain outcome and evidence.
