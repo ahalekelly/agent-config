@@ -1,0 +1,3038 @@
+[
+  {
+    "engine": "playwright-chrome_headless",
+    "timestamp": "2026-05-26T21:57:03.341972",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": "Original: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n, Fallback: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 13291,
+        "memory_mb": 487,
+        "cpu_percent": 9.9
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 27708,
+        "memory_mb": 484,
+        "cpu_percent": 3.5
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 13215,
+        "memory_mb": 486,
+        "cpu_percent": 2.7
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 44135,
+        "memory_mb": 530,
+        "cpu_percent": 14.999999999999998
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 59833,
+        "memory_mb": 535,
+        "cpu_percent": 17.200000000000003
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3581,
+        "memory_mb": 533,
+        "cpu_percent": 3.3999999999999995
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 15164,
+        "memory_mb": 534,
+        "cpu_percent": 8.8
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 8680,
+        "memory_mb": 535,
+        "cpu_percent": 3.1999999999999997
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4475,
+        "memory_mb": 535,
+        "cpu_percent": 2.9000000000000004
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "196.65.213.80"
+      }
+    ],
+    "average_memory_mb": 517,
+    "average_cpu_percent": 7.400000000000001,
+    "bypass_rate": 0.4,
+    "error": null
+  },
+  {
+    "engine": "playwright-chrome",
+    "timestamp": "2026-05-26T22:09:41.169940",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": "Original: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n, Fallback: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 8489,
+        "memory_mb": 1154,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 8846,
+        "memory_mb": 1064,
+        "cpu_percent": 42.599999999999994
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4884,
+        "memory_mb": 1066,
+        "cpu_percent": 16.9
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 12812,
+        "memory_mb": 1095,
+        "cpu_percent": 18.5
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 13034,
+        "memory_mb": 1096,
+        "cpu_percent": 37.8
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1911,
+        "memory_mb": 1092,
+        "cpu_percent": 9.399999999999999
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 6959,
+        "memory_mb": 1103,
+        "cpu_percent": 46.9
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4820,
+        "memory_mb": 1149,
+        "cpu_percent": 63.5
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1558,
+        "memory_mb": 1116,
+        "cpu_percent": 20.7
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "89.247.171.61"
+      }
+    ],
+    "average_memory_mb": 1103,
+    "average_cpu_percent": 28.477777777777778,
+    "bypass_rate": 0.6,
+    "error": null
+  },
+  {
+    "engine": "playwright-firefox_headless",
+    "timestamp": "2026-05-26T22:34:20.325769",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 16542,
+        "memory_mb": 833,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 11533,
+        "memory_mb": 777,
+        "cpu_percent": 28.500000000000004
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 8064,
+        "memory_mb": 766,
+        "cpu_percent": 18.7
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 21033,
+        "memory_mb": 839,
+        "cpu_percent": 31.900000000000002
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 78861,
+        "memory_mb": 830,
+        "cpu_percent": 44.6
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 40438,
+        "memory_mb": 790,
+        "cpu_percent": 39.7
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 39037,
+        "memory_mb": 1316,
+        "cpu_percent": 108.5
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 23293,
+        "memory_mb": 1487,
+        "cpu_percent": 189.20000000000002
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 8677,
+        "memory_mb": 1550,
+        "cpu_percent": 145.2
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 11297,
+        "memory_mb": 1495,
+        "cpu_percent": 96.4
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "130.0.11.123"
+      }
+    ],
+    "average_memory_mb": 1068,
+    "average_cpu_percent": 70.27000000000001,
+    "bypass_rate": 0.6,
+    "error": null
+  },
+  {
+    "engine": "playwright-firefox",
+    "timestamp": "2026-05-26T22:44:01.601295",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 15730,
+        "memory_mb": 877,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 40438,
+        "memory_mb": 1027,
+        "cpu_percent": 62.7
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 11450,
+        "memory_mb": 1010,
+        "cpu_percent": 37.0
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 43561,
+        "memory_mb": 1087,
+        "cpu_percent": 46.9
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 60800,
+        "memory_mb": 1258,
+        "cpu_percent": 99.2
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 35521,
+        "memory_mb": 1220,
+        "cpu_percent": 106.19999999999999
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4535,
+        "memory_mb": 1109,
+        "cpu_percent": 34.9
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 18959,
+        "memory_mb": 1211,
+        "cpu_percent": 119.79999999999998
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 22836,
+        "memory_mb": 1389,
+        "cpu_percent": 142.7
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 46469,
+        "memory_mb": 1428,
+        "cpu_percent": 105.19999999999999
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "79.8.183.149"
+      }
+    ],
+    "average_memory_mb": 1161,
+    "average_cpu_percent": 75.46,
+    "bypass_rate": 0.6,
+    "error": null
+  },
+  {
+    "engine": "camoufox_headless",
+    "timestamp": "2026-05-26T22:56:06.487920",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 19557,
+        "memory_mb": 1005,
+        "cpu_percent": 9.9
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 10962,
+        "memory_mb": 1209,
+        "cpu_percent": 85.8
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 10361,
+        "memory_mb": 1055,
+        "cpu_percent": 62.400000000000006
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4911,
+        "memory_mb": 1166,
+        "cpu_percent": 64.5
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 10835,
+        "memory_mb": 1439,
+        "cpu_percent": 75.8
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 10604,
+        "memory_mb": 1304,
+        "cpu_percent": 114.69999999999999
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4496,
+        "memory_mb": 1370,
+        "cpu_percent": 70.4
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 18025,
+        "memory_mb": 1320,
+        "cpu_percent": 129.0
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 5496,
+        "memory_mb": 1652,
+        "cpu_percent": 168.9
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 10237,
+        "memory_mb": 1660,
+        "cpu_percent": 104.39999999999999
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "186.86.110.232",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "186.86.110.232"
+      }
+    ],
+    "average_memory_mb": 1318,
+    "average_cpu_percent": 88.58,
+    "bypass_rate": 0.9,
+    "error": null
+  },
+  {
+    "engine": "camoufox",
+    "timestamp": "2026-05-26T23:04:58.395607",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 14537,
+        "memory_mb": 918,
+        "cpu_percent": 9.7
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 13605,
+        "memory_mb": 1454,
+        "cpu_percent": 87.9
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 6737,
+        "memory_mb": 1019,
+        "cpu_percent": 62.400000000000006
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4529,
+        "memory_mb": 1461,
+        "cpu_percent": 101.8
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 5225,
+        "memory_mb": 1133,
+        "cpu_percent": 64.30000000000001
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2714,
+        "memory_mb": 1146,
+        "cpu_percent": 16.8
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2880,
+        "memory_mb": 1140,
+        "cpu_percent": 30.5
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": false,
+        "error": "Original: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.priceline.com/\", waiting until \"load\"\n, Fallback: Failed to get IP address",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": "Browser not started",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": false,
+        "error": "Browser not started",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": "Browser not started",
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": "Browser not started",
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": "Browser not started",
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": null
+      }
+    ],
+    "average_memory_mb": 1181,
+    "average_cpu_percent": 53.34285714285715,
+    "bypass_rate": 0.3,
+    "error": null
+  },
+  {
+    "engine": "cloakbrowser_headless",
+    "timestamp": "2026-05-26T23:27:41.337200",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": "Original: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n, Fallback: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 7754,
+        "memory_mb": 995,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 7562,
+        "memory_mb": 907,
+        "cpu_percent": 42.4
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4642,
+        "memory_mb": 937,
+        "cpu_percent": 35.2
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3602,
+        "memory_mb": 915,
+        "cpu_percent": 16.799999999999997
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1522,
+        "memory_mb": 915,
+        "cpu_percent": 6.6
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3237,
+        "memory_mb": 914,
+        "cpu_percent": 13.999999999999998
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 9568,
+        "memory_mb": 924,
+        "cpu_percent": 33.800000000000004
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 9657,
+        "memory_mb": 968,
+        "cpu_percent": 56.89999999999999
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 10031,
+        "memory_mb": 953,
+        "cpu_percent": 39.0
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "193.5.237.36"
+      }
+    ],
+    "average_memory_mb": 936,
+    "average_cpu_percent": 27.188888888888886,
+    "bypass_rate": 0.6,
+    "error": null
+  },
+  {
+    "engine": "cloakbrowser",
+    "timestamp": "2026-05-27T00:04:47.976942",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": "Original: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n, Fallback: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 22308,
+        "memory_mb": 1099,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 21013,
+        "memory_mb": 1027,
+        "cpu_percent": 50.8
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 38213,
+        "memory_mb": 1051,
+        "cpu_percent": 43.9
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 21253,
+        "memory_mb": 1064,
+        "cpu_percent": 56.0
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 58764,
+        "memory_mb": 1073,
+        "cpu_percent": 58.7
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 9506,
+        "memory_mb": 1077,
+        "cpu_percent": 55.8
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 118125,
+        "memory_mb": 1108,
+        "cpu_percent": 72.5
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 16510,
+        "memory_mb": 1116,
+        "cpu_percent": 92.0
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 22663,
+        "memory_mb": 1130,
+        "cpu_percent": 59.900000000000006
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "179.0.46.130"
+      }
+    ],
+    "average_memory_mb": 1082,
+    "average_cpu_percent": 54.400000000000006,
+    "bypass_rate": 0.9,
+    "error": null
+  },
+  {
+    "engine": "tf-playwright-stealth-chromium_headless",
+    "timestamp": "2026-05-27T18:50:40.010397",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": "Original: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n, Fallback: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3102,
+        "memory_mb": 465,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 9152,
+        "memory_mb": 484,
+        "cpu_percent": 4.8
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 7677,
+        "memory_mb": 483,
+        "cpu_percent": 6.0
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 7269,
+        "memory_mb": 533,
+        "cpu_percent": 9.299999999999999
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 9989,
+        "memory_mb": 544,
+        "cpu_percent": 24.6
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1054,
+        "memory_mb": 539,
+        "cpu_percent": 4.1000000000000005
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3557,
+        "memory_mb": 562,
+        "cpu_percent": 12.4
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2819,
+        "memory_mb": 542,
+        "cpu_percent": 3.6
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 8418,
+        "memory_mb": 553,
+        "cpu_percent": 8.8
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "83.168.89.168"
+      }
+    ],
+    "average_memory_mb": 522,
+    "average_cpu_percent": 8.177777777777779,
+    "bypass_rate": 0.5,
+    "error": null
+  },
+  {
+    "engine": "tf-playwright-stealth-chromium",
+    "timestamp": "2026-05-27T19:01:36.101703",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": "Original: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n, Fallback: Page.goto: Timeout 120000ms exceeded.\nCall log:\n  - navigating to \"https://www.google.com/search?q=what+is+my+user+agent\", waiting until \"load\"\n",
+        "load_time_ms": 0,
+        "memory_mb": 0,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 9888,
+        "memory_mb": 1005,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 14454,
+        "memory_mb": 837,
+        "cpu_percent": 18.700000000000003
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 11845,
+        "memory_mb": 842,
+        "cpu_percent": 17.0
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 24975,
+        "memory_mb": 905,
+        "cpu_percent": 19.299999999999997
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 36920,
+        "memory_mb": 911,
+        "cpu_percent": 52.1
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 10012,
+        "memory_mb": 906,
+        "cpu_percent": 24.0
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 10320,
+        "memory_mb": 914,
+        "cpu_percent": 25.0
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 8440,
+        "memory_mb": 958,
+        "cpu_percent": 55.9
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 18459,
+        "memory_mb": 942,
+        "cpu_percent": 45.6
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "212.237.121.217"
+      }
+    ],
+    "average_memory_mb": 913,
+    "average_cpu_percent": 28.622222222222224,
+    "bypass_rate": 0.6,
+    "error": null
+  },
+  {
+    "engine": "tf-playwright-stealth-firefox_headless",
+    "timestamp": "2026-05-27T19:14:14.550876",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 24287,
+        "memory_mb": 834,
+        "cpu_percent": 9.8
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 43240,
+        "memory_mb": 851,
+        "cpu_percent": 38.9
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 17766,
+        "memory_mb": 938,
+        "cpu_percent": 28.3
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 37294,
+        "memory_mb": 1078,
+        "cpu_percent": 49.7
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 86497,
+        "memory_mb": 1229,
+        "cpu_percent": 60.29999999999999
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 30345,
+        "memory_mb": 1015,
+        "cpu_percent": 48.699999999999996
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4964,
+        "memory_mb": 780,
+        "cpu_percent": 19.6
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 13614,
+        "memory_mb": 1010,
+        "cpu_percent": 43.7
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 13463,
+        "memory_mb": 1237,
+        "cpu_percent": 69.3
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 17045,
+        "memory_mb": 1373,
+        "cpu_percent": 78.69999999999999
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "45.227.249.248"
+      }
+    ],
+    "average_memory_mb": 1034,
+    "average_cpu_percent": 44.7,
+    "bypass_rate": 0.7,
+    "error": null
+  },
+  {
+    "engine": "tf-playwright-stealth-firefox",
+    "timestamp": "2026-05-27T19:24:24.308402",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 14617,
+        "memory_mb": 885,
+        "cpu_percent": 9.2
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 11072,
+        "memory_mb": 1097,
+        "cpu_percent": 79.0
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 12283,
+        "memory_mb": 1087,
+        "cpu_percent": 68.3
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 9181,
+        "memory_mb": 1129,
+        "cpu_percent": 41.5
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 12012,
+        "memory_mb": 1505,
+        "cpu_percent": 48.3
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 21232,
+        "memory_mb": 1331,
+        "cpu_percent": 119.3
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2854,
+        "memory_mb": 1169,
+        "cpu_percent": 19.4
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 6171,
+        "memory_mb": 1241,
+        "cpu_percent": 48.099999999999994
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 5607,
+        "memory_mb": 1530,
+        "cpu_percent": 112.70000000000002
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 15990,
+        "memory_mb": 1641,
+        "cpu_percent": 131.0
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "196.98.139.187"
+      }
+    ],
+    "average_memory_mb": 1261,
+    "average_cpu_percent": 67.67999999999999,
+    "bypass_rate": 0.7,
+    "error": null
+  },
+  {
+    "engine": "patchright_headless",
+    "timestamp": "2026-05-27T20:55:14.540663",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 19720,
+        "memory_mb": 1137,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 19844,
+        "memory_mb": 1167,
+        "cpu_percent": 28.6
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 10629,
+        "memory_mb": 1184,
+        "cpu_percent": 19.9
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 19772,
+        "memory_mb": 1156,
+        "cpu_percent": 16.2
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 39717,
+        "memory_mb": 1191,
+        "cpu_percent": 18.2
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 38801,
+        "memory_mb": 1308,
+        "cpu_percent": 38.0
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2026,
+        "memory_mb": 1310,
+        "cpu_percent": 6.899999999999999
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 11446,
+        "memory_mb": 1441,
+        "cpu_percent": 21.900000000000002
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 6702,
+        "memory_mb": 1440,
+        "cpu_percent": 9.8
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4454,
+        "memory_mb": 1440,
+        "cpu_percent": 6.500000000000001
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "181.46.71.26"
+      }
+    ],
+    "average_memory_mb": 1277,
+    "average_cpu_percent": 16.6,
+    "bypass_rate": 0.4,
+    "error": null
+  },
+  {
+    "engine": "patchright",
+    "timestamp": "2026-05-27T21:04:15.415062",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3611,
+        "memory_mb": 1241,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 7646,
+        "memory_mb": 1261,
+        "cpu_percent": 35.8
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 13307,
+        "memory_mb": 1328,
+        "cpu_percent": 43.39999999999999
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 23659,
+        "memory_mb": 1400,
+        "cpu_percent": 34.8
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 7711,
+        "memory_mb": 1356,
+        "cpu_percent": 138.70000000000002
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 68279,
+        "memory_mb": 1153,
+        "cpu_percent": 51.8
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 5574,
+        "memory_mb": 1166,
+        "cpu_percent": 43.599999999999994
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 103583,
+        "memory_mb": 1357,
+        "cpu_percent": 63.8
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 18484,
+        "memory_mb": 1450,
+        "cpu_percent": 71.0
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 17558,
+        "memory_mb": 1432,
+        "cpu_percent": 50.50000000000001
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "24.78.176.233"
+      }
+    ],
+    "average_memory_mb": 1314,
+    "average_cpu_percent": 53.339999999999996,
+    "bypass_rate": 1.0,
+    "error": null
+  },
+  {
+    "engine": "selenium-chrome_headless__no_proxy",
+    "timestamp": "2026-05-27T21:19:36.867361",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4102,
+        "memory_mb": 871,
+        "cpu_percent": 19.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2098,
+        "memory_mb": 834,
+        "cpu_percent": 16.4
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2529,
+        "memory_mb": 888,
+        "cpu_percent": 8.399999999999999
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3451,
+        "memory_mb": 887,
+        "cpu_percent": 6.699999999999999
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 8995,
+        "memory_mb": 906,
+        "cpu_percent": 11.899999999999999
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3081,
+        "memory_mb": 911,
+        "cpu_percent": 9.2
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 836,
+        "memory_mb": 909,
+        "cpu_percent": 4.3
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2875,
+        "memory_mb": 1093,
+        "cpu_percent": 17.3
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1973,
+        "memory_mb": 1091,
+        "cpu_percent": 4.9
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 760,
+        "memory_mb": 1092,
+        "cpu_percent": 2.7
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "146.70.188.179"
+      }
+    ],
+    "average_memory_mb": 948,
+    "average_cpu_percent": 10.08,
+    "bypass_rate": 0.3,
+    "error": null
+  },
+  {
+    "engine": "selenium-chrome__no_proxy",
+    "timestamp": "2026-05-27T21:26:10.451262",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 899,
+        "memory_mb": 937,
+        "cpu_percent": 49.7
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 9358,
+        "memory_mb": 949,
+        "cpu_percent": 41.699999999999996
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3257,
+        "memory_mb": 1010,
+        "cpu_percent": 13.8
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3722,
+        "memory_mb": 1006,
+        "cpu_percent": 9.2
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2655,
+        "memory_mb": 1024,
+        "cpu_percent": 37.7
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3108,
+        "memory_mb": 1025,
+        "cpu_percent": 11.7
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2872,
+        "memory_mb": 1025,
+        "cpu_percent": 12.5
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 5501,
+        "memory_mb": 1038,
+        "cpu_percent": 45.300000000000004
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3606,
+        "memory_mb": 1170,
+        "cpu_percent": 56.099999999999994
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 795,
+        "memory_mb": 1163,
+        "cpu_percent": 20.1
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "146.70.188.179"
+      }
+    ],
+    "average_memory_mb": 1034,
+    "average_cpu_percent": 29.78,
+    "bypass_rate": 0.5,
+    "error": null
+  },
+  {
+    "engine": "nodriver-chrome_headless",
+    "timestamp": "2026-05-27T21:39:04.236098",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1653,
+        "memory_mb": 1266,
+        "cpu_percent": 79.7
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1995,
+        "memory_mb": 1130,
+        "cpu_percent": 15.799999999999999
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1750,
+        "memory_mb": 1170,
+        "cpu_percent": 18.4
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2189,
+        "memory_mb": 1170,
+        "cpu_percent": 33.8
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3746,
+        "memory_mb": 1208,
+        "cpu_percent": 4.5
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3060,
+        "memory_mb": 1216,
+        "cpu_percent": 33.3
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3956,
+        "memory_mb": 1300,
+        "cpu_percent": 31.2
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2110,
+        "memory_mb": 1433,
+        "cpu_percent": 14.599999999999998
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1948,
+        "memory_mb": 1433,
+        "cpu_percent": 7.800000000000001
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1599,
+        "memory_mb": 1433,
+        "cpu_percent": 5.0
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "91.54.173.199"
+      }
+    ],
+    "average_memory_mb": 1275,
+    "average_cpu_percent": 24.41,
+    "bypass_rate": 0.4,
+    "error": null
+  },
+  {
+    "engine": "nodriver-chrome",
+    "timestamp": "2026-05-27T21:54:24.909644",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 4552,
+        "memory_mb": 1300,
+        "cpu_percent": 29.700000000000003
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 5499,
+        "memory_mb": 1272,
+        "cpu_percent": 44.800000000000004
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 5314,
+        "memory_mb": 1305,
+        "cpu_percent": 35.800000000000004
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4495,
+        "memory_mb": 1366,
+        "cpu_percent": 29.1
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 6119,
+        "memory_mb": 1391,
+        "cpu_percent": 47.2
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 11991,
+        "memory_mb": 1405,
+        "cpu_percent": 62.400000000000006
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 5234,
+        "memory_mb": 1412,
+        "cpu_percent": 58.1
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 6807,
+        "memory_mb": 1415,
+        "cpu_percent": 47.7
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4383,
+        "memory_mb": 1515,
+        "cpu_percent": 65.80000000000001
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3390,
+        "memory_mb": 1514,
+        "cpu_percent": 53.5
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "146.70.188.179",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "190.232.219.121"
+      }
+    ],
+    "average_memory_mb": 1389,
+    "average_cpu_percent": 47.410000000000004,
+    "bypass_rate": 0.8,
+    "error": null
+  },
+  {
+    "engine": "zendriver-chrome_headless",
+    "timestamp": "2026-05-27T22:18:35.336124",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2093,
+        "memory_mb": 928,
+        "cpu_percent": 19.8
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1268,
+        "memory_mb": 802,
+        "cpu_percent": 24.299999999999997
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1153,
+        "memory_mb": 799,
+        "cpu_percent": 20.6
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 954,
+        "memory_mb": 805,
+        "cpu_percent": 20.5
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2224,
+        "memory_mb": 804,
+        "cpu_percent": 20.4
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1247,
+        "memory_mb": 812,
+        "cpu_percent": 23.5
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1142,
+        "memory_mb": 808,
+        "cpu_percent": 15.600000000000001
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1514,
+        "memory_mb": 807,
+        "cpu_percent": 20.8
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1163,
+        "memory_mb": 807,
+        "cpu_percent": 24.6
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 924,
+        "memory_mb": 808,
+        "cpu_percent": 24.8
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": "Failed to extract recaptcha score data after multiple attempts",
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "142.173.61.185"
+      }
+    ],
+    "average_memory_mb": 818,
+    "average_cpu_percent": 21.490000000000002,
+    "bypass_rate": 0.6,
+    "error": null
+  },
+  {
+    "engine": "zendriver-chrome",
+    "timestamp": "2026-05-27T22:34:01.557355",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1287,
+        "memory_mb": 971,
+        "cpu_percent": 29.700000000000003
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1239,
+        "memory_mb": 994,
+        "cpu_percent": 35.6
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1429,
+        "memory_mb": 986,
+        "cpu_percent": 19.9
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1300,
+        "memory_mb": 1028,
+        "cpu_percent": 43.599999999999994
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4043,
+        "memory_mb": 1016,
+        "cpu_percent": 39.5
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1589,
+        "memory_mb": 1028,
+        "cpu_percent": 48.7
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1593,
+        "memory_mb": 1019,
+        "cpu_percent": 55.099999999999994
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1798,
+        "memory_mb": 1019,
+        "cpu_percent": 39.1
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 1325,
+        "memory_mb": 1018,
+        "cpu_percent": 40.0
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 1177,
+        "memory_mb": 1019,
+        "cpu_percent": 36.900000000000006
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": "Failed to extract recaptcha score data after multiple attempts",
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "47.234.192.130"
+      }
+    ],
+    "average_memory_mb": 1009,
+    "average_cpu_percent": 38.81,
+    "bypass_rate": 0.7,
+    "error": null
+  },
+  {
+    "engine": "seleniumbase-cdp-chrome",
+    "timestamp": "2026-05-27T23:03:35.386805",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2599,
+        "memory_mb": 965,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3119,
+        "memory_mb": 998,
+        "cpu_percent": 46.10000000000001
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2475,
+        "memory_mb": 1059,
+        "cpu_percent": 34.1
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2057,
+        "memory_mb": 1125,
+        "cpu_percent": 55.6
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4458,
+        "memory_mb": 1142,
+        "cpu_percent": 63.60000000000001
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2186,
+        "memory_mb": 1145,
+        "cpu_percent": 76.1
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 3031,
+        "memory_mb": 1158,
+        "cpu_percent": 45.0
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2731,
+        "memory_mb": 1168,
+        "cpu_percent": 35.8
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 3610,
+        "memory_mb": 1374,
+        "cpu_percent": 69.4
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 2481,
+        "memory_mb": 1445,
+        "cpu_percent": 93.3
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "142.173.54.135"
+      }
+    ],
+    "average_memory_mb": 1157,
+    "average_cpu_percent": 51.9,
+    "bypass_rate": 0.8,
+    "error": null
+  },
+  {
+    "engine": "adspower",
+    "timestamp": "2026-05-27T23:14:26.667966",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 7949,
+        "memory_mb": 121,
+        "cpu_percent": 9.9
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 17584,
+        "memory_mb": 128,
+        "cpu_percent": 6.3
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 4411,
+        "memory_mb": 130,
+        "cpu_percent": 14.3
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 7188,
+        "memory_mb": 132,
+        "cpu_percent": 6.8
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 11321,
+        "memory_mb": 130,
+        "cpu_percent": 2.8
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 28502,
+        "memory_mb": 131,
+        "cpu_percent": 6.7
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 2826,
+        "memory_mb": 135,
+        "cpu_percent": 3.5
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 18559,
+        "memory_mb": 134,
+        "cpu_percent": 6.5
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 9119,
+        "memory_mb": 133,
+        "cpu_percent": 7.3
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 25186,
+        "memory_mb": 133,
+        "cpu_percent": 6.3
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "90.214.10.188",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "90.214.10.188"
+      }
+    ],
+    "average_memory_mb": 130,
+    "average_cpu_percent": 7.040000000000001,
+    "bypass_rate": 0.8,
+    "error": null
+  },
+  {
+    "engine": "adspower_headless",
+    "timestamp": "2026-05-27T23:21:54.759022",
+    "bypass_targets_results": [
+      {
+        "target": "google_search",
+        "url": "https://www.google.com/search?q=what+is+my+user+agent",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 22909,
+        "memory_mb": 129,
+        "cpu_percent": 0.0
+      },
+      {
+        "target": "cloudflare_protected",
+        "url": "https://community.cloudflare.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 11927,
+        "memory_mb": 131,
+        "cpu_percent": 7.1
+      },
+      {
+        "target": "datadome_protected",
+        "url": "https://datadome.co/customers-stories/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 28868,
+        "memory_mb": 144,
+        "cpu_percent": 6.3
+      },
+      {
+        "target": "datadome_protected_2",
+        "url": "https://www.hermes.com/",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 10674,
+        "memory_mb": 146,
+        "cpu_percent": 2.6
+      },
+      {
+        "target": "amazon_product",
+        "url": "https://a.co/d/21FTKNR",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 8243,
+        "memory_mb": 107,
+        "cpu_percent": 1.7
+      },
+      {
+        "target": "ticketmaster",
+        "url": "https://www.ticketmaster.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 37163,
+        "memory_mb": 112,
+        "cpu_percent": 6.1
+      },
+      {
+        "target": "akamai_protected",
+        "url": "https://www.mrporter.com",
+        "bypass": false,
+        "error": null,
+        "load_time_ms": 6852,
+        "memory_mb": 114,
+        "cpu_percent": 3.0
+      },
+      {
+        "target": "perimeterx_protected",
+        "url": "https://www.priceline.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 51600,
+        "memory_mb": 116,
+        "cpu_percent": 7.0
+      },
+      {
+        "target": "kasada_protected",
+        "url": "https://www.wizzair.com",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 8605,
+        "memory_mb": 115,
+        "cpu_percent": 7.8
+      },
+      {
+        "target": "reddit",
+        "url": "https://www.reddit.com/",
+        "bypass": true,
+        "error": null,
+        "load_time_ms": 19394,
+        "memory_mb": 119,
+        "cpu_percent": 7.4
+      }
+    ],
+    "browser_data_targets_results": [
+      {
+        "target": "recaptcha_score",
+        "url": "https://antcpt.com/score_detector",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": 0.9,
+        "ip": null
+      },
+      {
+        "target": "creepjs",
+        "url": "https://abrahamjuliot.github.io/creepjs/",
+        "error": null,
+        "creepjs_trust_score": 0,
+        "creepjs_bot_score": 0,
+        "creepjs_webrtc_ip": "177.93.10.239",
+        "recaptcha_score": null,
+        "ip": null
+      },
+      {
+        "target": "ipify",
+        "url": "https://api.ipify.org?format=json",
+        "error": null,
+        "creepjs_trust_score": null,
+        "creepjs_bot_score": null,
+        "creepjs_webrtc_ip": null,
+        "recaptcha_score": null,
+        "ip": "177.93.10.239"
+      }
+    ],
+    "average_memory_mb": 123,
+    "average_cpu_percent": 4.9,
+    "bypass_rate": 0.7,
+    "error": null
+  }
+]

@@ -1,0 +1,2546 @@
+- generic [active] [ref=f12e1]:
+  - dialog "We use cookies" [ref=f12e2]:
+    - generic [ref=f12e3]:
+      - paragraph [ref=f12e5]: We use cookies and other tracking technologies to improve your browsing experience on our website, to show you personalized content and targeted ads, to analyze our website traffic, and to understand where our visitors are coming from.
+      - generic [ref=f12e6]:
+        - button "OK" [ref=f12e7] [cursor=pointer]
+        - button "Change my preferences" [ref=f12e8] [cursor=pointer]
+  - generic [ref=f12e9]:
+    - generic [ref=f12e10]:
+      - generic [ref=f12e12]:
+        - link [ref=f12e15] [cursor=pointer]:
+          - /url: /adc/home/home
+          - img "AutomationDirect" [ref=f12e16]
+        - generic [ref=f12e18]:
+          - textbox "Search" [ref=f12e19]
+          - generic [ref=f12e20]:
+            - link "Search" [ref=f12e22] [cursor=pointer]:
+              - /url: javascript:navSearch(null)
+              - generic "Search" [ref=f12e23]: 
+            - button "" [ref=f12e24] [cursor=pointer]
+        - generic [ref=f12e26]:
+          - generic [ref=f12e27]: 
+          - generic [ref=f12e29]:
+            - generic [ref=f12e30]:
+              - link "Login" [ref=f12e31] [cursor=pointer]:
+                - /url: /myaccount/auth-gateway
+              - text: "|"
+              - link "Register" [ref=f12e32] [cursor=pointer]:
+                - /url: /myaccount/auth-gateway
+            - generic [ref=f12e33] [cursor=pointer]:
+              - text: Accounts & Orders
+              - generic [ref=f12e34]: 
+          - generic "View your shopping cart content" [ref=f12e39] [cursor=pointer]:
+            - img "Cart" [ref=f12e41]
+            - text: "0"
+            - generic [ref=f12e42]: $0.00
+      - text: 
+      - generic [ref=f12e43]:
+        - generic [ref=f12e44]:
+          - link "" [ref=f12e45] [cursor=pointer]:
+            - /url: /adc/home/home
+          - generic [ref=f12e47]: "|"
+          - text: Direct Sales US & Canada
+          - generic [ref=f12e48]: "|"
+          - text: 800-633-0405
+          - generic [ref=f12e49]: "|"
+          - link "About" [ref=f12e50] [cursor=pointer]:
+            - /url: /support/about-adc
+          - generic [ref=f12e51]: "|"
+          - link "Contact" [ref=f12e52] [cursor=pointer]:
+            - /url: /adc/contactus/contactus
+          - generic [ref=f12e53]: "|"
+          - link "Line Card" [ref=f12e54] [cursor=pointer]:
+            - /url: https://cdn.automationdirect.com/static/catalog/AutomationDirect-Authorized-Distributor-Line-Card.pdf
+          - generic [ref=f12e55]: "|"
+          - link "" [ref=f12e56] [cursor=pointer]:
+            - /url: /adc/cart/cart?openQuickOrder=true
+        - generic [ref=f12e58]:
+          - link "Products" [ref=f12e59] [cursor=pointer]:
+            - /url: /products
+          - text: "|"
+          - link "Support" [ref=f12e60] [cursor=pointer]:
+            - /url: /support
+          - link "Ordering Tools" [ref=f12e62] [cursor=pointer]:
+            - /url: /shopping
+    - generic [ref=f12e63]:
+      - generic [ref=f12e64]:
+        - generic [ref=f12e65] [cursor=pointer]:
+          - img "+" [ref=f12e67]
+          - text: Shopping Categories
+        - list [ref=f12e69]:
+          - listitem [ref=f12e70]:
+            - link "Barcode / RFID / Vision" [ref=f12e71] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision
+          - listitem [ref=f12e72]:
+            - link "Bulk Wire & Cable" [ref=f12e73] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/bulk_wire_-a-_cable
+          - listitem [ref=f12e74]:
+            - link "Cables (Terminated)" [ref=f12e75] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/cables_(terminated)
+          - listitem [ref=f12e76]:
+            - link "Circuit Protection / Fuses / Disconnects" [ref=f12e77] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects
+          - listitem [ref=f12e78]:
+            - link "Communications" [ref=f12e79] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/communications
+          - listitem [ref=f12e80]:
+            - link "Drives & Soft Starters" [ref=f12e81] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/drives_-a-_soft_starters
+          - listitem [ref=f12e82]:
+            - link "Enclosure Thermal Management & Lights" [ref=f12e83] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights
+          - listitem [ref=f12e84]:
+            - link "Enclosures & Racks" [ref=f12e85] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/enclosures_-a-_racks
+          - listitem [ref=f12e86]:
+            - link "Field I/O" [ref=f12e87] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/field_i-z-o
+          - listitem [ref=f12e88]:
+            - link "HMI (Human Machine Interface)" [ref=f12e89] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/hmi_(human_machine_interface)
+          - listitem [ref=f12e90]:
+            - link "Hydraulic Components" [ref=f12e91] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/hydraulic_components
+          - listitem [ref=f12e92]:
+            - link "Motion Control" [ref=f12e93] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/motion_control
+          - listitem [ref=f12e94]:
+            - link "Motor Controls" [ref=f12e95] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/motor_controls
+          - listitem [ref=f12e96]:
+            - link "Motors" [ref=f12e97] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/motors
+          - listitem [ref=f12e98]:
+            - link "Pneumatic Components" [ref=f12e99] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/pneumatic_components
+          - listitem [ref=f12e100]:
+            - link "Power Products (Electrical)" [ref=f12e101] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/power_products_(electrical)
+          - listitem [ref=f12e102]:
+            - link "Power Transmission (Mechanical)" [ref=f12e103] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/power_transmission_(mechanical)
+          - listitem [ref=f12e104]:
+            - link "Process Control & Measurement" [ref=f12e105] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/process_control_-a-_measurement
+          - listitem [ref=f12e106]:
+            - link "Programmable Controllers" [ref=f12e107] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/programmable_controllers
+          - listitem [ref=f12e108]:
+            - link "Pushbuttons / Switches / Indicators" [ref=f12e109] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators
+          - listitem [ref=f12e110]:
+            - link "Relays / Timers" [ref=f12e111] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/relays_-z-_timers
+          - listitem [ref=f12e112]:
+            - link "Safety" [ref=f12e113] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/safety
+          - listitem [ref=f12e114]:
+            - link "Sensors / Encoders" [ref=f12e115] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/sensors_-z-_encoders
+          - listitem [ref=f12e116]:
+            - link "Stacklights" [ref=f12e117] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/stacklights
+          - listitem [ref=f12e118]:
+            - link "Structural Frames / Rails" [ref=f12e119] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/structural_frames_-z-_rails
+          - listitem [ref=f12e120]:
+            - link "Tools & Test Equipment" [ref=f12e121] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/tools_-a-_test_equipment
+          - listitem [ref=f12e122]:
+            - link "Valves" [ref=f12e123] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/valves
+          - listitem [ref=f12e124]:
+            - link "Water (Potable) Components" [ref=f12e125] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/water_(potable)_components
+          - listitem [ref=f12e126]:
+            - link "Wire & Cable Management" [ref=f12e127] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/wire_-a-_cable_management
+          - listitem [ref=f12e128]:
+            - link "Wire & Cable Termination" [ref=f12e129] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/wire_-a-_cable_termination
+          - listitem [ref=f12e130]:
+            - link "Retired Products" [ref=f12e131] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/retired_products
+        - generic [ref=f12e132] [cursor=pointer]:
+          - img "+" [ref=f12e134]
+          - text: Learn More
+        - list [ref=f12e136]:
+          - listitem [ref=f12e137]:
+            - link "Brand Line Card" [ref=f12e138] [cursor=pointer]:
+              - /url: https://cdn.automationdirect.com/static/catalog/AutomationDirect-Authorized-Distributor-Line-Card.pdf
+          - listitem [ref=f12e139]:
+            - link "What's New" [ref=f12e140] [cursor=pointer]:
+              - /url: /content/what-is-new
+          - listitem [ref=f12e141]:
+            - link "E-newsletter" [ref=f12e142] [cursor=pointer]:
+              - /url: https://library.automationdirect.com/automationdirect-newsletter/
+          - listitem [ref=f12e143]:
+            - link "Online PDF Catalog" [ref=f12e144] [cursor=pointer]:
+              - /url: https://cdn.automationdirect.com/static/catalog/index.html
+          - listitem [ref=f12e145]:
+            - link "E-books / White Papers" [ref=f12e146] [cursor=pointer]:
+              - /url: /content/adc-literature
+          - listitem [ref=f12e147]:
+            - link "Video Tutorials" [ref=f12e148] [cursor=pointer]:
+              - /url: /videos/home
+          - listitem [ref=f12e149]:
+            - link "Company Reviews" [ref=f12e150] [cursor=pointer]:
+              - /url: /adc/form/user/companyreview
+          - listitem [ref=f12e151]:
+            - link "Learning Library" [ref=f12e152] [cursor=pointer]:
+              - /url: https://library.automationdirect.com/
+          - listitem [ref=f12e153]:
+            - link "Affordable Training" [ref=f12e154] [cursor=pointer]:
+              - /url: http://www.interconnectingautomation.com/
+          - listitem [ref=f12e155]:
+            - link "Free Online PLC training" [ref=f12e156] [cursor=pointer]:
+              - /url: /programmable-logic-controllers/plc-training
+          - listitem [ref=f12e157]:
+            - link "Cybersecurity" [ref=f12e158] [cursor=pointer]:
+              - /url: https://community.automationdirect.com/s/cybersecurity
+        - generic [ref=f12e159] [cursor=pointer]:
+          - img "+" [ref=f12e161]
+          - text: In Depth Product Sites
+        - list [ref=f12e163]:
+          - listitem [ref=f12e164]:
+            - link "Programmable Logic Controllers" [ref=f12e165] [cursor=pointer]:
+              - /url: /programmable-logic-controllers
+          - listitem [ref=f12e166]:
+            - link "Productivity1000 PLCs" [ref=f12e167] [cursor=pointer]:
+              - /url: /productivity/p1000
+          - listitem [ref=f12e168]:
+            - link "Productivity2000 PLCs" [ref=f12e169] [cursor=pointer]:
+              - /url: /productivity/p2000
+          - listitem [ref=f12e170]:
+            - link "Productivity3000 PLCs" [ref=f12e171] [cursor=pointer]:
+              - /url: /productivity/p3000
+          - listitem [ref=f12e172]:
+            - link "ProductivityCODESYS" [ref=f12e173] [cursor=pointer]:
+              - /url: /codesys/home
+          - listitem [ref=f12e174]:
+            - link "LS Electric XGB Series PLCs" [ref=f12e175] [cursor=pointer]:
+              - /url: /ls
+          - listitem [ref=f12e176]:
+            - link "ProductivityOpen" [ref=f12e177] [cursor=pointer]:
+              - /url: /open-source/home
+          - listitem [ref=f12e178]:
+            - link "CLICK PLCs" [ref=f12e179] [cursor=pointer]:
+              - /url: /clickplcs
+          - listitem [ref=f12e180]:
+            - link "Do-more BRX PLCs" [ref=f12e181] [cursor=pointer]:
+              - /url: /do-more/brx
+          - listitem [ref=f12e182]:
+            - link "C-more Touch Panels" [ref=f12e183] [cursor=pointer]:
+              - /url: /c-more/home
+          - listitem [ref=f12e184]:
+            - link "AC & DC Drives" [ref=f12e185] [cursor=pointer]:
+              - /url: /drives/home
+          - listitem [ref=f12e186]:
+            - link "Motion Control Components" [ref=f12e187] [cursor=pointer]:
+              - /url: /motion-control-components
+          - listitem [ref=f12e188]:
+            - link "Servos" [ref=f12e189] [cursor=pointer]:
+              - /url: /sureservo2
+          - listitem [ref=f12e190]:
+            - link "StrideLinx" [ref=f12e191] [cursor=pointer]:
+              - /url: /stride
+          - listitem [ref=f12e192]:
+            - link "Pneumatics" [ref=f12e193] [cursor=pointer]:
+              - /url: /pneumatics/home
+        - generic [ref=f12e194] [cursor=pointer]:
+          - img "+" [ref=f12e196]
+          - text: Product Selectors &Configuration Utilities
+        - list [ref=f12e198]:
+          - listitem [ref=f12e199]:
+            - link "PLC Family Selector" [ref=f12e200] [cursor=pointer]:
+              - /url: /systembuilder
+          - listitem [ref=f12e201]:
+            - link "P1000 PLC Systems" [ref=f12e202] [cursor=pointer]:
+              - /url: /productivity/p1000/config
+          - listitem [ref=f12e203]:
+            - link "P2000 PLC Systems" [ref=f12e204] [cursor=pointer]:
+              - /url: /productivity/p2000/config
+          - listitem [ref=f12e205]:
+            - link "P3000 PLC Systems" [ref=f12e206] [cursor=pointer]:
+              - /url: /productivity/p3000/config
+          - listitem [ref=f12e207]:
+            - link "ProductivityCODESYS" [ref=f12e208] [cursor=pointer]:
+              - /url: /codesys/config
+          - listitem [ref=f12e209]:
+            - link "CLICK PLC Systems" [ref=f12e210] [cursor=pointer]:
+              - /url: /clickplcs/config/pickclick
+          - listitem [ref=f12e211]:
+            - link [ref=f12e212] [cursor=pointer]:
+              - /url: /do-more/brx/config
+              - text: Do-more
+              - superscript [ref=f12e213]: ®
+              - text: BRX PLC Systems
+          - listitem [ref=f12e214]:
+            - link [ref=f12e215] [cursor=pointer]:
+              - /url: /ls/config
+              - text: LS-Electric
+              - superscript [ref=f12e216]: ®
+              - text: XGB PLC Systems
+          - listitem [ref=f12e217]:
+            - link [ref=f12e218] [cursor=pointer]:
+              - /url: /open-source/config
+              - text: Productivity
+              - superscript [ref=f12e219]: ®
+              - text: Open Systems
+          - listitem [ref=f12e220]:
+            - link [ref=f12e221] [cursor=pointer]:
+              - /url: /selectors/dlsafetylight
+              - text: Datalogic
+              - superscript [ref=f12e222]: ®
+              - text: Safety Light Curtains
+          - listitem [ref=f12e223]:
+            - link [ref=f12e224] [cursor=pointer]:
+              - /url: /selectors/ls-servo
+              - text: LS-Electric
+              - superscript [ref=f12e225]: ®
+              - text: Servo Systems
+          - listitem [ref=f12e226]:
+            - link [ref=f12e227] [cursor=pointer]:
+              - /url: /selectors/pneumaticgripper
+              - text: Nitra
+              - superscript [ref=f12e228]: ®
+              - text: Pneumatic Grippers
+          - listitem [ref=f12e229]:
+            - link "Object Detection (Sensors)" [ref=f12e230] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/sensors_-z-_encoders?showSelectionAssistance=true&disabledFacetGroups=Item_Type_ms#Item_Type_ms=(%22Area%20Sensor%22%22Limit%20Switch%22%22Photoelectric%20Sensor%22%22Photoelectric%20Fork%20Sensor%22%22Proximity%20Sensor%22%22Optical%20Fiber%22%22Fiber%20Amplifier%22)&sort=&start=0
+          - listitem [ref=f12e231]:
+            - link "PAL Controller Configurator" [ref=f12e232] [cursor=pointer]:
+              - /url: /selectors/pal
+          - listitem [ref=f12e233]:
+            - link "Precision Gearbox Selector" [ref=f12e234] [cursor=pointer]:
+              - /url: /selectors/suregear
+          - listitem [ref=f12e235]:
+            - link [ref=f12e236] [cursor=pointer]:
+              - /url: /protosxio
+              - text: Protos X
+              - superscript [ref=f12e237]: ®
+              - text: Field I/O
+          - listitem [ref=f12e238]:
+            - link "Pyrometers Selector" [ref=f12e239] [cursor=pointer]:
+              - /url: /selectors/pyrometers
+          - listitem [ref=f12e240]:
+            - link [ref=f12e241] [cursor=pointer]:
+              - /url: /selectors/modularenclosures
+              - text: Quadritalia
+              - superscript [ref=f12e242]: ®
+              - text: Modular Enclosures
+          - listitem [ref=f12e243]:
+            - link [ref=f12e244] [cursor=pointer]:
+              - /url: /selectors/softstarters
+              - text: Stellar
+              - superscript [ref=f12e245]: ®
+              - text: Soft Starters
+          - listitem [ref=f12e246]:
+            - link "Stepper System Selector" [ref=f12e247] [cursor=pointer]:
+              - /url: /selectors/steppers
+          - listitem [ref=f12e248]:
+            - link "SureFrame T-slot Extrusion" [ref=f12e249] [cursor=pointer]:
+              - /url: /selectors/sureframe
+          - listitem [ref=f12e250]:
+            - link [ref=f12e251] [cursor=pointer]:
+              - /url: /selectors/xyzgantry
+              - text: SureMotion
+              - superscript [ref=f12e252]: ®
+              - text: XYZ Gantry
+          - listitem [ref=f12e253]:
+            - link [ref=f12e254] [cursor=pointer]:
+              - /url: /selectors/sureservo2
+              - text: SureServo2
+              - superscript [ref=f12e255]: ®
+              - text: System Selector
+          - listitem [ref=f12e256]:
+            - link [ref=f12e257] [cursor=pointer]:
+              - /url: /selectors/steppers/linearactuators
+              - text: SureStep
+              - superscript [ref=f12e258]: ®
+              - text: Linear Actuators
+          - listitem [ref=f12e259]:
+            - link "Timing Belts & Pulleys" [ref=f12e260] [cursor=pointer]:
+              - /url: /selectors/beltandpulley
+          - listitem [ref=f12e261]:
+            - link [ref=f12e262] [cursor=pointer]:
+              - /url: /selectors/stacklights
+              - text: Werma
+              - superscript [ref=f12e263]: ®
+              - text: Stacklights
+          - listitem [ref=f12e264]:
+            - link "ZIPLinks" [ref=f12e265] [cursor=pointer]:
+              - /url: /selectors/ziplink
+      - generic [ref=f12e268]:
+        - generic [ref=f12e269]:
+          - link "Videos" [ref=f12e270] [cursor=pointer]:
+            - /url: /videos/home
+          - link "My Product Docs" [ref=f12e271] [cursor=pointer]:
+            - /url: /myaccount/doc-vault
+          - link "Product Manuals" [ref=f12e272] [cursor=pointer]:
+            - /url: https://cdn.automationdirect.com/static/manuals/index.html
+          - link "Learning Library" [ref=f12e273] [cursor=pointer]:
+            - /url: https://library.automationdirect.com/
+          - link "Tech Support" [ref=f12e274] [cursor=pointer]:
+            - /url: https://support.automationdirect.com/
+          - link "Community Forum" [ref=f12e275] [cursor=pointer]:
+            - /url: "\n\n\n\n\n\n\nhttps://community.automationdirect.com/s/"
+          - link "Online Catalog" [ref=f12e276] [cursor=pointer]:
+            - /url: https://cdn.automationdirect.com/static/catalog/index.html
+          - link "Software Downloads" [ref=f12e277] [cursor=pointer]:
+            - /url: /support/software-downloads
+          - link "Product Selectors" [ref=f12e278] [cursor=pointer]:
+            - /url: /selectors
+          - link "Cybersecurity" [ref=f12e279] [cursor=pointer]:
+            - /url: https://community.automationdirect.com/s/cybersecurity
+          - generic "ADC Tariff Statement" [ref=f12e281] [cursor=pointer]: Tariff Statement
+        - generic [ref=f12e282]:
+          - generic [ref=f12e283]: New and Trending
+          - link "All New Products" [ref=f12e284] [cursor=pointer]:
+            - /url: /content/what-is-new
+            - text: All New Products
+            - generic [ref=f12e285]: 
+        - generic [ref=f12e286]:
+          - generic [ref=f12e287]:
+            - link [ref=f12e289] [cursor=pointer]:
+              - /url: /adc/overview/catalog/programmable_controllers/productivity2000_plcs_(micro-modular)
+              - img "Productivity2000 Modules" [ref=f12e290]
+            - link [ref=f12e292] [cursor=pointer]:
+              - /url: /adc/overview/catalog/bulk_wire_-a-_cable/motor_supply_cable
+              - img "Olflex VFD Cable" [ref=f12e293]
+            - link [ref=f12e295] [cursor=pointer]:
+              - /url: /productivity/software/softwarewhatsnew
+              - img "Productivity Suite v4.7" [ref=f12e296]
+            - link [ref=f12e298] [cursor=pointer]:
+              - /url: /adc/overview/catalog/safety/z-range_safety_switch_system
+              - img "Z Range Safety System" [ref=f12e299]
+            - link [ref=f12e301] [cursor=pointer]:
+              - /url: /adc/overview/catalog/programmable_controllers/brx_plcs_(stackable_micro_brick)
+              - img "BRX PLCs I/O Modules" [ref=f12e302]
+            - link [ref=f12e304] [cursor=pointer]:
+              - /url: /support/software-downloads?itemcode=C-more%20CM5%20Series
+              - img "C-more 9.0 Software" [ref=f12e305]
+            - link [ref=f12e307] [cursor=pointer]:
+              - /url: /clickplcs/clickplus/intelligent-modules#nodered
+              - img "CLICK Specialty Modules" [ref=f12e308]
+            - link [ref=f12e310] [cursor=pointer]:
+              - /url: /adc/overview/catalog/pneumatic_components
+              - img "New Metal Work bit series Air Prep" [ref=f12e311]
+            - link [ref=f12e313] [cursor=pointer]:
+              - /url: /adc/overview/catalog/programmable_controllers/ls_electric_plcs_(stackable_micro_-a-_brick)/motion_controllers
+              - img "LS Electric XMC Motion Controller" [ref=f12e314]
+            - link [ref=f12e316] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/hmi_(human_machine_interface)/industrial_monitors/industrial_monitors
+              - img "C-more industrial LCD flat panel touchscreens" [ref=f12e317]
+            - link [ref=f12e319] [cursor=pointer]:
+              - /url: /programmable-logic-controllers/plc-training
+              - img "PLC Training from AutomationDirect" [ref=f12e320]
+            - link [ref=f12e322] [cursor=pointer]:
+              - /url: /adc/overview/catalog/pneumatic_components
+              - img "Mindman Pneumatic Valves" [ref=f12e323]
+            - img "A left arrow for the image slider." [ref=f12e325] [cursor=pointer]
+            - img "A right arrow for the image slider." [ref=f12e327] [cursor=pointer]
+          - generic [ref=f12e331]:
+            - list [ref=f12e333]:
+              - listitem [ref=f12e334] [cursor=pointer]:
+                - img "FREE Pocket Calipers" [ref=f12e335]
+                - generic [ref=f12e336]: Get your FREE Pocket Calipers
+              - listitem [ref=f12e337] [cursor=pointer]:
+                - img "SI Direct Application Experts and Panel Builders Near You" [ref=f12e338]
+                - generic [ref=f12e339]: For Application Experts and Panel Builders Near You
+              - listitem [ref=f12e340] [cursor=pointer]:
+                - img "Review and Get Rewarded" [ref=f12e341]
+                - generic [ref=f12e342]:
+                  - generic [ref=f12e343]: NEW Items
+                  - text: Do product reviews and earn points for cool tools!
+              - listitem [ref=f12e344] [cursor=pointer]:
+                - img "WAGO 207 Series Gelboxes" [ref=f12e345]
+                - generic [ref=f12e346]: WAGO 207 Series Gelboxes and Splicing Connectors
+              - listitem [ref=f12e347] [cursor=pointer]:
+                - img "Lika Electronic Linear Encoders" [ref=f12e348]
+                - generic [ref=f12e349]: Lika Electronic Linear Encoders
+              - listitem [ref=f12e350] [cursor=pointer]:
+                - img "STRIDE PRO Unmanaged+ Ethernet Switches" [ref=f12e351]
+                - generic [ref=f12e352]: More STRIDE PRO Unmanaged+ Ethernet Switches
+              - listitem [ref=f12e353] [cursor=pointer]:
+                - img "Fuji Electric TK-E02 Overload Relays" [ref=f12e354]
+                - generic [ref=f12e355]: Fuji Electric TK-E02 Overload Relays
+              - listitem [ref=f12e356] [cursor=pointer]:
+                - img "Murrelektronik Exact 12 Passive Distribution Blocks" [ref=f12e357]
+                - generic [ref=f12e358]: Murrelektronik Exact 12 Passive Distribution Blocks
+              - listitem [ref=f12e359] [cursor=pointer]:
+                - img "Murrelektronik M8 and M12 4-pin Cables" [ref=f12e360]
+                - generic [ref=f12e361]: Murrelektronik M8 and M12 4-pin Cables
+              - listitem [ref=f12e362] [cursor=pointer]:
+                - img "RECOM Single-Phase Switching Power Supplies" [ref=f12e363]
+                - generic [ref=f12e364]: RECOM Single-Phase Switching Power Supplies
+              - listitem [ref=f12e365] [cursor=pointer]:
+                - img "Wachendorff IP69K Rotary Encoders" [ref=f12e366]
+                - generic [ref=f12e367]: Wachendorff IP69K Rotary Encoders and Measuring Wheel Components
+              - listitem [ref=f12e368] [cursor=pointer]:
+                - img "ABB - Thomas & Betts Cable Ties and Cable Tie Tools" [ref=f12e369]
+                - generic [ref=f12e370]: ABB - Thomas & Betts Cable Ties and Cable Tie Tools
+              - listitem [ref=f12e371] [cursor=pointer]:
+                - img "WAGO Base Series Single-Phase Power Supplies" [ref=f12e372]
+                - generic [ref=f12e373]: WAGO Base Series Single-Phase Power Supplies
+              - listitem [ref=f12e374] [cursor=pointer]:
+                - img "Cembre Knockouts & Punching Tools" [ref=f12e375]
+                - generic [ref=f12e376]: Cembre Knockouts & Punching Tools
+              - listitem [ref=f12e377] [cursor=pointer]:
+                - img "Greenlee Knockout & Hydraulic Tools" [ref=f12e378]
+                - generic [ref=f12e379]: Greenlee Knockout & Hydraulic Tools
+              - listitem [ref=f12e380] [cursor=pointer]:
+                - img "Crohm Brake Resistors" [ref=f12e381]
+                - generic [ref=f12e382]: Crohm Brake Resistors
+              - listitem [ref=f12e383] [cursor=pointer]:
+                - img "Atkore Stainless Steel Hygienic Connectors" [ref=f12e384]
+                - generic [ref=f12e385]: Atkore Stainless Steel Hygienic Connectors
+              - listitem [ref=f12e386] [cursor=pointer]:
+                - img "Flodraulic Continental Hydraulic Valves" [ref=f12e387]
+                - generic [ref=f12e388]: Flodraulic Continental Hydraulic Valves
+              - listitem [ref=f12e389] [cursor=pointer]:
+                - img "Rockford Ball Screw Ball Screws and Nuts" [ref=f12e390]
+                - generic [ref=f12e391]: Rockford Ball Screw (RBS) Ball Screws and Nuts
+              - listitem [ref=f12e392] [cursor=pointer]:
+                - img "More METEcon Multi-Wire Connector Housings and Inserts" [ref=f12e393]
+                - generic [ref=f12e394]: METEcon Multi-Wire Connector Housings and Inserts
+              - listitem [ref=f12e395] [cursor=pointer]:
+                - img "Gladiator DIN Rail Mounted Duplex Receptacles" [ref=f12e396]
+                - generic [ref=f12e397]: Gladiator DIN Rail Mounted Duplex Receptacles
+              - listitem [ref=f12e398] [cursor=pointer]:
+                - img "SIM Couplings and Timing Pulleys" [ref=f12e399]
+                - generic [ref=f12e400]: SIM Couplings and Timing Pulleys
+              - listitem [ref=f12e401] [cursor=pointer]:
+                - img "STAHL Zener Barriers and Isolators" [ref=f12e402]
+                - generic [ref=f12e403]: Additional STAHL Zener Barriers and Isolators
+              - listitem [ref=f12e404] [cursor=pointer]:
+                - img "Saginaw NEMA 1 and Sanitary Enclosures" [ref=f12e405]
+                - generic [ref=f12e406]: Saginaw NEMA 1 and Sanitary Enclosures
+              - listitem [ref=f12e407] [cursor=pointer]:
+                - img "DataSensing Safety Laser Scanners" [ref=f12e408]
+                - generic [ref=f12e409]: Enhanced Datalogic Safety Laser Scanners
+              - listitem [ref=f12e410] [cursor=pointer]:
+                - img "Hammond Hinged Wireway" [ref=f12e411]
+                - generic [ref=f12e412]: Hammond NEMA 1 Hinged Lay-in Wireways
+              - listitem [ref=f12e413] [cursor=pointer]:
+                - img "Autonics CT Series Counter Timer" [ref=f12e414]
+                - generic [ref=f12e415]: Autonics CT Series Counter Timer
+              - listitem [ref=f12e416] [cursor=pointer]:
+                - img "RHINO PSR Series Spring Clamp Power Supplies" [ref=f12e417]
+                - generic [ref=f12e418]: RHINO PSR Series Spring Clamp Power Supplies
+              - listitem [ref=f12e419] [cursor=pointer]:
+                - img "Laumas Single-Point Load Cells" [ref=f12e420]
+                - generic [ref=f12e421]: Laumas Single-Point Load Cells
+              - listitem [ref=f12e422] [cursor=pointer]:
+                - img "AchieVe PSA series NEC Class 2 Power Supplies" [ref=f12e423]
+                - generic [ref=f12e424]: AchieVe PSA series NEC Class 2 Power Supplies
+              - listitem [ref=f12e425] [cursor=pointer]:
+                - img "Fandis Lumeis Series LED Enclosure Lights" [ref=f12e426]
+                - generic [ref=f12e427]: Fandis Lumeis Series LED Enclosure Lights
+              - listitem [ref=f12e428] [cursor=pointer]:
+                - img "Block-DC UPS Power Supplies" [ref=f12e429]
+                - generic [ref=f12e430]: Block-DC UPS Power Supplies
+              - listitem [ref=f12e431] [cursor=pointer]:
+                - img "di-soric Ultrasonic Sensors" [ref=f12e432]
+                - generic [ref=f12e433]: di-soric Ultrasonic Sensors
+              - listitem [ref=f12e434] [cursor=pointer]:
+                - img "Channellock Linesman's and Locking Pliers" [ref=f12e435]
+                - generic [ref=f12e436]: CHANNELLOCK Lineman's & Locking Pliers
+              - listitem [ref=f12e437] [cursor=pointer]:
+                - img "AchieVe Pressure Switches" [ref=f12e438]
+                - generic [ref=f12e439]: AchieVe Pressure Switches
+              - listitem [ref=f12e440] [cursor=pointer]:
+                - img "Define Instruments Panel Meters" [ref=f12e441]
+                - generic [ref=f12e442]: Define Instruments Panel Meters
+              - listitem [ref=f12e443] [cursor=pointer]:
+                - img "VNE Corporation Shaviv Deburring Tools" [ref=f12e444]
+                - generic [ref=f12e445]: VNE Corporation Shaviv Deburring Tools
+              - listitem [ref=f12e446] [cursor=pointer]:
+                - img "Datalogic Smart-VS Series Vision Sensor" [ref=f12e447]
+                - generic [ref=f12e448]: Datalogic Smart-VS Series Vision Sensor
+              - listitem [ref=f12e449] [cursor=pointer]:
+                - img "RuB Ball Valves" [ref=f12e450]
+                - generic [ref=f12e451]: RuB Ball Valves
+            - generic:
+              - list
+        - generic [ref=f12e454]: Shop All Products
+        - heading [level=2] [ref=f12e456] [cursor=pointer]:
+          - link "Programmable Control" [ref=f12e457]:
+            - /url: /adc/shopping/catalog/programmable_controllers
+          - link "PLC Solutions" [ref=f12e459]:
+            - /url: /plc-solutions/pneumatics
+          - link "PLC Training" [ref=f12e461]:
+            - /url: /programmable-logic-controllers/plc-training
+        - generic [ref=f12e462]:
+          - link [ref=f12e464] [cursor=pointer]:
+            - /url: /systembuilder
+            - img "PLC Selector Thumbnail" [ref=f12e465]
+            - text: Interactive PLC Selector
+          - link [ref=f12e466] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/click_plus_plcs_(stackable_micro_modular)
+            - img "CLICK PLUS PLCs Thumbnail" [ref=f12e467]
+            - text: CLICK Plus PLCs
+          - link [ref=f12e468] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/click_plcs_(stackable_micro_brick)
+            - img "CLICK PLCs Thumbnail" [ref=f12e469]
+            - text: CLICK PLCs
+          - link [ref=f12e470] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/productivity1000_plcs_(stackable_micro)
+            - img "Productivity1000 PLC Thumbnail" [ref=f12e471]
+            - text: Productivity1000 PLCs (Standard / Mini)
+          - link [ref=f12e472] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/productivity2000_plcs_(micro-modular)
+            - img "Productivity2000 PLC Thumbnail" [ref=f12e473]
+            - text: Productivity2000 PLCs
+          - link [ref=f12e474] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/productivity3000_plcs_(modular)
+            - img "Productivity3000 PLC Thumbnail" [ref=f12e475]
+            - text: Productivity3000 PLCs
+          - link [ref=f12e476] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/brx_plcs_(stackable_micro_brick)
+            - img "Do-more PLCs Thumbnail" [ref=f12e477]
+            - text: Do-more BRX PLCs (stackable)
+          - link [ref=f12e478] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/do-more_h2_-a-_t1h_plcs_(micro_modular_-a-_stackable)
+            - img "Do-more DL205 Thumbnail" [ref=f12e479]
+            - text: Do-more PLCs (H2 / T1H)
+          - link [ref=f12e480] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/ls_electric_plcs_(stackable_micro_-a-_brick)
+            - img "LS Electric PLCs Thumbnail" [ref=f12e481]
+            - text: LS Electric PLCs
+          - link [ref=f12e482] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/directlogic_plcs_(micro_to_small,_brick_-a-_modular)
+            - img "DirectLOGIC PLCs Thumbnail" [ref=f12e483]
+            - text: DirectLOGIC PLCs
+          - link [ref=f12e484] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/productivitycodesys
+            - img "CODESYS Compatible Controllers Thumbnail" [ref=f12e485]
+            - text: CODESYS Compatible Controllers
+          - link [ref=f12e486] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/programmable_controllers/productivity_open_(arduino-compatible)
+            - img "Productivity Open Thumbnail" [ref=f12e487]
+            - text: Arduino Compatible Controllers
+          - link [ref=f12e488] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control
+            - img "Motion Control Thumbnail" [ref=f12e489]
+            - text: Motion Control
+        - heading [level=2] [ref=f12e490] [cursor=pointer]:
+          - link "Field I/O" [ref=f12e491]:
+            - /url: /adc/shopping/catalog/field_i-z-o
+        - generic [ref=f12e492]:
+          - generic [ref=f12e493]:
+            - link [ref=f12e494] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/field_i-z-o/io-link/io-link_masters/bni008m
+              - heading "Featured" [level=4] [ref=f12e495]
+            - link [ref=f12e496] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/field_i-z-o/io-link/io-link_masters/bni008m
+              - img "Balluff IO-Link Master Thumbnail" [ref=f12e497]
+              - text: Balluff IO-Link Master
+          - link [ref=f12e498] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/field_i-z-o/io-link
+            - img "IO Link Thumbnail" [ref=f12e499]
+            - text: IO Link Field I/O
+          - link [ref=f12e500] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/field_i-z-o/protos_x_i-z-o
+            - img "Protos X Thumbnail" [ref=f12e501]
+            - text: Protos X Field I/O
+          - link [ref=f12e502] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/field_i-z-o/stride_i-z-o
+            - img "Stride Field I/O Thumbnail" [ref=f12e503]
+            - text: STRIDE Field I/O
+          - link [ref=f12e504] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/directional_control_solenoid_valves/i-z-o_modules
+            - img "Nitra PAL I/O Thumbnail" [ref=f12e505]
+            - text: Nitra PAL Field I/O
+          - link [ref=f12e506] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/field_i-z-o/ls_electric_xgb
+            - img "LS Electric XGB Field I/O Thumbnail" [ref=f12e507]
+            - text: LS Electric XGB Field I/O
+          - link [ref=f12e508] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/field_i-z-o/brx_remote_i-z-o
+            - img "BRX Remote I/O Thumbnail" [ref=f12e509]
+            - text: BRX Remote I/O
+          - link [ref=f12e510] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/field_i-z-o/terminator_i-z-o
+            - img "Terminator Thumbnail" [ref=f12e511]
+            - text: Terminator Field I/O
+          - link [ref=f12e512] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/field_i-z-o/point_to_point_wireless_i-z-o
+            - img "Point to Point Wireless I/O Thumbnail" [ref=f12e513]
+            - text: Point to Point Wireless I/O
+        - heading [level=2] [ref=f12e514] [cursor=pointer]:
+          - link "HMI (Operator Interfaces)" [ref=f12e515]:
+            - /url: /adc/shopping/catalog/hmi_(human_machine_interface)
+        - generic [ref=f12e516]:
+          - generic [ref=f12e517]:
+            - link [ref=f12e518] [cursor=pointer]:
+              - /url: /adc/overview/catalog/hmi_(human_machine_interface)/industrial_monitors/industrial_monitors
+              - heading "Featured" [level=4] [ref=f12e519]
+            - link "C-more Industrial Monitors Thumbnail New C-more Industrial Monitors" [ref=f12e520] [cursor=pointer]:
+              - /url: /adc/overview/catalog/hmi_(human_machine_interface)/industrial_monitors/industrial_monitors
+              - img "C-more Industrial Monitors Thumbnail" [ref=f12e521]
+              - generic [ref=f12e522]: New
+              - text: C-more Industrial Monitors
+          - link [ref=f12e523] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hmi_(human_machine_interface)/graphical_hmi_devices/hmi_panels
+            - img "Graphical HMI Devices Thumbnail" [ref=f12e524]
+            - text: Graphical HMI Devices
+          - link [ref=f12e525] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hmi_(human_machine_interface)/graphical_hmi_devices/headless_hmi_devices
+            - img "Headless HMI Thumbnail" [ref=f12e526]
+            - text: Headless HMI Devices
+          - link [ref=f12e527] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hmi_(human_machine_interface)/message_displays
+            - img "HMI Message Displays Thumbnail" [ref=f12e528]
+            - text: Message Displays
+          - link [ref=f12e529] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hmi_(human_machine_interface)/industrial_monitors
+            - img "HMI Industrial Monitors Thumbnail" [ref=f12e530]
+            - text: Industrial Monitors
+        - heading [level=2] [ref=f12e531] [cursor=pointer]:
+          - link "Communications" [ref=f12e532]:
+            - /url: /adc/shopping/catalog/communications
+        - generic [ref=f12e533]:
+          - generic [ref=f12e534]:
+            - link [ref=f12e535] [cursor=pointer]:
+              - /url: /adc/overview/catalog/communications/industrial_ethernet_switches/unmanaged+_switches
+              - heading "Featured" [level=4] [ref=f12e536]
+            - link "Unmanaged+ Switches New Unmanaged+ Switches" [ref=f12e537] [cursor=pointer]:
+              - /url: /adc/overview/catalog/communications/industrial_ethernet_switches/unmanaged+_switches
+              - img "Unmanaged+ Switches" [ref=f12e538]
+              - generic [ref=f12e539]: New
+              - text: Unmanaged+ Switches
+          - link [ref=f12e540] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/communications/secure_remote_access_-_vpn
+            - img "VPN Secure Remote Access Thumbnail" [ref=f12e541]
+            - text: VPN Secure Remote Access
+          - link [ref=f12e542] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/communications/industrial_iot_solutions
+            - img "Industrial IoT Solutions Thumbnail" [ref=f12e543]
+            - text: Industrial IoT Solutions
+          - link [ref=f12e544] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/communications/industrial_ethernet_switches
+            - img "Ethernet Switches Thumbnail" [ref=f12e545]
+            - text: Ethernet Switches
+          - link [ref=f12e546] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/communications/ethernet_media_converters_-a-_poe_injectors
+            - img "Ethernet Media Converters and POE Injectors Thumbnail" [ref=f12e547]
+            - text: Ethernet Converters & POE Injectors
+          - link [ref=f12e548] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/communications/protocol_gateways
+            - img "Protocol Gateways Thumbnail" [ref=f12e549]
+            - text: Protocol Gateways
+          - link [ref=f12e550] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/communications/serial
+            - img "Serial Thumbnail" [ref=f12e551]
+            - text: Serial
+          - link [ref=f12e552] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/communications/cables_-a-_connectors
+            - img "Cables & Connectors Thumbnail" [ref=f12e553]
+            - text: Cables & Connectors
+        - heading [level=2] [ref=f12e554] [cursor=pointer]:
+          - link "Drives and Soft Starters" [ref=f12e555]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters
+        - generic [ref=f12e556]:
+          - generic [ref=f12e557]:
+            - link [ref=f12e558] [cursor=pointer]:
+              - /url: /adc/overview/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/micro_vfds
+              - heading "Featured" [level=4] [ref=f12e559]
+            - link [ref=f12e560] [cursor=pointer]:
+              - /url: /adc/overview/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/micro_vfds
+              - img "IronHorse ES1 AC Drives Thubnail" [ref=f12e561]
+              - text: IronHorse ES1 AC Drives
+          - link [ref=f12e562] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/micro_vfds
+            - img "Micro Thumbnail" [ref=f12e563]
+            - text: Micro VFDs
+          - link [ref=f12e564] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/general_purpose_vfds
+            - img "General purpose drive Thumbnail" [ref=f12e565]
+            - text: General Purpose VFDs
+          - link [ref=f12e566] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/high-performance_vfds
+            - img "High Performance Drives Thumbnail" [ref=f12e567]
+            - text: High Performance VFDs
+          - link [ref=f12e568] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/washdown_(nema_4x)_vfds
+            - img "Washdown (NEMA 4X) Thumbnail" [ref=f12e569]
+            - text: Washdown (NEMA 4X) VFDs
+          - link [ref=f12e570] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)
+            - img "AC Variable Frequency Drives Thumbnail" [ref=f12e571]
+            - text: VFD Comms & I/O Modules
+          - link [ref=f12e572] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/line_reactors_-a-_output_filters
+            - img "Line Reactors & Output Filters Thumbnail" [ref=f12e573]
+            - text: Line Reactors & Output Filters
+          - link [ref=f12e574] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/braking_units_-a-_resistors
+            - img "Braking Units & Resistors Thumbnail" [ref=f12e575]
+            - text: Braking Units & Resistors
+          - link [ref=f12e576] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/emi_filters
+            - img "EMI Filters Thumbnail" [ref=f12e577]
+            - text: EMI Filters
+          - link [ref=f12e578] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_variable_frequency_drives_(vfd)/vfd_accessories
+            - img "Software, Comms & I/O Modules Thumbnail" [ref=f12e579]
+            - text: VFD Accessories
+          - link [ref=f12e580] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/ac_motor_soft_starters
+            - img "Soft Starters Thumbnail" [ref=f12e581]
+            - text: Soft Starters
+          - link [ref=f12e582] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/drives_-a-_soft_starters/dc_drives
+            - img "DC Drives Thumbnail" [ref=f12e583]
+            - text: DC Drives
+        - heading [level=2] [ref=f12e584] [cursor=pointer]:
+          - link "Motor Controls" [ref=f12e585]:
+            - /url: /adc/shopping/catalog/motor_controls
+        - generic [ref=f12e586]:
+          - generic [ref=f12e587]:
+            - link [ref=f12e588] [cursor=pointer]:
+              - /url: /adc/overview/catalog/power_products_(electrical)/transformers/ventilated_drive_isolation_transformers_(nema_rated)
+              - heading "Featured" [level=4] [ref=f12e589]
+            - link [ref=f12e590] [cursor=pointer]:
+              - /url: /adc/overview/catalog/power_products_(electrical)/transformers/ventilated_drive_isolation_transformers_(nema_rated)
+              - img "VFD Isolation Transformer Thumbnail" [ref=f12e591]
+              - text: VFD Isolation Transformer
+          - link [ref=f12e592] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/iec_magnetic_motor_starters
+            - img "IEC Magnetic Motor Starters Thumbnail" [ref=f12e593]
+            - text: IEC Magnetic Motor Starters
+          - link [ref=f12e594] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/iec_manual_motor_protectors
+            - img "IEC Manual Motor Protectors Thumbnail" [ref=f12e595]
+            - text: IEC Manual Motor Protectors
+          - link [ref=f12e596] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/iec_magnetic_contactors
+            - img "IEC Magnetic Contactors Thumbnail" [ref=f12e597]
+            - text: IEC Magnetic Contactors
+          - link [ref=f12e598] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/solid_state_contactors
+            - img "Solid State Contactors Thumbnail" [ref=f12e599]
+            - text: Solid State Contactors
+          - link [ref=f12e600] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/iec_overload_relays
+            - img "IEC Overload Relays Thumbnail" [ref=f12e601]
+            - text: IEC Overload Relays
+          - link [ref=f12e602] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/definite_purpose_contactors
+            - img "Definite Purpose Contactors Thumbnail" [ref=f12e603]
+            - text: Definite Purpose Contactors
+          - link [ref=f12e604] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/motor_disconnects_-a-_controllers
+            - img "Motor Disconnects & Controllers Thumbnail" [ref=f12e605]
+            - text: Motor Disconnects & Controllers
+          - link [ref=f12e606] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motor_controls/motor_control_relays
+            - img "Motor Control Relays Thumbnail" [ref=f12e607]
+            - text: Motor Control Relays
+        - heading [level=2] [ref=f12e608] [cursor=pointer]:
+          - link "Motors" [ref=f12e609]:
+            - /url: /adc/shopping/catalog/motors
+        - generic [ref=f12e610]:
+          - generic [ref=f12e611]:
+            - link [ref=f12e612] [cursor=pointer]:
+              - /url: /adc/overview/catalog/motors/dc_gearmotors/permanent_magnet_dc_gearmotors
+              - heading "Featured" [level=4] [ref=f12e613]
+            - link [ref=f12e614] [cursor=pointer]:
+              - /url: /adc/overview/catalog/motors/dc_gearmotors/permanent_magnet_dc_gearmotors
+              - img "IronHorse VP1 DC Gearmotors Thumbnail" [ref=f12e615]
+              - text: IronHorse VP1 DC Gearmotors
+          - link [ref=f12e616] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/general_purpose_and_inverter_rated
+            - img "General Purpose Motors Thumbnail" [ref=f12e617]
+            - text: Standard & Inverter Rated AC Motors
+          - link [ref=f12e618] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/high-performance_inverter_duty
+            - img "High-Performance Inverter Duty Motors Thumbnail" [ref=f12e619]
+            - text: Inverter Duty AC Motors
+          - link [ref=f12e620] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/open_drip_proof
+            - img "Open Drip Proof Thumbnail" [ref=f12e621]
+            - text: Open Drip Proof
+          - link [ref=f12e622] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/washdown
+            - img "Washdown Motors Thumbnail" [ref=f12e623]
+            - text: Washdown AC Motors
+          - link [ref=f12e624] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/severe_duty
+            - img "Hazardous Location Motors Thumbnail" [ref=f12e625]
+            - text: Severe Duty AC Motors
+          - link [ref=f12e626] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/iec
+            - img "IEC AC Motors Thumbnail" [ref=f12e627]
+            - text: IEC AC Motors
+          - link [ref=f12e628] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/brake_motors
+            - img "Brake Motors Thumbnail" [ref=f12e629]
+            - text: Brake Motors
+          - link [ref=f12e630] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/permanent_magnet_ac_(pmac)
+            - img "Permanent Magnet AC Motors Thumbnail" [ref=f12e631]
+            - text: Permanent Magnet AC Motors
+          - link [ref=f12e632] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/centrifugal_jet_pump
+            - img "Centrifugal Jet Pump Motors Thumbnail" [ref=f12e633]
+            - text: Centrifugal Jet Pump AC Motors
+          - link [ref=f12e634] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/conveyor-z-farm_duty
+            - img "Conveyor/Farm Duty Motors Thumbnail" [ref=f12e635]
+            - text: Conveyor/Farm Duty AC Motors
+          - link [ref=f12e636] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/ac_motors/ac_motors_accessories
+            - img "AC Motor Accessories Thumbnail" [ref=f12e637]
+            - text: AC Motor Accessories
+          - link [ref=f12e638] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/motor_bases_(for_nema_motors)
+            - img "Motor Bases Thumbnail" [ref=f12e639]
+            - text: AC Motor Bases
+          - link [ref=f12e640] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/dc_motors
+            - img "General Purpose DC Motors Thumbnail" [ref=f12e641]
+            - text: DC Motors
+          - link [ref=f12e642] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motors/dc_gearmotors
+            - img "DC GearMotors Thumbnail" [ref=f12e643]
+            - text: DC GearMotors
+        - heading [level=2] [ref=f12e644] [cursor=pointer]:
+          - link "Motion Control" [ref=f12e645]:
+            - /url: /adc/shopping/catalog/motion_control
+        - generic [ref=f12e646]:
+          - generic [ref=f12e647]:
+            - link [ref=f12e648] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/sensors_-z-_encoders/encoders/rotary_encoders#Feedback_Type_ms=
+              - heading "Featured" [level=4] [ref=f12e649]
+            - link [ref=f12e650] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/sensors_-z-_encoders/encoders/rotary_encoders#Feedback_Type_ms=
+              - img "Ethernet Absolute Encoders Thumbnail" [ref=f12e651]
+              - text: Ethernet Absolute Encoders
+          - link [ref=f12e652] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/pulse_train_output_motion_plcs
+            - img "Pulse Train Output PLCs Thumbnail" [ref=f12e653]
+            - text: Pulse Train Output PLCs
+          - link [ref=f12e654] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/ethercat_motion_plcs
+            - img "EtherCAT PLCs Thumbnail" [ref=f12e655]
+            - text: EtherCAT PLCs
+          - link [ref=f12e656] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/sureservo2_(sv2a_series)_servo_systems
+            - img "SureServo2 (SV2A Series) Servo Systems Thumbnail" [ref=f12e657]
+            - text: SureServo2 (SV2A Series) Servos
+          - link [ref=f12e658] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/ls_electric_phox_ethercat,_pulse,_and_indexing_dc_servo_systems
+            - img "LS PHOX EtherCAT DC Servos Thumbnail" [ref=f12e659]
+            - text: LS PHOX EtherCAT DC Servos
+          - link [ref=f12e660] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/ls_electric_ix7_(ix7nh_series)_ethercat_and_modtcp_servo_systems
+            - img "LS iX7 EtherCAT / ModTCP Servos Thumbnail" [ref=f12e661]
+            - text: LS iX7 Servos EtherCAT / ModTCP
+          - link [ref=f12e662] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/ls_electric_l7c_(l7ca_series)_servo_systems
+            - img "LS Electric L7C (L7CA Series) Servo Systems Thumbnail" [ref=f12e663]
+            - text: LS L7C Servos
+          - link [ref=f12e664] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/ls_electric_l7p_(l7pa_-a-_l7pb_series)_servo_systems
+            - img "LS Electric L7P (L7PA & L7PB Series) Servo Systems Thumbnail" [ref=f12e665]
+            - text: LS L7P Servos
+          - link [ref=f12e666] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/stepper_systems
+            - img "Stepper System Components Thumbnail" [ref=f12e667]
+            - text: Stepper System Components
+          - link [ref=f12e668] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/motion_control/stepper_motor_linear_actuators
+            - img "Stepper Motor Linear Actuators Thumbnail" [ref=f12e669]
+            - text: Stepper Motor Linear Actuators
+          - link [ref=f12e670] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/encoders
+            - img "Encoders Thumbnail" [ref=f12e671]
+            - text: Encoders
+        - heading [level=2] [ref=f12e672] [cursor=pointer]:
+          - link "Mechanical Power Transmission" [ref=f12e673]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)
+        - generic [ref=f12e674]:
+          - generic [ref=f12e675]:
+            - link [ref=f12e676] [cursor=pointer]:
+              - /url: /adc/overview/catalog/power_transmission_(mechanical)/drive_couplings
+              - heading "Featured" [level=4] [ref=f12e677]
+            - link [ref=f12e678] [cursor=pointer]:
+              - /url: /adc/overview/catalog/power_transmission_(mechanical)/drive_couplings
+              - img "Drive Couplings Thumbnail" [ref=f12e679]
+              - text: Drive Couplings
+          - link [ref=f12e680] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/linear_motion_slides_and_actuators
+            - img "Linear Slides and Actuators Thumbnail" [ref=f12e681]
+            - text: Linear Slides & Actuators
+          - link [ref=f12e682] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/ball_screws_-a-_ball_nuts
+            - img "Ball Screws & Ball Nuts" [ref=f12e683]
+            - text: Ball Screws & Ball Nuts
+          - link [ref=f12e684] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/linear_guides_-a-_rail_systems
+            - img "Linear Guides and Rail Systems" [ref=f12e685]
+            - text: Linear Guides & Rail Systems
+          - link [ref=f12e686] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/precision_ground_linear_shafts_-z-_bearings_-z-_supports
+            - img "Precision Linear Shafts" [ref=f12e687]
+            - text: Precision Linear Shafts
+          - link [ref=f12e688] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/aluminum_linear_shafts_-a-_bearings
+            - img "Aluminum Linear Shafts" [ref=f12e689]
+            - text: Aluminum Linear Shafts
+          - link [ref=f12e690] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/helical_racks_-a-_pinions
+            - img "Helical Racks and Pinions" [ref=f12e691]
+            - text: Helical Racks & Pinions
+          - link [ref=f12e692] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/stainless_steel_worm_gearboxes
+            - img "Stainless Worm Gearbox Thumbnail" [ref=f12e693]
+            - text: Stainless Worm Gearboxes
+          - link [ref=f12e694] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/cast_iron_worm_gearboxes
+            - img "Cast Iron Worm Gearbox Thumbnail" [ref=f12e695]
+            - text: Cast Iron Worm Gearboxes
+          - link [ref=f12e696] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/aluminum_worm_gearboxes_(nema_input)
+            - img "Aluminum Worm Gearboxes (NEMA) Thumbnail" [ref=f12e697]
+            - text: Alu. Worm Gearboxes (NEMA)
+          - link [ref=f12e698] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/aluminum_worm_gearboxes_(iec_input)
+            - img "Aluminum Worm Gearboxes (NEMA) Thumbnail" [ref=f12e699]
+            - text: Alu. Worm Gearboxes (IEC)
+          - link [ref=f12e700] [cursor=pointer]:
+            - /url: /adc/overview/catalog/power_transmission_(mechanical)/helical_gearboxes
+            - img "Helical Gearboxes Thumbnail" [ref=f12e701]
+            - text: Helical Gearboxes
+          - link [ref=f12e702] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/high-precision_inline_strain_wave_gearboxes
+            - img "High-Precision Inline Strain Wave Gearboxes Thumbnail" [ref=f12e703]
+            - text: Inline Strain Wave Gearboxes
+          - link [ref=f12e704] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/precision_gearboxes_for_servomotors
+            - img "Servo Precision Gearboxes Thumbnail" [ref=f12e705]
+            - text: Servo Precision Gearboxes
+          - link [ref=f12e706] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/precision_gearboxes_for_small_nema_motors
+            - img "Stepper Gearboxes Thumbnail" [ref=f12e707]
+            - text: Stepper Gearboxes
+          - link [ref=f12e708] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/drive_couplings
+            - img "Drive Couplings Thumbnail" [ref=f12e709]
+            - text: Drive Couplings
+          - link [ref=f12e710] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_transmission_(mechanical)/bore_reducers
+            - img "Bore Reducers" [ref=f12e711]
+            - text: Bore Reducers
+          - link [ref=f12e712] [cursor=pointer]:
+            - /url: /adc/overview/catalog/power_transmission_(mechanical)/timing_belts_-a-_timing_pulleys
+            - img "Timing Belts & Pulleys Thumbnail" [ref=f12e713]
+            - text: Timing Belts & Timing Pulleys
+        - heading [level=2] [ref=f12e714] [cursor=pointer]:
+          - link "Bulk Wire & Cable" [ref=f12e715]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable
+        - generic [ref=f12e716]:
+          - generic [ref=f12e717]:
+            - link [ref=f12e718] [cursor=pointer]:
+              - /url: /adc/overview/catalog/bulk_wire_-a-_cable/tray_rated_cable/general_purpose
+              - heading "Featured" [level=4] [ref=f12e719]
+            - link [ref=f12e720] [cursor=pointer]:
+              - /url: /adc/overview/catalog/bulk_wire_-a-_cable/tray_rated_cable/general_purpose
+              - img "Lapp OLFLEX Flexible Control Cable Thumbnail" [ref=f12e721]
+              - text: Lapp OLFLEX Flexible Control Cable
+          - link [ref=f12e722] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/single_conductor_wire_-a-_cable
+            - img "Single Conductor WireThumbnail" [ref=f12e723]
+            - text: Single Conductor Wire
+          - link [ref=f12e724] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/portable_cord
+            - img "Portable Cord Thumbnail" [ref=f12e725]
+            - text: Portable Cord
+          - link [ref=f12e726] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/power_cable
+            - img "Power Cable Thumbnail" [ref=f12e727]
+            - text: Power Cable
+          - link [ref=f12e728] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/tray_rated_cable
+            - img "Tray Rated Cable Thumbnail" [ref=f12e729]
+            - text: Tray Rated Cable
+          - link [ref=f12e730] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/low_voltage_control_-a-_signal_cable
+            - img "Low Voltage Control & Signal Cable Thumbnail" [ref=f12e731]
+            - text: Low Voltage Control & Signal Cable
+          - link [ref=f12e732] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/600v_control_cable
+            - img "600V Control Cable Thumbnail" [ref=f12e733]
+            - text: 600V Control Cable
+          - link [ref=f12e734] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/motor_supply_cable
+            - img "Motor Supply Cable Thumbnail" [ref=f12e735]
+            - text: Motor Supply Cable
+          - link [ref=f12e736] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/data_-a-_communication_cable
+            - img "Data & Communication Cable Thumbnail" [ref=f12e737]
+            - text: Data & Communication Cable
+          - link [ref=f12e738] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/bulk_wire_-a-_cable/process_-a-_instrumentation_cable
+            - img "Process & Instrumentation Cable Thumbnail" [ref=f12e739]
+            - text: Process & Instrumentation Cable
+        - heading [level=2] [ref=f12e740] [cursor=pointer]:
+          - link "Discrete & Analog Sensing" [ref=f12e741]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders
+        - generic [ref=f12e742]:
+          - generic [ref=f12e743]:
+            - link [ref=f12e744] [cursor=pointer]:
+              - /url: /adc/overview/catalog/sensors_-z-_encoders/ultrasonic_proximity_sensors
+              - heading "Featured" [level=4] [ref=f12e745]
+            - link "di-soric IO-Link Ultrasonic Sensors Thumbnail New IO-Link Ultrasonic Sensors" [ref=f12e746] [cursor=pointer]:
+              - /url: /adc/overview/catalog/sensors_-z-_encoders/ultrasonic_proximity_sensors
+              - img "di-soric IO-Link Ultrasonic Sensors Thumbnail" [ref=f12e747]
+              - generic [ref=f12e748]: New
+              - text: IO-Link Ultrasonic Sensors
+          - link [ref=f12e749] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/inductive_proximity_sensors
+            - img "Inductive Proximity Sensors Thumbnail" [ref=f12e750]
+            - text: Inductive Proximity Sensors
+          - link [ref=f12e751] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/magnetic_proximity_sensors
+            - img "Magnetic Proximity Sensors Thumbnail" [ref=f12e752]
+            - text: Magnetic Proximity Sensors
+          - link [ref=f12e753] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/capacitive_proximity_sensors
+            - img "Capactive Proximity Sensors Thumbnail" [ref=f12e754]
+            - text: Capacitive Proximity Sensors
+          - link [ref=f12e755] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/ultrasonic_proximity_sensors
+            - img "Ultrasonic Proximity Sensors Thumbnail" [ref=f12e756]
+            - text: Ultrasonic Proximity Sensors
+          - link [ref=f12e757] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/photoelectric_sensors/background_suppression
+            - img "Background Suppression Photoelectric Sensors Thumbnail" [ref=f12e758]
+            - text: Background Suppression Photoelectric
+          - link [ref=f12e759] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/photoelectric_sensors/diffuse
+            - img "Diffuse Photoelectric Sensors Thumbnail" [ref=f12e760]
+            - text: Diffuse Photoelectric Sensors
+          - link [ref=f12e761] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/photoelectric_sensors/retroreflective
+            - img "Retroreflective Photoelectric Sensors Thumbnail" [ref=f12e762]
+            - text: Retroreflective Photoelectric Sensors
+          - link [ref=f12e763] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/photoelectric_sensors/through-beam
+            - img "Through-beam Photoelectric Sensors Thumbnail" [ref=f12e764]
+            - text: Through-beam Photoelectric Sensors
+          - link [ref=f12e765] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/photoelectric_sensors/fiber_optic_sensors
+            - img "Fiber Optic Thumbnail" [ref=f12e766]
+            - text: Fiber Optic Sensors
+          - link [ref=f12e767] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/photoelectric_sensors/fork_sensors
+            - img "Fork Thumbnail" [ref=f12e768]
+            - text: Fork Sensors
+          - link [ref=f12e769] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/encoders
+            - img "Encoders Thumbnail" [ref=f12e770]
+            - text: Encoders
+          - link [ref=f12e771] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/limit_switches
+            - img "Limit Switches Thumbnail" [ref=f12e772]
+            - text: Limit Switches
+          - link [ref=f12e773] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/current_-a-_voltage_sensors_(ac_-a-_dc)
+            - img "Current & Voltage Sensors Thumbnail" [ref=f12e774]
+            - text: Current & Voltage Sensors
+          - link [ref=f12e775] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/ground_fault_sensors
+            - img "Ground Fault Sensors Thumbnail" [ref=f12e776]
+            - text: Ground Fault Sensors
+          - link [ref=f12e777] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/linear_position_sensors
+            - img "Linear Position Sensors Thumbnail" [ref=f12e778]
+            - text: Linear Position Sensors
+          - link [ref=f12e779] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/inclination_sensors
+            - img "Inclination Sensors Thumbnail" [ref=f12e780]
+            - text: Inclination Sensors
+          - link [ref=f12e781] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/light_grids
+            - img "Light Grids Thumbnail" [ref=f12e782]
+            - text: Light Grids
+          - link [ref=f12e783] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/position_indicators
+            - img "Position Indicators Thumbnail" [ref=f12e784]
+            - text: Position Indicators
+          - link [ref=f12e785] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/sensors_-z-_encoders/sensor_signal_converters
+            - img "Sensor Signal Converters Thumbnail" [ref=f12e786]
+            - text: Sensor Signal Converters
+        - heading [level=2] [ref=f12e787] [cursor=pointer]:
+          - link "Process Sensing & Control" [ref=f12e788]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement
+        - generic [ref=f12e789]:
+          - generic [ref=f12e790]:
+            - link [ref=f12e791] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/process_control_-a-_measurement/flow_sensors/paddle_wheel_flow_meters
+              - heading "Featured" [level=4] [ref=f12e792]
+            - link [ref=f12e793] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/process_control_-a-_measurement/flow_sensors/paddle_wheel_flow_meters
+              - img "ICON Truflo Paddle Wheel Liquid Flow Meter Thumbnail" [ref=f12e794]
+              - text: Truflo Paddle Wheel Liquid Flow Meter
+          - link [ref=f12e795] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/temperature_-z-_process_controllers
+            - img "Temp / Process Controllers Thumbnail" [ref=f12e796]
+            - text: Temp/ Process Controllers
+          - link [ref=f12e797] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/digital_panel_meters
+            - img "Digital Panel Meters Thumbnail" [ref=f12e798]
+            - text: Digital Panel Meters
+          - link [ref=f12e799] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/graphical_panel_meters
+            - img "Graphical Panel Meters Thumbnail" [ref=f12e800]
+            - text: Graphical Panel Meters
+          - link [ref=f12e801] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/analog_panel_meters
+            - img "Hour Meters and Counters Thumbnail" [ref=f12e802]
+            - text: Analog Panel Meters
+          - link [ref=f12e803] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/hour_meters_-a-_counters
+            - img "Hour Meters and Counters Thumbnail" [ref=f12e804]
+            - text: Hour Meters & Counters
+          - link [ref=f12e805] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/temperature_sensors_-a-_transmitters
+            - img "Temperature Sensors & Transmitters Thumbnail" [ref=f12e806]
+            - text: Temperature Sensors & Transmitters
+          - link [ref=f12e807] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/pressure_gauges_-a-_thermometers/bi-metal_dial_thermometers
+            - img "Dial Thermometers Thumbnail" [ref=f12e808]
+            - text: Dial Thermometers
+          - link [ref=f12e809] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/humidity_sensors
+            - img "Humidity Sensors Thumbnail" [ref=f12e810]
+            - text: Humidity Sensors
+          - link [ref=f12e811] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/pressure_sensors
+            - img "Pressure Sensors Thumbnail" [ref=f12e812]
+            - text: Pressure Sensors
+          - link [ref=f12e813] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/pressure_gauges_-a-_thermometers
+            - img "Pressure Gauges Thumbnail" [ref=f12e814]
+            - text: Pressure Gauges
+          - link [ref=f12e815] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/pneumatic_transducers
+            - img "Pneumatic Transducers Thumbnail" [ref=f12e816]
+            - text: Pneumatic Transducers
+          - link [ref=f12e817] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/level_sensors_-a-_controllers
+            - img "Level Sensors & Controllers Thumbnail" [ref=f12e818]
+            - text: Level Sensors & Controllers
+          - link [ref=f12e819] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/flow_sensors
+            - img "Flow Sensors Thumbnail" [ref=f12e820]
+            - text: Flow Sensors
+          - link [ref=f12e821] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/weight_-z-_force_sensors_-a-_electronics
+            - img "Weight Force Sensors Thumbnail" [ref=f12e822]
+            - text: Weight / Force Sensors
+          - link [ref=f12e823] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/vibration_switches_-a-_transmitters
+            - img "Vibration Sensors Thumbnail" [ref=f12e824]
+            - text: Vibration Sensors
+          - link [ref=f12e825] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/signal_conditioners
+            - img "Signal Conditioners Thumbnail" [ref=f12e826]
+            - text: Signal Conditioners
+          - link [ref=f12e827] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/process_control_-a-_measurement/solenoid_process_valves
+            - img "Solenoid Process Valves Thumbnail" [ref=f12e828]
+            - text: Solenoid Process Valves
+        - heading [level=2] [ref=f12e829] [cursor=pointer]:
+          - link "Barcode / RFID / Vision" [ref=f12e830]:
+            - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision
+        - generic [ref=f12e831]:
+          - generic [ref=f12e832]:
+            - link [ref=f12e833] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision/vision/vision_sensors
+              - heading "Featured" [level=4] [ref=f12e834]
+            - link [ref=f12e835] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision/vision/vision_sensors
+              - img "Datalogic Vision Sensors Thumbnail" [ref=f12e836]
+              - text: Datalogic Vision Sensors
+          - link [ref=f12e837] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision/barcode_scanners
+            - img "Bar Code Scanner Thumbnail" [ref=f12e838]
+            - text: Barcode Scanners
+          - link [ref=f12e839] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision/rfid_devices
+            - img "RFID Devices Thumbnail" [ref=f12e840]
+            - text: RFID Devices
+          - link [ref=f12e841] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision/vision
+            - img "Vision Devices Thumbnail" [ref=f12e842]
+            - text: Vision Devices
+          - link [ref=f12e843] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision/vision_lighting
+            - img "Vision Lighting Thumbnail" [ref=f12e844]
+            - text: Vision Lighting
+          - link [ref=f12e845] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/barcode_-z-_rfid_-z-_vision/device_mounting_systems
+            - img "Device Mounting Systems Thumbnail" [ref=f12e846]
+            - text: Device Mounting Systems
+        - heading [level=2] [ref=f12e847] [cursor=pointer]:
+          - link "Pushbuttons / Switches / Indicators / Stacklights" [ref=f12e848]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators
+        - generic [ref=f12e849]:
+          - generic [ref=f12e850]:
+            - link [ref=f12e851] [cursor=pointer]:
+              - /url: /adc/overview/catalog/stacklights/signal_towers
+              - heading "Featured" [level=4] [ref=f12e852]
+            - link [ref=f12e853] [cursor=pointer]:
+              - /url: /adc/overview/catalog/stacklights/signal_towers
+              - img "WERMA eSign towerlight Thumbnail" [ref=f12e854]
+              - text: WERMA eSign Towerlight
+          - link [ref=f12e855] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/pushbuttons
+            - img "Pushbuttons Thumbnail" [ref=f12e856]
+            - text: Pushbuttons
+          - link [ref=f12e857] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/emergency_stop_pushbuttons
+            - img "Emergency Stop Pushbuttons Thumbnail" [ref=f12e858]
+            - text: Emergency Stop Pushbuttons
+          - link [ref=f12e859] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/mushroom_head_pushbuttons
+            - img "Mushroom Head Pushbuttons Thumbnail" [ref=f12e860]
+            - text: Mushroom Head Pushbuttons
+          - link [ref=f12e861] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/selector_switches
+            - img "Selector Switches Thumbnail" [ref=f12e862]
+            - text: Selector Switches
+          - link [ref=f12e863] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/start_-z-_stop_combo_switches
+            - img "Start / Stop Combo Switches Thumbnail" [ref=f12e864]
+            - text: Start / Stop Combo Switches
+          - link [ref=f12e865] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/joysticks
+            - img "Joysticks Thumbnail" [ref=f12e866]
+            - text: Joysticks
+          - link [ref=f12e867] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/potentiometers
+            - img "Potentiometers Thumbnail" [ref=f12e868]
+            - text: Potentiometers
+          - link [ref=f12e869] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/capacitive_switches
+            - img "Capacitive Switches Thumbnail" [ref=f12e870]
+            - text: Capacitive Switches
+          - link [ref=f12e871] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/pendant_switches
+            - img "Pendant Switches Thumbnail" [ref=f12e872]
+            - text: Pendant Switches
+          - link [ref=f12e873] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/pneumatic_switches
+            - img "Pneumatic Switches Thumbnail" [ref=f12e874]
+            - text: Pneumatic Switches
+          - link [ref=f12e875] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/indicating_lights
+            - img "Indicating Lights Thumbnail" [ref=f12e876]
+            - text: Indicating Lights
+          - link [ref=f12e877] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/legend_plates
+            - img "Legend Plates Thumbnail" [ref=f12e878]
+            - text: Legend Plates
+          - link [ref=f12e879] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/pushbutton_-z-_switch_-z-_indicator_accessories
+            - img "Pushbutton / Switch / Indicator Accessories Thumbnail" [ref=f12e880]
+            - text: Pushbutton / Switch / Indicator Accessories
+          - link [ref=f12e881] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/hazardous_location_devices
+            - img "Hazardous Location Devices Thumbnail" [ref=f12e882]
+            - text: Hazardous Location Devices
+          - link [ref=f12e883] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/emergency_stop_control_stations
+            - img "Emergency Stop Control Stations Thumbnail" [ref=f12e884]
+            - text: Emergency Stop Control Stations
+          - link [ref=f12e885] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/start_-z-_stop_combo_control_stations
+            - img "Start / Stop Combo Control Stations Thumbnail" [ref=f12e886]
+            - text: Start / Stop Combo Control Stations
+          - link [ref=f12e887] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/pushbutton_enclosures
+            - img "Pushbutton Enclosures Thumbnail" [ref=f12e888]
+            - text: Pushbutton Enclosures
+          - link [ref=f12e889] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/foot_switches
+            - img "Foot Switches Thumbnail" [ref=f12e890]
+            - text: Foot Switches
+          - link [ref=f12e891] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pushbuttons_-z-_switches_-z-_indicators/signaling_devices
+            - img "Visual and Audible Signaling Thumbnail" [ref=f12e892]
+            - text: Visual and Audible Signaling
+          - link [ref=f12e893] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/stacklights/signal_towers
+            - img "Signal Towers Thumbnail" [ref=f12e894]
+            - text: Signal Towers (Stacklights)
+          - link [ref=f12e895] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/stacklights/signal_tower_elements
+            - img "Signal Tower Elements Thumbnail" [ref=f12e896]
+            - text: Signal Tower Elements
+          - link [ref=f12e897] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/stacklights/signal_column_(wall_mount)
+            - img "Signal Column Thumbnail" [ref=f12e898]
+            - text: Signal Column
+        - heading [level=2] [ref=f12e899] [cursor=pointer]:
+          - link "Enclosures & Racks" [ref=f12e900]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks
+        - generic [ref=f12e901]:
+          - generic [ref=f12e902]:
+            - link [ref=f12e903] [cursor=pointer]:
+              - /url: /adc/overview/catalog/enclosures_-a-_racks
+              - heading "Featured" [level=4] [ref=f12e904]
+            - link [ref=f12e905] [cursor=pointer]:
+              - /url: /adc/overview/catalog/enclosures_-a-_racks
+              - img "Saginaw NEMA 1 and Sanitary Enclosures Thumbnail" [ref=f12e906]
+              - text: NEMA 1 & Sanitary Enclosures
+          - link [ref=f12e907] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/wall-mount_enclosures
+            - img "Wall Mount Enclosures Thumbnail" [ref=f12e908]
+            - text: Wall Mount Enclosures
+          - link [ref=f12e909] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/junction_boxes
+            - img "Juntion Boxes Thumbnail" [ref=f12e910]
+            - text: Junction Boxes
+          - link [ref=f12e911] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/sanitary_enclosures
+            - img "Sanitary Enclosures Thumbnail" [ref=f12e912]
+            - text: Sanitary Enclosures
+          - link [ref=f12e913] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/miniature_cases
+            - img "Miniature Cases Thumbnail" [ref=f12e914]
+            - text: Miniature Cases
+          - link [ref=f12e915] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/pushbutton_enclosures
+            - img "Pushbutton Enclosures Thumbnail" [ref=f12e916]
+            - text: Pushbutton Enclosures
+          - link [ref=f12e917] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/floor-mount_enclosures
+            - img "Floor Mount Enclosures Thumbnail" [ref=f12e918]
+            - text: Floor-Mount Enclosures
+          - link [ref=f12e919] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/freestanding_enclosures
+            - img "Freestanding Enclosures Thumbnail" [ref=f12e920]
+            - text: Freestanding Enclosures
+          - link [ref=f12e921] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/modular_enclosures
+            - img "Modular Enclosures Thumbnail" [ref=f12e922]
+            - text: Modular Enclosures
+          - link [ref=f12e923] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/modular_enclosures/modular_enclosure_components
+            - img "Modular Enclosure Components Thumbnail" [ref=f12e924]
+            - text: Modular Enclosure Components
+          - link [ref=f12e925] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/disconnect_enclosures
+            - img "Disconnect Enclosures Thumbnail" [ref=f12e926]
+            - text: Disconnect Enclosures
+          - link [ref=f12e927] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/operator_consoles_-a-_workstations
+            - img "Operator Consoles and Workstations" [ref=f12e928]
+            - text: Operator Consoles & Workstations
+          - link [ref=f12e929] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/operator_consolets
+            - img "Operator Consolets" [ref=f12e930]
+            - text: Operator Consolets
+          - link [ref=f12e931] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/hmi_enclosures
+            - img "HMI Enclosures" [ref=f12e932]
+            - text: HMI Enclosures
+          - link [ref=f12e933] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/rack_-z-_desktop-mount_enclosures
+            - img "Rack / Desktop-Mount Enclosures Thumbnail" [ref=f12e934]
+            - text: Rack / Desktop Enclosures
+          - link [ref=f12e935] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/wiring_trough
+            - img "Wire Trough Enclosures Thumbnail" [ref=f12e936]
+            - text: Wiring Trough
+          - link [ref=f12e937] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/wireway
+            - img "Wireway Enclosures Thumbnail" [ref=f12e938]
+            - text: Wireway
+          - link [ref=f12e939] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/data_communication_racks
+            - img "Data Communication Racks Thumbnail" [ref=f12e940]
+            - text: Data Communication Racks
+          - link [ref=f12e941] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/hmi_enclosure_suspension_arm_systems
+            - img "HMI Enclosure Suspension Arm Systems" [ref=f12e942]
+            - text: HMI Enclosure Suspension Arm Systems
+          - link [ref=f12e943] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/subpanels
+            - img "Enclosure Subpanels Thumbnail" [ref=f12e944]
+            - text: Enclosure Subpanels
+          - link [ref=f12e945] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/din_rails
+            - img "DIN Rail Thumbnail" [ref=f12e946]
+            - text: DIN Rail
+          - link [ref=f12e947] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosures_-a-_racks/enclosure_parts_-a-_accessories
+            - img "Accessories & Spare Parts Thumbnail" [ref=f12e948]
+            - text: Accessories & Spare Parts
+        - heading [level=2] [ref=f12e949] [cursor=pointer]:
+          - link "Enclosure Thermal Management & Lights" [ref=f12e950]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights
+        - generic [ref=f12e951]:
+          - generic [ref=f12e952]:
+            - link [ref=f12e953] [cursor=pointer]:
+              - /url: /adc/overview/catalog/enclosure_thermal_management_-a-_lights/enclosure_lighting
+              - heading "Featured" [level=4] [ref=f12e954]
+            - link [ref=f12e955] [cursor=pointer]:
+              - /url: /adc/overview/catalog/enclosure_thermal_management_-a-_lights/enclosure_lighting
+              - img "Fandis Lumeis LED Enclosure Lights Thumbnail" [ref=f12e956]
+              - text: Fandis Lumeis LED Enclosure Lights
+          - link [ref=f12e957] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/air_conditioners
+            - img "Air Conditioners Thumbnail" [ref=f12e958]
+            - text: Air Conditioners
+          - link [ref=f12e959] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/thermoelectric_coolers
+            - img "Thermoelectric Coolers Thumbnail" [ref=f12e960]
+            - text: Thermoelectric Coolers
+          - link [ref=f12e961] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/air-to-air_heat_exchangers
+            - img "Air-Air Heat Exchangers Thumbnail" [ref=f12e962]
+            - text: Air-Air Heat Exchangers
+          - link [ref=f12e963] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/air-to-water_heat_exchangers
+            - img "Air-Water Heat Exchangers Exchangers Thumbnail" [ref=f12e964]
+            - text: Air-Water Heat Exchangers
+          - link [ref=f12e965] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/filter_fans
+            - img "Directional Cooling Fans Thumbnail" [ref=f12e966]
+            - text: Filter Fans
+          - link [ref=f12e967] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/rack_fans
+            - img "Rack Fans Thumbnail" [ref=f12e968]
+            - text: Rack Fans
+          - link [ref=f12e969] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/vortex_coolers
+            - img "Vortex Coolers Thumbnail" [ref=f12e970]
+            - text: Vortex Coolers
+          - link [ref=f12e971] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/heaters
+            - img "Heaters Thumbnail" [ref=f12e972]
+            - text: Heaters
+          - link [ref=f12e973] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/thermostats_-a-_hygrostats
+            - img "Thermostats & Hygrostats Thumbnail" [ref=f12e974]
+            - text: Thermostats & Hygrostats
+          - link [ref=f12e975] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/ambient_sensors
+            - img "Ambient Sensors Thumbnail" [ref=f12e976]
+            - text: Ambient Sensors
+          - link [ref=f12e977] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/vents_-a-_grilles
+            - img "Vents & Grilles Thumbnail" [ref=f12e978]
+            - text: Vents & Grilles
+          - link [ref=f12e979] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/pressure_compensators_-a-_vent_plugs
+            - img "Pressure Compensators and Vent Plugs Thumbnail" [ref=f12e980]
+            - text: Pressure Compensators & Vent Plugs
+          - link [ref=f12e981] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/breathers_-a-_drains
+            - img "Breathers and Drains Thumbnail" [ref=f12e982]
+            - text: Breathers & Drains
+          - link [ref=f12e983] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/fan_hoods
+            - img "Fan Hoods Thumbnail" [ref=f12e984]
+            - text: Fan Hoods
+          - link [ref=f12e985] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/filter_media
+            - img "Filter Media Thumbnail" [ref=f12e986]
+            - text: Filter Media
+          - link [ref=f12e987] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/thermal_management_accessories
+            - img "Thermal Management Accessories Thumbnail" [ref=f12e988]
+            - text: Thermal Management Accessories
+          - link [ref=f12e989] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/enclosure_lighting
+            - img "Enclosure Lighting Thumbnail" [ref=f12e990]
+            - text: Enclosure Lighting
+          - link [ref=f12e991] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/enclosure_thermal_management_-a-_lights/industrial_led_lighting
+            - img "Industrial LED Lighting Thumbnail" [ref=f12e992]
+            - text: Industrial LED Lighting
+        - heading [level=2] [ref=f12e993] [cursor=pointer]:
+          - link "Relays & Timers" [ref=f12e994]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers
+        - generic [ref=f12e995]:
+          - generic [ref=f12e996]:
+            - link [ref=f12e997] [cursor=pointer]:
+              - /url: /adc/overview/catalog/relays_-z-_timers/phase_monitoring_relays
+              - heading "Featured" [level=4] [ref=f12e998]
+            - link [ref=f12e999] [cursor=pointer]:
+              - /url: /adc/overview/catalog/relays_-z-_timers/phase_monitoring_relays
+              - img "Dold phase protection relay Thumbnail" [ref=f12e1000]
+              - text: Dold Phase Protection Relay
+          - link [ref=f12e1001] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/electro-mechanical_relays
+            - img "Electro-mechanical Relays Thumbnail" [ref=f12e1002]
+            - text: Electro-mechanical Relays
+          - link [ref=f12e1003] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/optocoupler_relays
+            - img "Optocoupler Relays Thumbnail" [ref=f12e1004]
+            - text: Optocoupler Relays
+          - link [ref=f12e1005] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/solid_state_relays
+            - img "Solid State Relays Thumbnail" [ref=f12e1006]
+            - text: Solid State Relays
+          - link [ref=f12e1007] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/phase_monitoring_relays
+            - img "Phase Monitoring Relays Thumbnail" [ref=f12e1008]
+            - text: Phase Monitoring Relays
+          - link [ref=f12e1009] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/voltage_monitoring_relays
+            - img "Voltage Monitoring Relays Thumbnail" [ref=f12e1010]
+            - text: Voltage Monitoring Relays
+          - link [ref=f12e1011] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/alternating_relays
+            - img "Alternating Relays Thumbnail" [ref=f12e1012]
+            - text: Alternating Relays
+          - link [ref=f12e1013] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/pump_seal_failure_relays
+            - img "Pump Seal Failure Relays Thumbnail" [ref=f12e1014]
+            - text: Pump Seal Failure Relays
+          - link [ref=f12e1015] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/intrinsically_safe_relays
+            - img "Intrinsically Safe Relays Thumbnail" [ref=f12e1016]
+            - text: Intrinsically Safe Relays
+          - link [ref=f12e1017] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/timer_relays
+            - img "TimerRelays Thumbnail" [ref=f12e1018]
+            - text: Timer Relays
+          - link [ref=f12e1019] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/multi-function_digital_counter_-z-_timer_-z-_tachometer
+            - img "Multi-Function Digital Counter Tachometer Thumbnail" [ref=f12e1020]
+            - text: Timer / Counter / Tach
+          - link [ref=f12e1021] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/relay_-a-_timer_sockets
+            - img "Relay & Timer Sockets Thumbnail" [ref=f12e1022]
+            - text: Relay & Timer Sockets
+          - link [ref=f12e1023] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/relays_-z-_timers/relay_-a-_timer_accessories
+            - img "Relay & Timer Accessories Thumbnail" [ref=f12e1024]
+            - text: Relay & Timer Accessories
+        - heading [level=2] [ref=f12e1025] [cursor=pointer]:
+          - link "Valves" [ref=f12e1026]:
+            - /url: /adc/shopping/catalog/valves
+        - generic [ref=f12e1027]:
+          - generic [ref=f12e1028]:
+            - link [ref=f12e1029] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/valves/solenoid_process_valves/stacking_-z-_manifold_process_valves
+              - heading "Featured" [level=4] [ref=f12e1030]
+            - link [ref=f12e1031] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/valves/solenoid_process_valves/stacking_-z-_manifold_process_valves
+              - img "Stacking/Manifold Valves Thumbnail" [ref=f12e1032]
+              - text: Stacking/ Manifold Valves
+          - link [ref=f12e1033] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/solenoid_process_valves
+            - img "Solenoid Process Valves Thumbnail" [ref=f12e1034]
+            - text: Solenoid Process Valves
+          - link [ref=f12e1035] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/process_ball_valves
+            - img "Process Ball Valves Thumbnail" [ref=f12e1036]
+            - text: Process Ball Valves
+          - link [ref=f12e1037] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/modular_process_valves
+            - img "Modular Process Valves Thumbnail" [ref=f12e1038]
+            - text: Modular Process Valves
+          - link [ref=f12e1039] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/directional_control_solenoid_valves
+            - img "Directional Control Solenoid Valves Thumbnail" [ref=f12e1040]
+            - text: Directional Solenoid Valves
+          - link [ref=f12e1041] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/solenoid_valve_cables_-a-_connectors_(square_din_style)
+            - img "Valve Cable and Connectors Thumbnail" [ref=f12e1042]
+            - text: Valve Cables & Connectors
+          - link [ref=f12e1043] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/pilot_valves
+            - img "Pilot Valves Thumbnail" [ref=f12e1044]
+            - text: Pilot Valves
+          - link [ref=f12e1045] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/manual_valves
+            - img "Manual Valves Thumbnail" [ref=f12e1046]
+            - text: Manual Valves
+          - link [ref=f12e1047] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/check_valves
+            - img "Check Valves Thumbnail" [ref=f12e1048]
+            - text: Check Valves
+          - link [ref=f12e1049] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/flow_indicators
+            - img "Flow Indicators Thumbnail" [ref=f12e1050]
+            - text: Flow Indicators
+          - link [ref=f12e1051] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/valves/manifolds
+            - img "Manifolds Thumbnail" [ref=f12e1052]
+            - text: Manifolds
+        - heading [level=2] [ref=f12e1053] [cursor=pointer]:
+          - link "Pneumatic Components" [ref=f12e1054]:
+            - /url: /adc/shopping/catalog/pneumatic_components
+        - generic [ref=f12e1055]:
+          - generic [ref=f12e1056]:
+            - link [ref=f12e1057] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/pneumatic_components/special_purpose_fittings#Fitting_Type_ms=%22Inline%20Pressure%20Regulator%22&start=0
+              - heading "Featured" [level=4] [ref=f12e1058]
+            - link [ref=f12e1059] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/pneumatic_components/special_purpose_fittings#Fitting_Type_ms=%22Inline%20Pressure%20Regulator%22&start=0
+              - img "Push-to-Connect Pressure Regulators Thumbnail" [ref=f12e1060]
+              - text: Push-to-Connect Pressure Regulators
+          - link [ref=f12e1061] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/pneumatic_air_preparation_(frl-filters,_regulators,_lubricators)
+            - img "Air Prep (FRL) Thumbnail" [ref=f12e1062]
+            - text: Air Prep (FRL)
+          - link [ref=f12e1063] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/air_logic_valves
+            - img "Air Logic Valves Thumbnail" [ref=f12e1064]
+            - text: Air Logic Valves
+          - link [ref=f12e1065] [cursor=pointer]:
+            - /url: /adc/overview/catalog/pneumatic_components/directional_control_solenoid_valves
+            - img "Modular Solenoid Valves Thumbnail" [ref=f12e1066]
+            - text: Modular Solenoid Valves
+          - link [ref=f12e1067] [cursor=pointer]:
+            - /url: /adc/overview/catalog/pneumatic_components/directional_control_solenoid_valves/solenoid_valves
+            - img "Basic Solenoid Valves Thumbnail" [ref=f12e1068]
+            - text: Basic Solenoid Valves
+          - link [ref=f12e1069] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/air_pilot_valves
+            - img "Air Pilot Valves Thumbnail" [ref=f12e1070]
+            - text: Air Pilot Valves
+          - link [ref=f12e1071] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/manual_air_valves
+            - img "Manual Air Valves Thumbnail" [ref=f12e1072]
+            - text: Manual Air Valves/ Operators
+          - link [ref=f12e1073] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/exhaust_silencers
+            - img "Exhaust Silencer Thumbnail" [ref=f12e1074]
+            - text: Exhaust Silencers
+          - link [ref=f12e1075] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/pneumatic_air_cylinders
+            - img "Rodded Air Cylinders Thumbnail" [ref=f12e1076]
+            - text: Rodded Air Cylinders
+          - link [ref=f12e1077] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/rodless_air_cylinders
+            - img "Rodless AirCylinders Thumbnail" [ref=f12e1078]
+            - text: Rodless Air Cylinders
+          - link [ref=f12e1079] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/pneumatic_rotary_actuators_-a-_grippers
+            - img "Rotary Actuators & Grippers Thumbnail" [ref=f12e1080]
+            - text: Rotary Actuators & Grippers
+          - link [ref=f12e1081] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/pneumatic_cylinder_position_switches
+            - img "Cylinder Position Switches Thumbnail" [ref=f12e1082]
+            - text: Cylinder Position Switches
+          - link [ref=f12e1083] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/vacuum_products/vacuum_suction_cups
+            - img "Vacuum Suction Cups Thumbnail" [ref=f12e1084]
+            - text: Vacuum Suction Cups
+          - link [ref=f12e1085] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/vacuum_products/vacuum_ejectors
+            - img "Vacuum Ejectors Thumbnail" [ref=f12e1086]
+            - text: Vacuum Ejectors
+          - link [ref=f12e1087] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/vacuum_products/end_of_arm_tooling_components
+            - img "End of Arm Tooling Components Thumbnail" [ref=f12e1088]
+            - text: End of Arm Tooling Components
+          - link [ref=f12e1089] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/pneumatic_transducers
+            - img "Pneumatic Transducers Thumbnail" [ref=f12e1090]
+            - text: Pneumatic Transducers
+          - link [ref=f12e1091] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/flexible_pneumatic_tubing_-a-_hoses
+            - img "Tubing & Hose Thumbnail" [ref=f12e1092]
+            - text: Tubing & Hose
+          - link [ref=f12e1093] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/fittings/push-to-connect
+            - img "NPT Thumbnail" [ref=f12e1094]
+            - text: Push-to-connect fittings
+          - link [ref=f12e1095] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/special_purpose_fittings
+            - img "Special Purpose Thumbnail" [ref=f12e1096]
+            - text: Special Purpose Fittings
+          - link [ref=f12e1097] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/manifolds
+            - img "Manifolds Thumbnail" [ref=f12e1098]
+            - text: Manifolds
+          - link [ref=f12e1099] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/fittings/threaded
+            - img "Threaded Fittings Thumbnail" [ref=f12e1100]
+            - text: Threaded Fittings
+          - link [ref=f12e1101] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/hose_clamps
+            - img "Hose Clamps Thumbnail" [ref=f12e1102]
+            - text: Hose Clamps
+          - link [ref=f12e1103] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/fittings/swivel
+            - img "Swivel Air Fittings Thumbnail" [ref=f12e1104]
+            - text: Swivel Air Fittings
+          - link [ref=f12e1105] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/fittings/quick-disconnect_air_couplings
+            - img "Air Couplings Thumbnail" [ref=f12e1106]
+            - text: Air Couplings
+          - link [ref=f12e1107] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/air_jets
+            - img "Air Jet Thumbnail" [ref=f12e1108]
+            - text: Air Jets
+          - link [ref=f12e1109] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/pneumatic_components/pneumatic_blow_guns
+            - img "Pneumatic Blow Guns Thumbnail" [ref=f12e1110]
+            - text: Pneumatic Blow Guns
+        - heading [level=2] [ref=f12e1111] [cursor=pointer]:
+          - link "Hydraulic Components" [ref=f12e1112]:
+            - /url: /adc/shopping/catalog/hydraulic_components
+        - generic [ref=f12e1113]:
+          - generic [ref=f12e1114]:
+            - link [ref=f12e1115] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_solenoid_valves#Brand_Name_ms=%22Continental%22&start=0
+              - heading "Featured" [level=4] [ref=f12e1116]
+            - link [ref=f12e1117] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_solenoid_valves#Brand_Name_ms=%22Continental%22&start=0
+              - img "Continental Solenoid Valves Thumbnail" [ref=f12e1118]
+              - text: Continental Solenoid Valves
+          - link [ref=f12e1119] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_power_units
+            - img "Hydraulic Power Units Thumbnail" [ref=f12e1120]
+            - text: Hydraulic Power Units
+          - link [ref=f12e1121] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/heat_exchangers_for_hpus
+            - img "Heat Exchangers for HPUs Thumbnail" [ref=f12e1122]
+            - text: Heat Exchangers for HPUs
+          - link [ref=f12e1123] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_solenoid_valves
+            - img "Hydraulic Solenoid Valves Thumbnail" [ref=f12e1124]
+            - text: Hydraulic Solenoid Valves
+          - link [ref=f12e1125] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_manual_valves
+            - img "Hydraulic Manual Valves Thumbnail" [ref=f12e1126]
+            - text: Hydraulic Manual Valves
+          - link [ref=f12e1127] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_valve_subplates_and_manifolds
+            - img "Hydraulic Valve Subplates and Manifolds Thumbnail" [ref=f12e1128]
+            - text: Hydraulic Valve Subplates & Manifolds
+          - link [ref=f12e1129] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_cylinders
+            - img "Hydraulic Cylinders Thumbnail" [ref=f12e1130]
+            - text: Hydraulic Cylinders
+          - link [ref=f12e1131] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_hose_assemblies
+            - img "Hydraulic Hose Assemblies Thumbnail" [ref=f12e1132]
+            - text: Hydraulic Hose Assemblies
+          - link [ref=f12e1133] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/hydraulic_components/hydraulic_adapters
+            - img "Hydraulic Adapters Thumbnail" [ref=f12e1134]
+            - text: Hydraulic Adapters
+        - heading [level=2] [ref=f12e1135] [cursor=pointer]:
+          - link "Water (Potable) Components" [ref=f12e1136]:
+            - /url: /adc/shopping/catalog/water_(potable)_components
+        - generic [ref=f12e1137]:
+          - generic [ref=f12e1138]:
+            - link [ref=f12e1139] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/water_(potable)_components/potable_water_solenoid_valves
+              - heading "Featured" [level=4] [ref=f12e1140]
+            - link [ref=f12e1141] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/water_(potable)_components/potable_water_solenoid_valves
+              - img "Spartan Water Valves Thumbnail" [ref=f12e1142]
+              - text: Spartan Water Valves
+          - link [ref=f12e1143] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/potable_water_pressure_regulators
+            - img "Pressure Regulators Thumbnail" [ref=f12e1144]
+            - text: Pressure Regulators
+          - link [ref=f12e1145] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/potable_water_solenoid_valves
+            - img "Solenoid Valves Thumbnail" [ref=f12e1146]
+            - text: Solenoid Valves
+          - link [ref=f12e1147] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/potable_water_ball_valves
+            - img "Potable Water Ball Valves Thumbnail" [ref=f12e1148]
+            - text: Potable Water Ball Valves
+          - link [ref=f12e1149] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/flexible_water_tubing_-a-_hoses
+            - img "Flexible Tubing & Hose Thumbnail" [ref=f12e1150]
+            - text: Flexible Tubing & Hose
+          - link [ref=f12e1151] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/push-to-connect_water_fittings
+            - img "Push-to-Connect Fittings Thumbnail" [ref=f12e1152]
+            - text: Push-to-Connect Fittings
+          - link [ref=f12e1153] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/special_purpose_push-to-connect_water_fittings
+            - img "Special Purpose Fittings Thumbnail" [ref=f12e1154]
+            - text: Special Purpose Fittings
+          - link [ref=f12e1155] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/lead-free_brass_fittings
+            - img "Brass Fittings Thumbnail" [ref=f12e1156]
+            - text: Brass Fittings
+          - link [ref=f12e1157] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/hose_clamps
+            - img "Hose Clamps Thumbnail" [ref=f12e1158]
+            - text: Hose Clamps
+          - link [ref=f12e1159] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/potable_water_dial_pressure_gauges
+            - img "Potable Water Dial Pressure Gauges Thumbnail" [ref=f12e1160]
+            - text: Potable Water Dial Pressure Gauges
+          - link [ref=f12e1161] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/needle_valves
+            - img "Needle Valves Thumbnail" [ref=f12e1162]
+            - text: Needle Valves
+          - link [ref=f12e1163] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/pressure_sensors
+            - img "Pressure Sensors Thumbnail" [ref=f12e1164]
+            - text: Pressure Sensors
+          - link [ref=f12e1165] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/level_sensors
+            - img "Level Sensors Thumbnail" [ref=f12e1166]
+            - text: Level Sensors
+          - link [ref=f12e1167] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/water_(potable)_components/flow_sensors
+            - img "Flow Sensors Thumbnail" [ref=f12e1168]
+            - text: Flow Sensors
+        - heading [level=2] [ref=f12e1169] [cursor=pointer]:
+          - link "Safety" [ref=f12e1170]:
+            - /url: /adc/shopping/catalog/safety
+        - generic [ref=f12e1171]:
+          - generic [ref=f12e1172]:
+            - link [ref=f12e1173] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/safety/z-range_safety_switch_system
+              - heading "Featured" [level=4] [ref=f12e1174]
+            - link [ref=f12e1175] [cursor=pointer]:
+              - /url: /adc/shopping/catalog/safety/z-range_safety_switch_system
+              - img "Z-Range Safety Switch System Thumbnail" [ref=f12e1176]
+              - text: Z-Range Safety Switch System
+          - link [ref=f12e1177] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/non-contact_safety_switches
+            - img "Non-contact Safety Switches Thumbnail" [ref=f12e1178]
+            - text: Non-contact Safety Switches
+          - link [ref=f12e1179] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/magnetic_locking_rfid_safety_switches
+            - img "Non-contact Safety Switches Thumbnail" [ref=f12e1180]
+            - text: Magnetic/RFID Safety Switches
+          - link [ref=f12e1181] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/interlock_safety_switches
+            - img "InterlockSafety Switches Thumbnail" [ref=f12e1182]
+            - text: Interlock Safety Switches
+          - link [ref=f12e1183] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_limit_switches
+            - img "Safety Limit Switches Thumbnail" [ref=f12e1184]
+            - text: Safety Limit Switches
+          - link [ref=f12e1185] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/cable-pull_safety_switches
+            - img "Cable Pull Safety Switches Thumbnail" [ref=f12e1186]
+            - text: Cable-Pull Safety Switches
+          - link [ref=f12e1187] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/hazardous_area_devices
+            - img "Hazardous Area Devices Thumbnail" [ref=f12e1188]
+            - text: Hazardous Area Devices
+          - link [ref=f12e1189] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/intrinsically_safe_isolators_and_barriers
+            - img "Intrinsically Safe Isolators Thumbnail" [ref=f12e1190]
+            - text: Intrinsically Safe Isolators and Barriers
+          - link [ref=f12e1191] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_light_curtains_(category_4_-z-_type_4)
+            - img "Light Curtains Thumbnail" [ref=f12e1192]
+            - text: Light Curtains
+          - link [ref=f12e1193] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_laser_scanners
+            - img "Area Scanners Thumbnail" [ref=f12e1194]
+            - text: Area Scanners
+          - link [ref=f12e1195] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/z-range_safety_switch_system
+            - img "Z-Range Safety System Thumbnail" [ref=f12e1196]
+            - text: Z-Range Safety System
+          - link [ref=f12e1197] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/fail-safe_inductive_sensors
+            - img "Fail-safe Inductive Sensors Thumbnail" [ref=f12e1198]
+            - text: Fail-safe Inductive Sensors
+          - link [ref=f12e1199] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_controllers
+            - img "Modular Safety Integrated Controllers Thumbnail" [ref=f12e1200]
+            - text: Safety Controllers
+          - link [ref=f12e1201] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_configurable_relays
+            - img "Safety Configurable Relays Thumbnail" [ref=f12e1202]
+            - text: Safety Configurable Relays
+          - link [ref=f12e1203] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_relay_modules
+            - img "Safety Relays Thumbnail" [ref=f12e1204]
+            - text: Safety Relays
+          - link [ref=f12e1205] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_mats
+            - img "Safety Mats Thumbnail" [ref=f12e1206]
+            - text: Safety Mats
+          - link [ref=f12e1207] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_edges_and_bumpers
+            - img "Safety Edges and Bumpers Thumbnail" [ref=f12e1208]
+            - text: Safety Edges & Bumpers
+          - link [ref=f12e1209] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/trapped_key_interlock_switches
+            - img "Trapped Key Switches Thumbnail" [ref=f12e1210]
+            - text: Trapped Key Switches
+          - link [ref=f12e1211] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/two-hand_controls
+            - img "Two-Hand Controls Thumbnail" [ref=f12e1212]
+            - text: Two-Hand Controls
+          - link [ref=f12e1213] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/safety_enabling_switches
+            - img "Cable Enabling Switches Thumbnail" [ref=f12e1214]
+            - text: Safety Enabling Switches
+          - link [ref=f12e1215] [cursor=pointer]:
+            - /url: /adc/overview/catalog/safety/iec_safety_contactors
+            - img "IEC Safety Contactors Thumbnail" [ref=f12e1216]
+            - text: IEC Safety Contactors
+          - link [ref=f12e1217] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/machine_guarding
+            - img "Machine Guarding Thumbnail" [ref=f12e1218]
+            - text: Machine Guarding
+          - link [ref=f12e1219] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/safety/gate_boxes
+            - img "Gate Boxes Thumbnail" [ref=f12e1220]
+            - text: Gate Boxes
+        - heading [level=2] [ref=f12e1221] [cursor=pointer]:
+          - link "Electrical Power" [ref=f12e1222]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)
+        - generic [ref=f12e1223]:
+          - generic [ref=f12e1224]:
+            - link [ref=f12e1225] [cursor=pointer]:
+              - /url: /adc/overview/catalog/power_products_(electrical)/analog_panel_meters
+              - heading "Featured" [level=4] [ref=f12e1226]
+            - link [ref=f12e1227] [cursor=pointer]:
+              - /url: /adc/overview/catalog/power_products_(electrical)/analog_panel_meters
+              - img "Analog Panel Meters Thumbnail" [ref=f12e1228]
+              - text: Analog Panel Meters
+          - link [ref=f12e1229] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/dc_power_supplies
+            - img "DC Power Supplies Thumbnail" [ref=f12e1230]
+            - text: DC Power Supplies
+          - link [ref=f12e1231] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/dc-to-dc_converters
+            - img "DC to Dc Converters Thumbnail" [ref=f12e1232]
+            - text: DC-to-DC Converters
+          - link [ref=f12e1233] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/dc_ups_systems
+            - img "DC UPS Systems Thumbnail" [ref=f12e1234]
+            - text: DC UPS Systems
+          - link [ref=f12e1235] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/transformers
+            - img "Transformers Thumbnail" [ref=f12e1236]
+            - text: Transformers
+          - link [ref=f12e1237] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/power_monitoring
+            - img "Power Monitors Thumbnail" [ref=f12e1238]
+            - text: Power Monitoring
+          - link [ref=f12e1239] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/graphical_panel_meters
+            - img "Graphical Panel Meters Thumbnail" [ref=f12e1240]
+            - text: Graphical Panel Meters
+          - link [ref=f12e1241] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/analog_panel_meters
+            - img "Hour Meters and Counters Thumbnail" [ref=f12e1242]
+            - text: Analog Panel Meters
+          - link [ref=f12e1243] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/power_distribution_blocks
+            - img "Power Distribution Blocks Thumbnail" [ref=f12e1244]
+            - text: Power Distribution Blocks
+          - link [ref=f12e1245] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/wiring_devices
+            - img "Wiring Devices Thumbnail" [ref=f12e1246]
+            - text: Wiring Devices
+          - link [ref=f12e1247] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/surge_suppression_devices
+            - img "Surge Suppression Devices Thumbnail" [ref=f12e1248]
+            - text: Surge Suppression Devices
+          - link [ref=f12e1249] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/surge_protective_devices
+            - img "Surge Protective Thumbnail" [ref=f12e1250]
+            - text: Surge Protective Devices
+          - link [ref=f12e1251] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/power_line_filters
+            - img "Power Line Filters Thumbnail" [ref=f12e1252]
+            - text: Power Line Filters
+          - link [ref=f12e1253] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/panel_interface_connectors
+            - img "Panel Interface Connectors Thumbnail" [ref=f12e1254]
+            - text: Panel Interface Connectors
+          - link [ref=f12e1255] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/current_transformers
+            - img "Current Transformers Thumbnail" [ref=f12e1256]
+            - text: Current Transformers
+          - link [ref=f12e1257] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/power_products_(electrical)/mechanical_connectors
+            - img "Mechanical Connectors Thumbnail" [ref=f12e1258]
+            - text: Mechanical Connectors
+        - heading [level=2] [ref=f12e1259] [cursor=pointer]:
+          - link "Circuit Protection" [ref=f12e1260]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects
+        - generic [ref=f12e1261]:
+          - generic [ref=f12e1262]:
+            - link [ref=f12e1263] [cursor=pointer]:
+              - /url: /adc/overview/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches
+              - heading "Featured" [level=4] [ref=f12e1264]
+            - link [ref=f12e1265] [cursor=pointer]:
+              - /url: /adc/overview/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches
+              - img "Class CC Fused Disconnect Thumbnail" [ref=f12e1266]
+              - text: Class CC Fused Disconnect
+          - link [ref=f12e1267] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/circuit_breakers_-a-_circuit_protectors/molded_case_circuit_breakers_(mccb)
+            - img "Molded Case Circuit Breakers Thumbnail" [ref=f12e1268]
+            - text: Molded Case Circuit Breakers
+          - link [ref=f12e1269] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/circuit_breakers_-a-_circuit_protectors/miniature_circuit_breakers_(mcb)
+            - img "Miniature Circuit Breakers Thumbnail" [ref=f12e1270]
+            - text: Miniature Circuit Breakers
+          - link [ref=f12e1271] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/circuit_breakers_-a-_circuit_protectors/miniature_supplementary_protectors
+            - img "Miniature Supplementary Protectors Thumbnail" [ref=f12e1272]
+            - text: Miniature Supplementary Protectors
+          - link [ref=f12e1273] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/circuit_breakers_-a-_circuit_protectors/electronic_circuit_protection
+            - img "Electronic Circuit Protection Thumbnail" [ref=f12e1274]
+            - text: Electronic Circuit Protection
+          - link [ref=f12e1275] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/fuses
+            - img "Fuses Thumbnail" [ref=f12e1276]
+            - text: Fuses
+          - link [ref=f12e1277] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/fuse_holders
+            - img "Fuse Holder Thumbnail" [ref=f12e1278]
+            - text: Fuse Holders
+          - link [ref=f12e1279] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/fuse_blocks
+            - img "Fuse Blocks Thumbnail" [ref=f12e1280]
+            - text: Fuse Blocks
+          - link [ref=f12e1281] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches/manual_transfer_switches
+            - img "Manual Transfer Switches Thumbnail" [ref=f12e1282]
+            - text: Manual Transfer Switches
+          - link [ref=f12e1283] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches/fused_disconnects
+            - img "Fused Disconnects Thumbnail" [ref=f12e1284]
+            - text: Fused Disconnects
+          - link [ref=f12e1285] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches/non-fused_disconnects
+            - img "Non-Fused Disconnects Thumbnail" [ref=f12e1286]
+            - text: Non-Fused Disconnects
+          - link [ref=f12e1287] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches/non-fused_dc-rated_disconnects
+            - img "Non-Fused DC-Rated Disconnects Thumbnail" [ref=f12e1288]
+            - text: Non-Fused DC-Rated Disconnects
+          - link [ref=f12e1289] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches/motor_disconnects_-a-_controllers
+            - img "Motor Disconnects & Controllers Thumbnail" [ref=f12e1290]
+            - text: Motor Disconnects & Controllers
+          - link [ref=f12e1291] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches
+            - img "Disconnects & Switches Thumbnail" [ref=f12e1292]
+            - text: Disconnects & Switches
+          - link [ref=f12e1293] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches/enclosed_motor_disconnects
+            - img "Enclosed Motor Disconnects Thumbnail" [ref=f12e1294]
+            - text: Enclosed Motor Disconnects
+          - link [ref=f12e1295] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/circuit_protection_-z-_fuses_-z-_disconnects/disconnects_-a-_switches/rotary_cam_switches
+            - img "Rotary Cam Switches Thumbnail" [ref=f12e1296]
+            - text: Rotary Cam Switches
+          - link [ref=f12e1297] [cursor=pointer]:
+            - /url: /adc/overview/catalog/motor_controls/motor_disconnects_-a-_controllers/disconnect_external_handles_-a-_components
+            - img "Handles Shafts & Accessories Thumbnail" [ref=f12e1298]
+            - text: External Handles & Components
+        - heading [level=2] [ref=f12e1299] [cursor=pointer]:
+          - link "Structural Frames / Rails" [ref=f12e1300]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails
+        - generic [ref=f12e1301]:
+          - generic [ref=f12e1302]:
+            - link [ref=f12e1303] [cursor=pointer]:
+              - /url: /adc/overview/catalog/structural_frames_-z-_rails/table_lifting_systems
+              - heading "Featured" [level=4] [ref=f12e1304]
+            - link [ref=f12e1305] [cursor=pointer]:
+              - /url: /adc/overview/catalog/structural_frames_-z-_rails/table_lifting_systems
+              - img "Table Lifting Systems for T-slotted Rail" [ref=f12e1306]
+              - text: Table Lifting Systems for T-slotted Rail
+          - link [ref=f12e1307] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/t-slotted_rails
+            - img "T-slotted Rails" [ref=f12e1308]
+            - text: T-slotted Rails
+          - link [ref=f12e1309] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/table_lifting_systems
+            - img "Table Lifting Systems Thumbnail" [ref=f12e1310]
+            - text: Table Lifting Systems
+          - link [ref=f12e1311] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/nuts_for_t-slotted_rails
+            - img "T-slotted Nuts Thumbnail" [ref=f12e1312]
+            - text: T-slotted Nuts
+          - link [ref=f12e1313] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/fasteners_for_t-slotted_rails
+            - img "Fasteners Thumbnail" [ref=f12e1314]
+            - text: T-slotted Fasteners
+          - link [ref=f12e1315] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/connecting_components_for_t-slotted_rails
+            - img "Connecting Components Thumbnail" [ref=f12e1316]
+            - text: T-slotted Connecting Components
+          - link [ref=f12e1317] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/joining_plates_for_t-slotted_rails
+            - img "Joining Plates Thumbnail" [ref=f12e1318]
+            - text: T-slotted Joining Plates
+          - link [ref=f12e1319] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/brackets_for_t-slotted_rails
+            - img "Brackets Thumbnail" [ref=f12e1320]
+            - text: T-slotted Brackets
+          - link [ref=f12e1321] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/bases_for_t-slotted_rails
+            - img "Bases Thumbnail" [ref=f12e1322]
+            - text: T-slotted Bases
+          - link [ref=f12e1323] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/casters_for_t-slotted_rails
+            - img "Castors Thumbnail" [ref=f12e1324]
+            - text: T-slotted Casters
+          - link [ref=f12e1325] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/hinges_for_t-slotted_rails
+            - img "Hinges Thumbnail" [ref=f12e1326]
+            - text: T-slotted Hinges
+          - link [ref=f12e1327] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/panel_-a-_door_elements_for_t-slotted_rails
+            - img "Panel and Door Elements Thumbnail" [ref=f12e1328]
+            - text: T-slotted Panel & Door Elements
+          - link [ref=f12e1329] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/wire_management_for_t-slotted_rails
+            - img "Wire Management Thumbnail" [ref=f12e1330]
+            - text: T-slotted Wire Management
+          - link [ref=f12e1331] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/slides_and_rollers_for_t-slotted_rails
+            - img "T-slotted Slides and Rollers Thumbnail" [ref=f12e1332]
+            - text: T-slotted Slides and Rollers
+          - link [ref=f12e1333] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/workstation_components_for_t-slotted_rails
+            - img "T-slotted Workstation Components Thumbnail" [ref=f12e1334]
+            - text: T-slotted Workstation Components
+          - link [ref=f12e1335] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/accessories_for_t-slotted_rails
+            - img "T-slotted accessories Thumbnail" [ref=f12e1336]
+            - text: T-slotted Accessories
+          - link [ref=f12e1337] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/structural_frames_-z-_rails/device_mounting_systems
+            - img "Device Mounting Systems Thumbnail" [ref=f12e1338]
+            - text: Device Mounting Systems
+        - heading [level=2] [ref=f12e1339] [cursor=pointer]:
+          - link "Wire & Cable Management" [ref=f12e1340]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management
+        - generic [ref=f12e1341]:
+          - generic [ref=f12e1342]:
+            - link [ref=f12e1343] [cursor=pointer]:
+              - /url: /adc/overview/catalog/wire_-a-_cable_management/electrical_conduit/conduit_fittings
+              - heading "Featured" [level=4] [ref=f12e1344]
+            - link [ref=f12e1345] [cursor=pointer]:
+              - /url: /adc/overview/catalog/wire_-a-_cable_management/electrical_conduit/conduit_fittings
+              - img "Atkore Hygienic Connectors Thumbnail" [ref=f12e1346]
+              - text: Atkore Hygienic Connectors
+          - link [ref=f12e1347] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/wire_duct
+            - img "Wire Duct Thumbnail" [ref=f12e1348]
+            - text: Wire Duct
+          - link [ref=f12e1349] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/din_rail
+            - img "DIN Rail Thumbnail" [ref=f12e1350]
+            - text: DIN Rail
+          - link [ref=f12e1351] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/cable_glands
+            - img "Cable Glands Thumbnail" [ref=f12e1352]
+            - text: Cable Glands
+          - link [ref=f12e1353] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/cable_entry_systems
+            - img "Cable Entry Systems" [ref=f12e1354]
+            - text: Cable Entry Systems
+          - link [ref=f12e1355] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/cord_grips
+            - img "Cord Grips Thumbnail" [ref=f12e1356]
+            - text: Cord Grips
+          - link [ref=f12e1357] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/electrical_conduit
+            - img "Electrical Conduit Thumbnail" [ref=f12e1358]
+            - text: Electrical Conduit
+          - link [ref=f12e1359] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/electrical_tubing
+            - img "Electrical Tubing Thumbnail" [ref=f12e1360]
+            - text: Electrical Tubing
+          - link [ref=f12e1361] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/dynamic_cable_-z-_hose_management
+            - img "Dynamic Cable / Hose Management Thumbnail" [ref=f12e1362]
+            - text: Dynamic Cable / Hose Management
+          - link [ref=f12e1363] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/spiral_wrap_-z-_braided_sleeve
+            - img "Spiral Wrap / Braided Sleeve Thumbnail" [ref=f12e1364]
+            - text: Spiral Wrap / Braided Sleeve
+          - link [ref=f12e1365] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/heat_shrink_tubing
+            - img "Heat Shrink Tubing Thumbnail" [ref=f12e1366]
+            - text: Heat Shrink Tubing
+          - link [ref=f12e1367] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/electrical_tape
+            - img "Electrical Tape Thumbnail" [ref=f12e1368]
+            - text: Electrical Tape
+          - link [ref=f12e1369] [cursor=pointer]:
+            - /url: /adc/overview/catalog/wire_-a-_cable_management/cable_ties_-a-_mounts
+            - img "Cable Ties and Mounts Thumbnail" [ref=f12e1370]
+            - text: Cable Ties & Mounts
+          - link [ref=f12e1371] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/fixing_-z-_fastening_and_support
+            - img "Fixing / Fastening and Support Thumbnail" [ref=f12e1372]
+            - text: Fixing / Fastening & Support
+          - link [ref=f12e1373] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/wireway
+            - img "Wireway Thumbnail" [ref=f12e1374]
+            - text: Wireway
+          - link [ref=f12e1375] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_management/labeling
+            - img "Labeling" [ref=f12e1376]
+            - text: Labeling
+        - heading [level=2] [ref=f12e1377] [cursor=pointer]:
+          - link "Wire & Cable Termination" [ref=f12e1378]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination
+        - generic [ref=f12e1379]:
+          - generic [ref=f12e1380]:
+            - link [ref=f12e1381] [cursor=pointer]:
+              - /url: /adc/overview/catalog/wire_-a-_cable_termination/multi-wire_connectors
+              - heading "Featured" [level=4] [ref=f12e1382]
+            - link [ref=f12e1383] [cursor=pointer]:
+              - /url: /adc/overview/catalog/wire_-a-_cable_termination/multi-wire_connectors
+              - img "METEcon Housing and Inserts Thumbnail" [ref=f12e1384]
+              - text: METEcon Housing and Inserts
+          - link [ref=f12e1385] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/circular_connection_cables
+            - img "Circular Connection Cables Thumbnail" [ref=f12e1386]
+            - text: Circular Connection Cables
+          - link [ref=f12e1387] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/ziplink_pre-wired_connection_cables_-a-_modules
+            - img "Pre-wired Cables & Modules Thumbnail" [ref=f12e1388]
+            - text: Pre-wired PLC I/O Cables & Modules
+          - link [ref=f12e1389] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/terminal_blocks
+            - img "Terminal Blocks Thumbnail" [ref=f12e1390]
+            - text: Terminal Blocks
+          - link [ref=f12e1391] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/din_rail
+            - img "DIN Rail Thumbnail" [ref=f12e1392]
+            - text: DIN Rail
+          - link [ref=f12e1393] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/power_distribution_blocks
+            - img "Power Distribution Blocks Thumbnail" [ref=f12e1394]
+            - text: Power Distribution Blocks
+          - link [ref=f12e1395] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/panel_interface_connectors
+            - img "Panel Interface Connectors Thumbnail" [ref=f12e1396]
+            - text: Panel Interface Connectors
+          - link [ref=f12e1397] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/pin_-a-_sleeve_devices
+            - img "Cable Glands Thumbnail" [ref=f12e1398]
+            - text: Pin & Sleeve Devices
+          - link [ref=f12e1399] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/wiring_devices
+            - img "Wiring Devices Thumbnail" [ref=f12e1400]
+            - text: Wiring Devices
+          - link [ref=f12e1401] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/multi-wire_connectors
+            - img "Multi-Wire Connectors Thumbnail" [ref=f12e1402]
+            - text: Multi-Wire Connectors
+          - link [ref=f12e1403] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/wire_end_connectors
+            - img "Wire End Connectors Thumbnail" [ref=f12e1404]
+            - text: Wire End Connectors
+          - link [ref=f12e1405] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/splicing_connectors
+            - img "Splicing Connectors Thumbnail" [ref=f12e1406]
+            - text: Splicing Connectors
+          - link [ref=f12e1407] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/wire_-a-_cable_termination/mechanical_connectors
+            - img "Mechanical Connectors Thumbnail" [ref=f12e1408]
+            - text: Mechanical Connectors
+        - heading [level=2] [ref=f12e1409] [cursor=pointer]:
+          - link "Tools & Test Equipment" [ref=f12e1410]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment
+        - generic [ref=f12e1411]:
+          - generic [ref=f12e1412]:
+            - link [ref=f12e1413] [cursor=pointer]:
+              - /url: /adc/overview/catalog/tools_-a-_test_equipment/hole_cutting_-a-_knockouts/knockout_punches
+              - heading "Featured" [level=4] [ref=f12e1414]
+            - link [ref=f12e1415] [cursor=pointer]:
+              - /url: /adc/overview/catalog/tools_-a-_test_equipment/hole_cutting_-a-_knockouts/knockout_punches
+              - img "Greenlee Knockout & Hydraulic Tools Thumbnail" [ref=f12e1416]
+              - text: Knockout & Hydraulic Tools
+          - link [ref=f12e1417] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/electrical_test_equipment
+            - img "Electrical Test Equipment Thumbnail" [ref=f12e1418]
+            - text: Electrical Test Equipment
+          - link [ref=f12e1419] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/tool_sets
+            - img "Tool Sets Thumbnail" [ref=f12e1420]
+            - text: Tool Sets
+          - link [ref=f12e1421] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/screwdrivers_-a-_nutdrivers
+            - img "Screwdrivers and Nutdrivers Thumbnail" [ref=f12e1422]
+            - text: Screwdrivers & Nutdrivers
+          - link [ref=f12e1423] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/stripping_-a-_crimping_tools
+            - img "Stripping and Crimping Tools Thumbnail" [ref=f12e1424]
+            - text: Stripping & Crimping Tools
+          - link [ref=f12e1425] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/pliers_-a-_cutting_tools
+            - img "Pliers and Cutting Tools Thumbnail" [ref=f12e1426]
+            - text: Pliers & Cutting Tools
+          - link [ref=f12e1427] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/bit_drivers,_bits,_-a-_adapters
+            - img "Bit Drivers and Adapters Thumbnail" [ref=f12e1428]
+            - text: Bit Drivers, Bits, & Adapters
+          - link [ref=f12e1429] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/wrenches
+            - img "Wrenches Thumbnail" [ref=f12e1430]
+            - text: Wrenches
+          - link [ref=f12e1431] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/tool_storage_-a-_organization
+            - img "Tool Storage and Organization Thumbnail" [ref=f12e1432]
+            - text: Tool Storage & Organization
+          - link [ref=f12e1433] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/soldering_irons_-a-_guns
+            - img "Soldering Irons & Guns Thumbnail" [ref=f12e1434]
+            - text: Soldering Irons & Guns
+          - link [ref=f12e1435] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/heat_guns
+            - img "Heat Guns Thumbnail" [ref=f12e1436]
+            - text: Heat Guns
+          - link [ref=f12e1437] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/fish_tapes
+            - img "Fish Tape Thumbnail" [ref=f12e1438]
+            - text: Fish Tape
+          - link [ref=f12e1439] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/cable_tie_tools
+            - img "Cable Tie Tools Thumbnail" [ref=f12e1440]
+            - text: Cable Tie Tools
+          - link [ref=f12e1441] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/hole_cutting_-a-_knockouts
+            - img "Hole Cutting and Knockouts Thumbnail" [ref=f12e1442]
+            - text: Hole Cutting & Knockouts
+          - link [ref=f12e1443] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/striking_tools
+            - img "Striking Tools Thumbnail" [ref=f12e1444]
+            - text: Striking Tools
+          - link [ref=f12e1445] [cursor=pointer]:
+            - /url: /adc/shopping/catalog/tools_-a-_test_equipment/measuring_-a-_layout
+            - img "Measuring & Layout Thumbnail" [ref=f12e1446]
+            - text: Measuring & Layout
+    - generic [ref=f12e1448]:
+      - generic [ref=f12e1449]:
+        - generic [ref=f12e1450]:
+          - generic [ref=f12e1451]:
+            - generic [ref=f12e1452]: Sign Up
+            - text: "to receive:"
+            - link [ref=f12e1453] [cursor=pointer]:
+              - /url: /ebooks/email-newsletter-signup
+              - strong [ref=f12e1454]: FREE e-Newsletter
+            - text: sign up today!
+          - generic [ref=f12e1455]:
+            - generic [ref=f12e1456]: Connect With Us
+            - text: "Social Media Channels:"
+            - link [ref=f12e1457] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/automationdirect
+              - img "linkedin" [ref=f12e1458]
+            - link [ref=f12e1459] [cursor=pointer]:
+              - /url: https://www.facebook.com/AutomationDirect
+              - img "facebook" [ref=f12e1460]
+            - link [ref=f12e1461] [cursor=pointer]:
+              - /url: https://twitter.com/AutomationDirec
+              - img "x" [ref=f12e1462]
+            - link [ref=f12e1463] [cursor=pointer]:
+              - /url: https://www.instagram.com/automationdirect
+              - img "instagram" [ref=f12e1464]
+            - link [ref=f12e1465] [cursor=pointer]:
+              - /url: https://www.youtube.com/AutomationDirect
+              - img "youtube" [ref=f12e1466]
+          - generic [ref=f12e1467]:
+            - generic [ref=f12e1468]: Company Information
+            - generic [ref=f12e1469]:
+              - link "About Us" [ref=f12e1470] [cursor=pointer]:
+                - /url: /support/about-adc
+              - link "Brand Line Card" [ref=f12e1471] [cursor=pointer]:
+                - /url: https://cdn.automationdirect.com/static/catalog/AutomationDirect-Authorized-Distributor-Line-Card.pdf
+              - link "System Integrator Program" [ref=f12e1472] [cursor=pointer]:
+                - /url: /adc/form/admin/si?mode=integrators
+              - link "International Sales" [ref=f12e1473] [cursor=pointer]:
+                - /url: /adc/international/international
+            - generic [ref=f12e1474]:
+              - link "Panel Builder Program" [ref=f12e1475] [cursor=pointer]:
+                - /url: /adc/form/admin/si?mode=panel
+              - link "Site Help" [ref=f12e1476] [cursor=pointer]:
+                - /url: /help
+              - link "Company Reviews" [ref=f12e1477] [cursor=pointer]:
+                - /url: /adc/form/user/companyreview
+              - link "Download Price List" [ref=f12e1478] [cursor=pointer]:
+                - /url: /shopping/price-list
+          - generic [ref=f12e1479]:
+            - generic [ref=f12e1480]: Contact Us
+            - link "Contact Options" [ref=f12e1481] [cursor=pointer]:
+              - /url: /adc/contactus/contactus
+            - generic [ref=f12e1482]: 1-800-633-0405
+            - generic [ref=f12e1483]: Monday - Friday 9 a.m. - 6 p.m. ET excluding holidays
+        - generic [ref=f12e1485]:
+          - generic [ref=f12e1487]:
+            - generic [ref=f12e1488]: Career Opportunities
+            - text: We're a great place to work! Check out our
+            - link "job openings" [ref=f12e1489] [cursor=pointer]:
+              - /url: https://automationdirect.csod.com/ux/ats/careersite/10/home?c=automationdirect
+            - generic [ref=f12e1490]: Need Training?
+            - link "Affordable Training by Interconnecting Automation" [ref=f12e1491] [cursor=pointer]:
+              - /url: http://www.interconnectingautomation.com/
+            - link "Free Online PLC Training" [ref=f12e1492] [cursor=pointer]:
+              - /url: /programmable-logic-controllers/plc-training
+            - link "FREE Video Tutorials" [ref=f12e1493] [cursor=pointer]:
+              - /url: /videos/home
+          - generic [ref=f12e1494]:
+            - generic [ref=f12e1495]: Information & News
+            - link "What's New / In The News" [ref=f12e1496] [cursor=pointer]:
+              - /url: /content/what-is-new
+            - link "FREE e-Newsletter" [ref=f12e1497] [cursor=pointer]:
+              - /url: https://library.automationdirect.com/automationdirect-newsletter-1/
+            - link "Automation Notebook" [ref=f12e1498] [cursor=pointer]:
+              - /url: http://www.automationnotebook.com/
+            - link "Product Literature" [ref=f12e1499] [cursor=pointer]:
+              - /url: /content/adc-literature#literature
+            - link "White Papers" [ref=f12e1500] [cursor=pointer]:
+              - /url: /content/adc-literature#papers
+            - link "News, Product and Training Bulletins" [ref=f12e1501] [cursor=pointer]:
+              - /url: /content/adc-literature#bulletin
+            - link "E-Books" [ref=f12e1502] [cursor=pointer]:
+              - /url: /content/adc-literature#ebook
+          - img "payment methods" [ref=f12e1506]
+          - generic [ref=f12e1507]:
+            - img "AutomationDirect" [ref=f12e1508]
+            - link [ref=f12e1509] [cursor=pointer]:
+              - /url: https://www.bbb.org/us/ga/cumming/profile/control-systems/automation-directcom-inc-0443-16000003
+              - img "BBB Accredited" [ref=f12e1510]
+      - generic [ref=f12e1511]:
+        - text: Copyright © 1999-2026 AutomationDirect. ALL RIGHTS RESERVED.
+        - generic [ref=f12e1512]:
+          - link "Site Map" [ref=f12e1513] [cursor=pointer]:
+            - /url: /adc/sitemap/sitemap
+          - link "Send Us your Feedback" [ref=f12e1514] [cursor=pointer]:
+            - /url: /adc/form/user/generalinquiry?ref=web
+          - link "Unsubscribe" [ref=f12e1515] [cursor=pointer]:
+            - /url: /myaccount/communicationprefs
+          - link "Email Preferences" [ref=f12e1516] [cursor=pointer]:
+            - /url: /myaccount/communicationprefs
+          - link "Legal & Business Policies" [ref=f12e1517] [cursor=pointer]:
+            - /url: /help/legal
+          - link "Cookie Preferences" [ref=f12e1518] [cursor=pointer]:
+            - /url: "#"
+          - link "YouTube Terms of Service" [ref=f12e1519] [cursor=pointer]:
+            - /url: https://www.youtube.com/t/terms
+          - link "AutomationDirect Product API" [ref=f12e1520] [cursor=pointer]:
+            - /url: /api
+        - link "Clear login credentials" [ref=f12e1523] [cursor=pointer]:
+          - /url: /logout
+    - link " Back to Top" [ref=f12e1525] [cursor=pointer]:
+      - /url: javascript:topFunction()
+      - generic [ref=f12e1526]: 
+      - text: Back to Top
+  - generic [ref=f12e1527]: ..
+  - button "Hello, have a question? Let’s chat." [ref=f12e1528] [cursor=pointer]

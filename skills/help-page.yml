@@ -1,0 +1,212 @@
+- generic [ref=f9e1]:
+  - generic:
+    - banner [ref=f9e2]:
+      - generic:
+        - generic:
+          - button "BROWSE CATALOG" [ref=f9e5] [cursor=pointer]
+          - generic [ref=f9e6]:
+            - generic [ref=f9e7]:
+              - link [ref=f9e8] [cursor=pointer]:
+                - /url: /
+                - img "McMaster-Carr Logo" [ref=f9e9]
+              - button "close" [ref=f9e10] [cursor=pointer]
+            - list [ref=f9e11]:
+              - listitem [ref=f9e12]:
+                - link "Abrading & Polishing Abrading & Polishing" [ref=f9e13] [cursor=pointer]:
+                  - /url: /products/abrading-and-polishing/
+                  - img "Abrading & Polishing" [ref=f9e14]
+                  - generic [ref=f9e15]: Abrading & Polishing
+              - listitem [ref=f9e16]:
+                - link "Building & Grounds Building & Grounds" [ref=f9e17] [cursor=pointer]:
+                  - /url: /products/building-and-grounds/
+                  - img "Building & Grounds" [ref=f9e18]
+                  - generic [ref=f9e19]: Building & Grounds
+              - listitem [ref=f9e20]:
+                - link "Electrical & Lighting Electrical & Lighting" [ref=f9e21] [cursor=pointer]:
+                  - /url: /products/electrical-and-lighting/
+                  - img "Electrical & Lighting" [ref=f9e22]
+                  - generic [ref=f9e23]: Electrical & Lighting
+              - listitem [ref=f9e24]:
+                - link "Fabricating Fabricating" [ref=f9e25] [cursor=pointer]:
+                  - /url: /products/fabricating/
+                  - img "Fabricating" [ref=f9e26]
+                  - generic [ref=f9e27]: Fabricating
+              - listitem [ref=f9e28]:
+                - link "Fastening & Joining Fastening & Joining" [ref=f9e29] [cursor=pointer]:
+                  - /url: /products/fastening-and-joining/
+                  - img "Fastening & Joining" [ref=f9e30]
+                  - generic [ref=f9e31]: Fastening & Joining
+              - listitem [ref=f9e32]:
+                - link "Filtering Filtering" [ref=f9e33] [cursor=pointer]:
+                  - /url: /products/filtering/
+                  - img "Filtering" [ref=f9e34]
+                  - generic [ref=f9e35]: Filtering
+              - listitem [ref=f9e36]:
+                - link "Flow & Level Control Flow & Level Control" [ref=f9e37] [cursor=pointer]:
+                  - /url: /products/flow-and-level-control/
+                  - img "Flow & Level Control" [ref=f9e38]
+                  - generic [ref=f9e39]: Flow & Level Control
+              - listitem [ref=f9e40]:
+                - link "Furniture & Storage Furniture & Storage" [ref=f9e41] [cursor=pointer]:
+                  - /url: /products/furniture-and-storage/
+                  - img "Furniture & Storage" [ref=f9e42]
+                  - generic [ref=f9e43]: Furniture & Storage
+              - listitem [ref=f9e44]:
+                - link "Hand Tools Hand Tools" [ref=f9e45] [cursor=pointer]:
+                  - /url: /products/hand-tools/
+                  - img "Hand Tools" [ref=f9e46]
+                  - generic [ref=f9e47]: Hand Tools
+              - listitem [ref=f9e48]:
+                - link "Hardware Hardware" [ref=f9e49] [cursor=pointer]:
+                  - /url: /products/hardware/
+                  - img "Hardware" [ref=f9e50]
+                  - generic [ref=f9e51]: Hardware
+              - listitem [ref=f9e52]:
+                - link "Heating & Cooling Heating & Cooling" [ref=f9e53] [cursor=pointer]:
+                  - /url: /products/heating-and-cooling/
+                  - img "Heating & Cooling" [ref=f9e54]
+                  - generic [ref=f9e55]: Heating & Cooling
+              - listitem [ref=f9e56]:
+                - link "Lubricating Lubricating" [ref=f9e57] [cursor=pointer]:
+                  - /url: /products/lubricating/
+                  - img "Lubricating" [ref=f9e58]
+                  - generic [ref=f9e59]: Lubricating
+              - listitem [ref=f9e60]:
+                - link "Material Handling Material Handling" [ref=f9e61] [cursor=pointer]:
+                  - /url: /products/material-handling/
+                  - img "Material Handling" [ref=f9e62]
+                  - generic [ref=f9e63]: Material Handling
+              - listitem [ref=f9e64]:
+                - link "Measuring & Inspecting Measuring & Inspecting" [ref=f9e65] [cursor=pointer]:
+                  - /url: /products/measuring-and-inspecting/
+                  - img "Measuring & Inspecting" [ref=f9e66]
+                  - generic [ref=f9e67]: Measuring & Inspecting
+              - listitem [ref=f9e68]:
+                - link "Office Supplies & Signs Office Supplies & Signs" [ref=f9e69] [cursor=pointer]:
+                  - /url: /products/office-supplies-and-signs/
+                  - img "Office Supplies & Signs" [ref=f9e70]
+                  - generic [ref=f9e71]: Office Supplies & Signs
+              - listitem [ref=f9e72]:
+                - link "Pipe, Tubing, Hose & Fittings Pipe, Tubing, Hose & Fittings" [ref=f9e73] [cursor=pointer]:
+                  - /url: /products/pipe-tubing-hose-and-fittings/
+                  - img "Pipe, Tubing, Hose & Fittings" [ref=f9e74]
+                  - generic [ref=f9e75]: Pipe, Tubing, Hose & Fittings
+              - listitem [ref=f9e76]:
+                - link "Plumbing and Janitorial Plumbing and Janitorial" [ref=f9e77] [cursor=pointer]:
+                  - /url: /products/plumbing-and-janitorial/
+                  - img "Plumbing and Janitorial" [ref=f9e78]
+                  - generic [ref=f9e79]: Plumbing and Janitorial
+              - listitem [ref=f9e80]:
+                - link "Power Transmission Power Transmission" [ref=f9e81] [cursor=pointer]:
+                  - /url: /products/power-transmission/
+                  - img "Power Transmission" [ref=f9e82]
+                  - generic [ref=f9e83]: Power Transmission
+              - listitem [ref=f9e84]:
+                - link "Pressure & Temperate Control Pressure & Temperate Control" [ref=f9e85] [cursor=pointer]:
+                  - /url: /products/pressure-and-temperature-control/
+                  - img "Pressure & Temperate Control" [ref=f9e86]
+                  - generic [ref=f9e87]: Pressure & Temperate Control
+              - listitem [ref=f9e88]:
+                - link "Pulling & Lifting Pulling & Lifting" [ref=f9e89] [cursor=pointer]:
+                  - /url: /products/pulling-and-lifting/
+                  - img "Pulling & Lifting" [ref=f9e90]
+                  - generic [ref=f9e91]: Pulling & Lifting
+              - listitem [ref=f9e92]:
+                - link "Raw Materials Raw Materials" [ref=f9e93] [cursor=pointer]:
+                  - /url: /products/raw-materials/
+                  - img "Raw Materials" [ref=f9e94]
+                  - generic [ref=f9e95]: Raw Materials
+              - listitem [ref=f9e96]:
+                - link "Safety Supplies Safety Supplies" [ref=f9e97] [cursor=pointer]:
+                  - /url: /products/safety-supplies/
+                  - img "Safety Supplies" [ref=f9e98]
+                  - generic [ref=f9e99]: Safety Supplies
+              - listitem [ref=f9e100]:
+                - link "Sawing & Cutting Sawing & Cutting" [ref=f9e101] [cursor=pointer]:
+                  - /url: /products/sawing-and-cutting/
+                  - img "Sawing & Cutting" [ref=f9e102]
+                  - generic [ref=f9e103]: Sawing & Cutting
+              - listitem [ref=f9e104]:
+                - link "Sealing Sealing" [ref=f9e105] [cursor=pointer]:
+                  - /url: /products/sealing/
+                  - img "Sealing" [ref=f9e106]
+                  - generic [ref=f9e107]: Sealing
+              - listitem [ref=f9e108]:
+                - link "Shipping Shipping" [ref=f9e109] [cursor=pointer]:
+                  - /url: /products/shipping/
+                  - img "Shipping" [ref=f9e110]
+                  - generic [ref=f9e111]: Shipping
+              - listitem [ref=f9e112]:
+                - link "Suspending Suspending" [ref=f9e113] [cursor=pointer]:
+                  - /url: /products/suspending/
+                  - img "Suspending" [ref=f9e114]
+                  - generic [ref=f9e115]: Suspending
+              - listitem
+      - generic [ref=f9e116]:
+        - link "5 6 2. 6 9 2. 5 9 1 1." [ref=f9e118] [cursor=pointer]:
+          - /url: tel:+15626925911
+          - text: (562) 692-5911
+        - link "Email Us" [ref=f9e171] [cursor=pointer]:
+          - /url: "#"
+        - link "Log in" [ref=f9e128] [cursor=pointer]:
+          - /url: "#"
+      - link [ref=f9e133] [cursor=pointer]:
+        - /url: /
+        - img "McMaster-Carr logo" [ref=f9e134]
+      - generic [ref=f9e137]:
+        - textbox "Search" [active] [ref=f9e138]
+        - textbox [ref=f9e139]
+        - button "Submit" [ref=f9e140]
+        - button "Search by image" [ref=f9e142] [cursor=pointer]
+      - generic [ref=f9e143]:
+        - navigation:
+          - list:
+            - listitem [ref=f9e144]:
+              - link "Order" [ref=f9e145] [cursor=pointer]:
+                - /url: /orders
+            - listitem [ref=f9e147]:
+              - link "Order History" [ref=f9e148] [cursor=pointer]:
+                - /url: /order-history
+    - main [ref=f9e152]
+    - contentinfo [ref=f9e154]:
+      - generic [ref=f9e155]:
+        - generic [ref=f9e156]:
+          - link "Home" [ref=f9e157] [cursor=pointer]:
+            - /url: /
+          - text: "|"
+          - link "Locations" [ref=f9e158] [cursor=pointer]:
+            - /url: /contact
+          - text: "|"
+          - link "Returns" [ref=f9e159] [cursor=pointer]:
+            - /url: /returns
+          - text: "|"
+          - link "International Orders" [ref=f9e160] [cursor=pointer]:
+            - /url: /international
+          - text: "|"
+          - link "Careers" [ref=f9e161] [cursor=pointer]:
+            - /url: /careers
+          - text: "|"
+          - link "Mobile App" [ref=f9e162] [cursor=pointer]:
+            - /url: /mobile
+          - text: "|"
+          - link "Solidworks Add-In" [ref=f9e163] [cursor=pointer]:
+            - /url: /solidworksaddin
+          - text: "|"
+          - link "eProcurement" [ref=f9e164] [cursor=pointer]:
+            - /url: /eprocurement
+          - text: "|"
+          - link "API" [ref=f9e165] [cursor=pointer]:
+            - /url: /help/api
+          - text: "|"
+          - link "Help" [ref=f9e166] [cursor=pointer]:
+            - /url: /help
+          - text: "|"
+          - link "Settings" [ref=f9e167] [cursor=pointer]:
+            - /url: /settings
+        - generic [ref=f9e168]:
+          - text: By using this website, you agree to our
+          - link "Terms and Conditions" [ref=f9e169] [cursor=pointer]:
+            - /url: /termsandconditions
+          - text: and
+          - link "Privacy Policy" [ref=f9e170] [cursor=pointer]:
+            - /url: /privacypolicy
