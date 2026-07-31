@@ -2,7 +2,7 @@ User Instructions:
 
 ## Config Layout
 
-`~/.agents` is a git repo holding shared configuration for all coding agents; `~/.claude`, `~/.claude-work`, and `~/.codex` are symlinks into its `home/` directory. AGENTS.md (this file) holds the shared instructions; `home/.claude/CLAUDE.md` adds Claude-specific sections on top. Skills are shared across projects via the `~/.claude/skills` symlink — when writing skill files, use the real `~/.agents/skills` path, some tools refuse to write through the symlink.
+`~/.agents` is a git repo holding shared configuration for all coding agents; `~/.claude`, `~/.claude-work`, and `~/.codex` are symlinks into `~/.agents/home/`. `~/.agents/AGENTS.md` (this file) holds the shared instructions; `~/.agents/home/.claude/CLAUDE.md` adds Claude-specific sections on top. Skills are shared across projects via the `~/.claude/skills` symlink (real path `~/.agents/skills`). When editing any of these files, use the real `~/.agents/` paths — some tools refuse to write through the symlinks.
 
 ## Code Style
 
