@@ -21,7 +21,9 @@ _scrub_secrets() {
 }
 
 codex() { _scrub_secrets codex "$@"; }
-pi() { _scrub_secrets pi "$@"; }
+# pi comes from pi-for-claude's node_modules so the interactive CLI and the
+# pi-for-claude wrapper are always the same version (update via npm there).
+pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
 
 _claude_with_profile() {
   CLAUDE_CONFIG_DIR="$1" _scrub_secrets claude "${@:2}"
