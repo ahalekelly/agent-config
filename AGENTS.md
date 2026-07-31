@@ -1,4 +1,4 @@
-User Instructions:
+Hi I'm Adrian Kelly, welcome to my computer
 
 ## Config Layout
 
@@ -66,7 +66,7 @@ Split distinct logical changes into separate commits. After making changes, you 
 
 Typically commit at file granularity, don't stage part of a file. If one file ends up containing multiple different changes you made, just commit them together. If the work is unfinished or tests are failing, flag these and don't commit. If a file you're working on also has edits that you didn't make, flag this and don't commit until the user explicitly asks you to.
 
-On repos I (ahalekelly) own, don't open pull requests, just commit to main without pushing. PRs are only for contributing to repos I don't own.
+On repos I (ahalekelly) own, don't open pull requests for changes I asked for, just commit to main without pushing. If you are running in /goal or a similar mode without me in the loop and come up with ideas for improvements to my repos, try them and submit them as PRs if they work and seem good.
 
 Make sure to keep docs up to date whenever something changes, but please keep user-facing docs succinct. If you notice a doc doesn't match the comitted code, update it, even if you're not the one who made it out of date. But if the doc doesn't match uncomitted changes done by another agent, no need to update the doc, they'll update the doc before they commit the code.
 
