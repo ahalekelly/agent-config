@@ -1,6 +1,6 @@
 ---
 name: scribd-text-layer-recovery
-description: Recover the full text of a paywalled or WAF-blocked document (standard, book, report) from a Scribd copy by scraping the viewer's hidden per-page text layer. Use when every direct PDF source is paywalled, 403s, or Cloudflare-blocks and a Scribd copy of the document exists.
+description: Recover the full text of a Scribd document (standard, book, report). Note that this relies on Scribd's PDF OCR which can be hit or miss, getting a PDF is better if there are tables or charts in the document.
 ---
 
 # Scribd text-layer recovery
