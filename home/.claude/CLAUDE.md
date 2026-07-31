@@ -14,7 +14,7 @@ WebFetch's text extraction often fails on PDFs ("corrupted/unreadable" or empty 
 
 Whenever posting on Github, put the "🤖 Generated with Claude Code" line at the top instead of the bottom so it's more clear to the reader.
 
-Never stop the shared browser daemon (`shared-browser.sh stop`) after browser-leaf fan-outs: it is machine-wide, another session's leaves may still be attached, and it stops itself after 5 minutes with no attached leaves.
+Never stop the shared browser daemon (`shared-browser.sh stop`) after browser-swarm fan-outs: it is machine-wide, another session's agents may still be attached, and it stops itself after 5 minutes with no attached agents.
 
 ## Model Routing
 
