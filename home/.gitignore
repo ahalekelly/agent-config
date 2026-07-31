@@ -1,0 +1,6 @@
+# Live agent runtime dirs — ~/.claude, ~/.claude-work, ~/.codex, and ~/.pi
+# symlink into this folder, so it fills with transcripts, caches, and
+# credentials. Everything is ignored; curated config files are tracked by
+# adding them explicitly with git add -f.
+*
+!/.gitignore
