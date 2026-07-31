@@ -1,7 +1,8 @@
 name = "web-bot-auth"
-main = "worker.js"
+main = "worker.mjs"
 compatibility_date = "2026-07-01"
 workers_dev = false
+# Required secret: PRIVATE_KEY_PEM, containing the matching PKCS#8 Ed25519 key.
 routes = [
   { pattern = "lancelotlabs.org/.well-known/http-message-signatures-directory*", zone_name = "lancelotlabs.org" },
 ]
