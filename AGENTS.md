@@ -24,7 +24,7 @@ Documentation and code comments should be timeless, imagine you're writing them 
 
 Timeless also means independent of the conversation that produced the edit: answer my question in your reply, and write the doc from the document's own point of view, stating facts positively rather than as responses ("the scope of X is ..." not "there is no separate definition of X"). Test: would the text make sense if it had always been in the doc?
 
-Reports are different, they're an explanation for the user to read immediately after creation, and a point-in-time snapshot, they don't have to be timeless. Put the datetime in a report's title — it's a staleness flag, telling any future reader (especially an agent) that the content reflects that date and that current docs win on conflict. It is not an invitation to keep old snapshots around: git preserves history, so delete or consolidate superseded reports instead of curating them.
+Reports are different, they're an explanation for the user to read immediately after creation, and a point-in-time snapshot, they don't have to be timeless. Put the datetime in a report's title — it marks the content as frozen at that date, so any future reader knows current docs win on conflict. If a report needs updating, it has become a living doc — drop the date from the title and record `created:` and `verified:` (last fact-checked) as frontmatter properties instead. Git preserves history, so delete or consolidate superseded reports rather than curating them.
 
 When creating Markdown files in greenfield projects, don't use newlines to hard-wrap, the markdown viewer's soft line wrapping is preferred.
 
