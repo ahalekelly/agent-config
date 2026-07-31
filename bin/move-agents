@@ -1,0 +1,60 @@
+#!/bin/zsh
+# move-agents: move background agent sessions between the personal and work
+# Claude Code profiles. A background row is its jobs/<id>/ directory: the
+# daemon discovers rows by scanning jobs/, and state.json carries everything a
+# respawn needs (resumeSessionId, cwd, name, flags). Transcripts (projects/)
+# are shared between profiles, so moving the job dir moves the agent; only
+# providerEnv.CLAUDE_CONFIG_DIR must be rewritten to the target profile.
+# Moved sessions run under the target profile's account from then on.
+set -uo pipefail
+
+usage() { echo "usage: move-agents from-work|to-work [--all]" >&2; exit 2; }
+
+[[ $# -ge 1 ]] || usage
+case $1 in
+  from-work) src=$HOME/.claude-work; dst=$HOME/.claude ;;
+  to-work)   src=$HOME/.claude;      dst=$HOME/.claude-work ;;
+  *) usage ;;
+esac
+all=false
+if [[ ${2:-} == --all ]]; then all=true; [[ $# -eq 2 ]] || usage
+else [[ $# -eq 1 ]] || usage
+fi
+
+rows=$(CLAUDE_CONFIG_DIR=$src command claude agents --json --all) || exit 1
+active_ids=$(CLAUDE_CONFIG_DIR=$src command claude agents --json | jq '[.[].id]') || exit 1
+
+failures=0 moved=0
+while IFS=$'\t' read -r id liveness name; do
+  if [[ $liveness == live && $all == false ]]; then
+    echo "skip  $id ($name): still live — use --all to move live agents"
+    continue
+  fi
+  if [[ -e $dst/jobs/$id ]]; then
+    echo "FAIL  $id ($name): already exists in $dst/jobs" >&2
+    (( failures++ )); continue
+  fi
+
+  # A running worker would keep appending to the transcript under the source
+  # account, so it must be stopped before the row changes profiles.
+  pid=$(jq -r --arg id "$id" '.workers[$id].pid // empty' "$src/daemon/roster.json" 2>/dev/null)
+  if [[ -n $pid ]] && ps -p "$pid" >/dev/null 2>&1; then
+    if ! CLAUDE_CONFIG_DIR=$src command claude stop "$id" </dev/null; then
+      echo "FAIL  $id ($name): claude stop failed" >&2
+      (( failures++ )); continue
+    fi
+  fi
+
+  mv "$src/jobs/$id" "$dst/jobs/$id"
+  jq --arg dst "$dst" '.providerEnv.CLAUDE_CONFIG_DIR = $dst' \
+    "$dst/jobs/$id/state.json" > "$dst/jobs/$id/state.json.tmp"
+  mv "$dst/jobs/$id/state.json.tmp" "$dst/jobs/$id/state.json"
+  echo "moved $id ($name) -> $dst"
+  (( moved++ ))
+done < <(jq -r --argjson act "$active_ids" '
+  .[] | select(.kind == "background")
+  | [.id, (if [.id] | inside($act) then "live" else "idle" end), (.name // "")]
+  | @tsv' <<< "$rows")
+
+echo "$moved moved, $failures failed"
+(( failures == 0 ))
