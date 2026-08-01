@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parents[1]))
 import platform_search_acceptance as acceptance  # noqa: E402
 
 EXPECTED_SOURCE_HASH = (
-    "01d33015b4c9786e3f3a37acfc89686edbe621c6ae519781c2a66e160a173507"
+    "f812a3e3895a82d24c62e5ab39bc2c7851085971f753a10b5845ec2078cc5586"
 )
 
 
@@ -102,6 +102,15 @@ class SavedCorpusTests(unittest.TestCase):
         raw_cart[0]["http_evidence"][0]["final_url"] += "/guest-carts/secret"
         cases.append((raw_cart, "unredacted Magento cart path"))
 
+        mutation = copy.deepcopy(self.rows)
+        mutation[0]["http_evidence"][0]["requested_url"] = (
+            "https://shop.example/api/storefront/carts"
+        )
+        mutation[0]["http_evidence"][0]["final_url"] = (
+            "https://shop.example/api/storefront/carts"
+        )
+        cases.append((mutation, "mutating endpoint"))
+
         unjoined = copy.deepcopy(self.rows)
         unjoined[0]["shipping_cache_domain"] = "missing.example"
         cases.append((unjoined, "learned-cache join"))
@@ -118,6 +127,32 @@ class SavedCorpusTests(unittest.TestCase):
         inconsistent_hash[0]["source_tree_sha256"] = "0" * 64
         with self.assertRaisesRegex(SystemExit, "one valid source-tree SHA-256"):
             self.validate(inconsistent_hash)
+
+        stale_hash = copy.deepcopy(self.rows)
+        for row in stale_hash:
+            row["source_tree_sha256"] = "0" * 64
+        with self.assertRaisesRegex(SystemExit, "current production source"):
+            self.validate(stale_hash)
+
+        changed_outcome = copy.deepcopy(self.rows)
+        changed_outcome[0]["search"] = {
+            "kind": "tool_error",
+            "stage": "search",
+            "platform": "shopify",
+            "source": "storefront_graphql",
+            "candidate_count": None,
+            "selected_index": None,
+            "selected_product": None,
+            "item_ref_sha256": None,
+            "message": "synthetic error",
+        }
+        with self.assertRaisesRegex(SystemExit, "search outcome counts"):
+            self.validate(changed_outcome)
+
+        changed_candidate_count = copy.deepcopy(self.rows)
+        changed_candidate_count[0]["search"]["candidate_count"] += 1
+        with self.assertRaisesRegex(SystemExit, "per-store search dispositions"):
+            self.validate(changed_candidate_count)
 
         changed_terminal = copy.deepcopy(self.rows)
         valin = next(

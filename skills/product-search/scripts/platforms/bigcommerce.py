@@ -9,8 +9,12 @@ from urllib.parse import quote as url_quote
 from urllib.parse import unquote, urljoin
 
 import httpx
+
 from platform_api_core import (
-    Detection,
+    BigCommerceQuote,
+    BigCommerceSearch,
+    BigCommerceShipping,
+    DetectedStore,
     Http,
     ToolError,
     bot_wall,
@@ -47,7 +51,9 @@ DUMMY_SF = {
 }
 
 
-def detect(response: httpx.Response, origin: str, entry_url: str) -> Detection | None:
+def detect(
+    response: httpx.Response, origin: str, entry_url: str
+) -> DetectedStore | None:
     evidence: list[str] = []
     server = response.headers.get("server", "").casefold()
     source = response.text.casefold()
@@ -59,7 +65,13 @@ def detect(response: httpx.Response, origin: str, entry_url: str) -> Detection |
         evidence.append("BigCommerce Stencil assets")
     if not evidence:
         return None
-    return Detection("detected", origin, entry_url, PLATFORM, origin, tuple(evidence))
+    return DetectedStore(
+        origin=origin,
+        entry_url=entry_url,
+        platform=PLATFORM,
+        api_origin=origin,
+        evidence=tuple(evidence),
+    )
 
 
 @dataclass(frozen=True)
@@ -169,7 +181,7 @@ class ProductParser(HTMLParser):
             self._title_text.append(data)
 
 
-def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     response = http.request(
         "GET", detection.origin + "/search.php", params={"search_query": query}
     )
@@ -211,10 +223,10 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
                 "BigCommerce product page redirected off the detected storefront"
             )
         items.append(_product(page.text, final_url))
-    return search_result(PLATFORM, query, items)
+    return search_result(BigCommerceSearch(), query, items)
 
 
-def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]:
+def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
     selected = parse_item_ref(reference, PLATFORM)
     if set(selected) != {"product_id", "product_url"}:
         raise ToolError("BigCommerce item_ref has unexpected fields")
@@ -355,11 +367,10 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
         raw_options.extend(options)
     options = [_shipping_option(value, currency_code) for value in raw_options]
     return quote_outcome(
-        PLATFORM,
+        BigCommerceQuote(selected_sku=cart_item.get("sku")),
         options,
         subtotal,
         no_quote_reason="empty_rate_list",
-        selected_sku=cart_item.get("sku"),
     )
 
 
@@ -502,12 +513,18 @@ def _shipping_option(value: Any, currency: str) -> dict[str, Any]:
         disposition = "unavailable"
     else:
         disposition = "delivery"
-    facts = (
-        {"transit_time": value["transitTime"]}
+    transit_time = (
+        value["transitTime"]
         if isinstance(value.get("transitTime"), str) and value["transitTime"]
-        else {}
+        else None
     )
-    return shipping_option(option_id, title, disposition, amount, **facts)
+    return shipping_option(
+        BigCommerceShipping(transit_time=transit_time),
+        option_id,
+        title,
+        disposition,
+        amount,
+    )
 
 
 def _cookie(http: Http, name: str) -> str:

@@ -17,7 +17,7 @@ FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from platform_api_core import (  # noqa: E402
-    Detection,
+    DetectedStore,
     Http,
     ToolError,
     item_ref,
@@ -51,14 +51,13 @@ def response(
     return httpx.Response(status, content=content, headers=headers, request=request)
 
 
-def detection() -> Detection:
-    return Detection(
-        "detected",
-        "https://bigcommerce.test",
-        "https://bigcommerce.test/",
-        "bigcommerce",
-        "https://bigcommerce.test",
-        ("bigcommerce_stencil",),
+def detection() -> DetectedStore:
+    return DetectedStore(
+        origin="https://bigcommerce.test",
+        entry_url="https://bigcommerce.test/",
+        platform="bigcommerce",
+        api_origin="https://bigcommerce.test",
+        evidence=("bigcommerce_stencil",),
     )
 
 

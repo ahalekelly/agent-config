@@ -17,7 +17,7 @@ FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from platform_api_core import (  # noqa: E402
-    Detection,
+    DetectedStore,
     Http,
     ToolError,
     item_ref,
@@ -51,14 +51,13 @@ def response(
     return httpx.Response(status, content=content, headers=headers, request=request)
 
 
-def detection(entry_url: str = "https://squarespace.test/") -> Detection:
-    return Detection(
-        "detected",
-        "https://squarespace.test",
-        entry_url,
-        "squarespace",
-        "https://squarespace.test",
-        ("server=Squarespace",),
+def detection(entry_url: str = "https://squarespace.test/") -> DetectedStore:
+    return DetectedStore(
+        origin="https://squarespace.test",
+        entry_url=entry_url,
+        platform="squarespace",
+        api_origin="https://squarespace.test",
+        evidence=("server=Squarespace",),
     )
 
 

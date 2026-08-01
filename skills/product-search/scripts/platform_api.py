@@ -13,21 +13,27 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, assert_never
 
 from platform_api_core import (
-    Detection,
+    DetectedStore,
     Http,
+    MagentoDetectedStore,
+    PositiveDetection,
+    StorefrontBotWall,
+    StorefrontDetection,
     ToolError,
+    UnknownStore,
     canonical_url,
     normalize_store_url,
+    public_detection,
     url_origin,
     validate_result,
     wall_system,
 )
 from platforms import bigcommerce, extra, magento, shopify, squarespace, woocommerce
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 ADAPTERS = {
     "shopify": shopify,
     "woocommerce": woocommerce,
@@ -40,25 +46,26 @@ ADAPTERS = {
 }
 
 
-def detect_store(http: Http, store: str) -> Detection:
+def detect_store(http: Http, store: str) -> StorefrontDetection:
     requested = normalize_store_url(store)
     homepage = http.request("GET", requested, follow_redirects=True)
     entry_url = canonical_url(str(homepage.url))
     origin = url_origin(entry_url)
-    detections: list[Detection] = []
-    walls: list[Detection] = []
+    detections: list[PositiveDetection] = []
+    walls: list[StorefrontBotWall] = []
 
     _collect(detections, walls, woocommerce.detect(http, origin, entry_url))
     _collect(detections, walls, shopify.detect(http, origin, entry_url, homepage))
-    _collect(detections, walls, magento.detect(http, origin, entry_url, homepage))
     _collect(detections, walls, bigcommerce.detect(homepage, origin, entry_url))
     _collect(detections, walls, squarespace.detect(homepage, origin, entry_url))
     _collect(detections, walls, extra.detect(homepage, origin, entry_url))
+    if not detections and not walls:
+        _collect(detections, walls, magento.detect(http, origin, entry_url, homepage))
 
     platforms = {detection.platform for detection in detections}
     if len(platforms) > 1:
         names = ", ".join(
-            sorted(platform for platform in platforms if platform is not None)
+            sorted(platforms)
         )
         raise ToolError(f"Conflicting positive storefront detections: {names}")
     if detections:
@@ -71,8 +78,27 @@ def detect_store(http: Http, store: str) -> Detection:
         api_origins = {detection.api_origin for detection in detections}
         if len(api_origins) != 1:
             raise ToolError(f"Conflicting {chosen.platform} API origins")
-        return Detection(
-            "detected", origin, entry_url, chosen.platform, chosen.api_origin, evidence
+        if isinstance(chosen, MagentoDetectedStore):
+            search_sources = {
+                detection.search_source
+                for detection in detections
+                if isinstance(detection, MagentoDetectedStore)
+            }
+            if len(search_sources) != 1:
+                raise ToolError("Conflicting Magento search sources")
+            return MagentoDetectedStore(
+                origin=origin,
+                entry_url=entry_url,
+                api_origin=chosen.api_origin,
+                evidence=evidence,
+                search_source=chosen.search_source,
+            )
+        return DetectedStore(
+            origin=origin,
+            entry_url=entry_url,
+            platform=chosen.platform,
+            api_origin=chosen.api_origin,
+            evidence=evidence,
         )
     if walls:
         systems = {detection.system for detection in walls}
@@ -83,35 +109,26 @@ def detect_store(http: Http, store: str) -> Detection:
         evidence = tuple(
             dict.fromkeys(value for detection in walls for value in detection.evidence)
         )
-        return Detection(
-            "bot_wall",
-            origin,
-            entry_url,
-            None,
-            None,
-            evidence,
-            wall.system,
-            wall.status,
+        return StorefrontBotWall(
+            origin=origin,
+            entry_url=entry_url,
+            evidence=evidence,
+            system=wall.system,
+            status=wall.status,
         )
     system = wall_system(homepage)
     if system is not None:
-        return Detection(
-            "bot_wall",
-            origin,
-            entry_url,
-            None,
-            None,
-            (f"HTTP {homepage.status_code} {system} challenge",),
-            system,
-            homepage.status_code,
+        return StorefrontBotWall(
+            origin=origin,
+            entry_url=entry_url,
+            evidence=(f"HTTP {homepage.status_code} {system} challenge",),
+            system=system,
+            status=homepage.status_code,
         )
-    return Detection(
-        "unknown",
-        origin,
-        entry_url,
-        None,
-        None,
-        (f"No positive platform signal; homepage HTTP {homepage.status_code}",),
+    return UnknownStore(
+        origin=origin,
+        entry_url=entry_url,
+        evidence=(f"No positive platform signal; homepage HTTP {homepage.status_code}",),
     )
 
 
@@ -125,13 +142,13 @@ def execute(command: str, store: str, value: str | None, http: Http) -> dict[str
             **({"query": value} if command in {"search", "probe"} else {}),
         },
         "origin": detection.origin,
-        "detection": detection.public(),
+        "detection": public_detection(detection),
         "evidence": http.evidence,
     }
-    if command == "detect" or detection.kind != "detected":
+    if command == "detect" or not isinstance(
+        detection, (DetectedStore, MagentoDetectedStore)
+    ):
         return record
-    if detection.platform is None:
-        raise AssertionError("Detected storefront must contain a platform")
     adapter = ADAPTERS[detection.platform]
     if command == "search":
         if value is None:
@@ -226,16 +243,18 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _collect(
-    detections: list[Detection], walls: list[Detection], value: Detection | None
+    detections: list[PositiveDetection],
+    walls: list[StorefrontBotWall],
+    value: PositiveDetection | StorefrontBotWall | None,
 ) -> None:
     if value is None:
         return
-    if value.kind == "detected":
+    if isinstance(value, (DetectedStore, MagentoDetectedStore)):
         detections.append(value)
-    elif value.kind == "bot_wall":
+    elif isinstance(value, StorefrontBotWall):
         walls.append(value)
-    elif value.kind != "unknown":
-        raise AssertionError(value.kind)
+    else:
+        assert_never(value)
 
 
 def _candidate(item: Any) -> str | None:

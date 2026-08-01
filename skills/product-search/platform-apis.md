@@ -55,7 +55,7 @@ uv run "$PLATFORM_API" corpus INPUT.json OUTPUT.jsonl
 
 Product-search adapters cover Shopify, WooCommerce, Magento, BigCommerce, Squarespace, Wix, Ecwid, and Salesforce Commerce Cloud. Destination-quote adapters cover the first five. Wix, Ecwid, and Salesforce Commerce Cloud return `unsupported_operation` with `browser_required:true` for quote because their generic public search paths do not establish portable cart state.
 
-Successful operation commands print one compact JSON record with `schema_version`, `observed_at`, `input`, resolved `origin`, `detection`, normalized `result`, and sanitized `evidence`. Result kinds are `search`, `quote`, `empty`, `fallback`, `gated`, `bot_wall`, `unsupported_operation`, and `unsupported_product_configuration`. `detect` and any command that cannot positively detect a platform omit `result`; the discriminated `detection` is the outcome. Contract, transport, parser, and schema errors print a terse message to stderr and exit nonzero.
+Successful operation commands print one compact schema-v2 JSON record with `schema_version`, `observed_at`, `input`, resolved `origin`, `detection`, normalized `result`, and sanitized `evidence`. Positive Magento detection includes the required `search_source` discriminant, `graphql` or `html`; the search result repeats the selected source. Result kinds are `search`, `quote`, `empty`, `fallback`, `gated`, `bot_wall`, `unsupported_operation`, and `unsupported_product_configuration`. `detect` and any command that cannot positively detect a platform omit `result`; the discriminated `detection` is the outcome. Contract, transport, parser, and schema errors print a terse message to stderr and exit nonzero.
 
 Corpus input is a JSON array of 1–100 objects, each containing exactly two nonempty strings:
 
@@ -78,7 +78,7 @@ Always follow the homepage redirect and probe the resolved storefront origin. An
 | --- | --- | --- | --- |
 | Shopify | `POST /api/2026-07/graphql.json` returns `data.shop`; a discovered `.myshopify.com` backend may be the API origin | tokenless Storefront GraphQL | tokenless Storefront GraphQL cart with deferred carrier rates |
 | WooCommerce | `GET /wp-json/wc/store/v1/cart` returns a cart object with `totals` | Store API `/products` | `Cart-Token`, add item, update customer |
-| Magento / Adobe Commerce | Magento markers plus a Magento-shaped guest-cart response; a quoted masked ID means open | public `/graphql`, sitemap, or product page | guest-cart REST when open |
+| Magento / Adobe Commerce | one read-only GraphQL capability query plus independent page markers when GraphQL is unavailable | detection-selected GraphQL or canonical same-origin HTML search | guest-cart REST when open |
 | BigCommerce Stencil | `cdn*.bigcommerce.com/s-<hash>`, Stencil assets, or `x-bc-store-id` | sitemap/search/product form; conditional page token GraphQL | Storefront REST cart plus checkout consignment |
 | Squarespace | Squarespace server/static assets and commerce collection JSON | `?format=json` collection data | anonymous cart entry plus shipping-location update |
 | Wix | Wix/Pepyaka headers or Wix static assets | anonymous e-commerce app token plus Catalog Reader | Wix storefront SDK/runtime |
@@ -258,26 +258,30 @@ All 12 stores completed the cart/address flow. Seven returned rates, five were e
 
 ### Detection and product search
 
-An open guest cart returns a quoted masked ID:
+Detection sends exactly one bounded, application-read-only capability query. It does not create a guest cart:
 
 ```sh
-curl -X POST 'https://STORE/rest/V1/guest-carts' -H 'Content-Type: application/json' --data-binary '{}'
+curl 'https://STORE/graphql' -H 'Content-Type: application/json' \
+  --data-binary '{"query":"query PlatformProbe { storeConfig { base_url } products(search: \"__codex_platform_probe__\", pageSize: 1) { total_count } }","variables":{}}'
 ```
 
-Magento authorization JSON, an edge HTML block, and a generic 401 are distinct. Markers such as `x-magento-init`, `Magento_*` assets, `form_key`, `mage-cache-*`, and `x-magento-*` headers can establish the platform even when catalog or cart access is gated.
+Valid Magento `storeConfig` plus a usable `products.total_count` selects `search_source:graphql`. Independent Magento markers plus GraphQL errors, non-JSON, or HTTP 400, 401, 403, 404, 405, or 422 select `search_source:html`. The same unavailable response without independent Magento proof is not a positive detection. Redirects, HTTP 429, 5xx responses, transport failures, and contradictory proven-Magento response shapes fail loudly. Markers include `x-magento-init`, `/static/.../frontend/`, `mage-cache-*`, `private_content_version`, and `x-magento-*` headers.
 
-Use a narrow public GraphQL search before scraping a SKU:
+The selected search strategy is stable for the operation. Search never switches or retries the other strategy. The GraphQL strategy uses:
 
 ```sh
 curl 'https://STORE/graphql' -H 'Content-Type: application/json' \
   --data-binary '{"query":"query($search:String!){products(search:$search,pageSize:10){total_count items{__typename name sku stock_status url_key}}}","variables":{"search":"bearing"}}'
 ```
 
-Query one exact parent SKU next for `storeConfig.product_url_suffix`, price range, and configurable children. Resolve product URLs from the validated detected entry URL; `product_url_suffix:null` means no suffix, while a missing or non-string/non-null suffix is a schema error. Preserve usable partial `data` while recording GraphQL errors. If GraphQL is unavailable, use the canonical same-origin `/catalogsearch/result?q=…` route and extract exact simple SKUs from product JSON-LD or Magento page configuration. A failure on that route is terminal. Add an in-stock simple SKU, never a configurable or bundle parent.
+Run one bounded full-text detail query for each candidate SKU and require exactly one returned parent with that SKU. This avoids storefronts that reject SKU filters or silently ignore URL-key filters without adding a retry path. Read `storeConfig.product_url_suffix`, price range, and configurable children from that response. Resolve product URLs from the validated detected entry URL; `product_url_suffix:null` means no suffix, while a missing or non-string/non-null suffix is a schema error. Preserve usable partial `data` while recording GraphQL errors. The HTML strategy starts at the canonical same-origin `/catalogsearch/result?q=…` route, follows at most one same-origin redirect, and extracts exact simple SKUs from product JSON-LD or Magento page configuration. Any other redirect or failure on the selected route is terminal. Add an in-stock simple SKU, never a configurable or bundle parent.
 
 ### Guest cart and rates
 
 ```sh
+curl -X POST 'https://STORE/rest/V1/guest-carts' \
+  -H 'Content-Type: application/json' --data-binary '{}'
+
 curl -X POST 'https://STORE/rest/V1/guest-carts/MASKED_ID/items' \
   -H 'Content-Type: application/json' \
   --data-binary '{"cartItem":{"quote_id":"MASKED_ID","sku":"SKU","qty":1}}'
@@ -287,7 +291,7 @@ curl -X POST 'https://STORE/rest/V1/guest-carts/MASKED_ID/estimate-shipping-meth
   --data-binary '{"address":{"firstname":"Jordan","lastname":"Smith","company":"Pacific Prototyping LLC","street":["747 Howard St"],"city":"San Francisco","region":"California","region_code":"CA","region_id":12,"postcode":"94103","country_id":"US","telephone":"4155550132"}}'
 ```
 
-Read carrier/method codes, titles, availability, `amount`, `price_excl_tax`, and `price_incl_tax`. Exclude pickup. Treat account-priced zero, “freight”, and similar ambiguous methods as unusable until verified; a named `freeshipping/freeshipping` zero is a real candidate.
+Quote creates exactly one guest cart and reuses its masked ID for the selected item, totals, and shipping estimate. Read carrier/method codes, titles, availability, `amount`, `price_excl_tax`, and `price_incl_tax`. Exclude pickup. Treat account-priced zero, “freight”, and similar ambiguous methods as unusable until verified; a named `freeshipping/freeshipping` zero is a real candidate.
 
 ### Corpus result
 
@@ -511,7 +515,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 122/122 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 145 tests plus 96 subtests on 2026-07-31. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 

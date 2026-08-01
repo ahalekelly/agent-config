@@ -8,9 +8,13 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import httpx
+
 from platform_api_core import (
-    Detection,
+    DetectedStore,
     Http,
+    ShopifyQuote,
+    ShopifySearch,
+    ShopifyShipping,
     ToolError,
     bot_wall,
     gated,
@@ -86,7 +90,7 @@ class SignedRedirectBoundary(ToolError):
 
 def detect(
     http: Http, origin: str, entry_url: str, homepage: httpx.Response
-) -> Detection | None:
+) -> DetectedStore | None:
     candidates = [origin]
     backends = sorted(
         set(
@@ -130,15 +134,19 @@ def detect(
             evidence = "tokenless Storefront GraphQL data.shop"
             if api_origin != origin:
                 evidence += f" via {api_origin}"
-            return Detection(
-                "detected", origin, entry_url, "shopify", api_origin, (evidence,)
+            return DetectedStore(
+                origin=origin,
+                entry_url=entry_url,
+                platform="shopify",
+                api_origin=api_origin,
+                evidence=(evidence,),
             )
     return None
 
 
-def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     response = _graphql(http, detection, PRODUCT_QUERY, {"query": query})
-    terminal = _terminal_response("search", response, detection)
+    terminal = _terminal_response("search", response)
     if terminal is not None:
         return terminal
     payload = json_object(response, "Shopify product search")
@@ -158,10 +166,10 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
             raise ToolError("Shopify product has no variant nodes")
         for variant in variants["nodes"]:
             items.append(_product_item(detection, product, variant))
-    return search_result("shopify", query, items)
+    return search_result(ShopifySearch(), query, items)
 
 
-def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]:
+def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
     from platform_api_core import parse_item_ref
 
     selected = parse_item_ref(reference, "shopify")
@@ -185,7 +193,7 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
             }
         },
     )
-    terminal = _terminal_response("quote", create_response, detection)
+    terminal = _terminal_response("quote", create_response)
     if terminal is not None:
         return terminal
     create_payload = json_object(create_response, "Shopify cart creation")
@@ -212,7 +220,7 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
         {"id": cart["id"]},
         accept="multipart/mixed; deferSpec=20220824, application/json",
     )
-    terminal = _terminal_response("quote", rates_response, detection)
+    terminal = _terminal_response("quote", rates_response)
     if terminal is not None:
         return terminal
     groups = _delivery_groups(rates_response)
@@ -221,18 +229,18 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
         for group in groups
         for option in _required_list(group, "deliveryOptions", "Shopify delivery group")
     ]
-    return quote_outcome("shopify", options, subtotal)
+    return quote_outcome(ShopifyQuote(), options, subtotal)
 
 
 def _graphql(
     http: Http,
-    detection: Detection,
+    detection: DetectedStore,
     query: str,
     variables: dict[str, Any],
     *,
     accept: str = "application/json",
 ) -> httpx.Response:
-    if detection.platform != "shopify" or detection.api_origin is None:
+    if detection.platform != "shopify":
         raise ToolError("Shopify adapter requires a detected Shopify API origin")
     target = detection.api_origin + API_PATH
     payload = {"query": query, "variables": variables}
@@ -281,7 +289,7 @@ def _signed_post(
 
 
 def _terminal_response(
-    operation: str, response: httpx.Response, detection: Detection
+    operation: str, response: httpx.Response
 ) -> dict[str, object] | None:
     system = wall_system(response)
     if system is not None:
@@ -311,7 +319,7 @@ def _graphql_data(payload: dict[str, Any], context: str) -> dict[str, Any]:
 
 
 def _product_item(
-    detection: Detection, product: dict[str, Any], variant: Any
+    detection: DetectedStore, product: dict[str, Any], variant: Any
 ) -> dict[str, Any]:
     if not isinstance(variant, dict) or not isinstance(variant.get("id"), str):
         raise ToolError("Shopify variant must contain an ID")
@@ -453,12 +461,13 @@ def _shipping_option(option: Any) -> dict[str, Any]:
         title,
     )
     return shipping_option(
+        ShopifyShipping(
+            code=option.get("code"), description=option.get("description")
+        ),
         option_id,
         title,
         disposition,
         amount,
-        code=option.get("code"),
-        description=option.get("description"),
     )
 
 

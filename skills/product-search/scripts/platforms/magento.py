@@ -9,9 +9,13 @@ from urllib.parse import quote as url_quote
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
+
 from platform_api_core import (
-    Detection,
     Http,
+    MagentoDetectedStore,
+    MagentoQuote,
+    MagentoSearch,
+    MagentoShipping,
     ToolError,
     bot_wall,
     canonical_url,
@@ -40,7 +44,7 @@ query ProductSearch($search: String!) {
 DETAIL_QUERY = """\
 query ProductDetail($sku: String!) {
   storeConfig { product_url_suffix }
-  products(filter: {sku: {eq: $sku}}, pageSize: 1) {
+  products(search: $sku, pageSize: 20) {
     items {
       __typename name sku stock_status url_key
       price_range {
@@ -84,7 +88,12 @@ DUMMY_SF = {
 
 MAX_SEARCH_RESULTS = 10
 
-DETECT_QUERY = "query PlatformProbe { storeConfig { base_url } }"
+DETECT_QUERY = """\
+query PlatformProbe {
+  storeConfig { base_url }
+  products(search: "__codex_platform_probe__", pageSize: 1) { total_count }
+}
+"""
 
 
 class ProductLinks(HTMLParser):
@@ -189,77 +198,86 @@ def detect(
     origin: str,
     entry_url: str,
     homepage: httpx.Response,
-) -> Detection | None:
+) -> MagentoDetectedStore | None:
     markers = _homepage_markers(homepage)
-    guest = http.request(
-        "POST",
-        origin + "/rest/V1/guest-carts",
-        headers={"Content-Type": "application/json"},
-        content=b"{}",
-    )
-    try:
-        guest_value = guest.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        guest_value = None
-    if (
-        guest.is_success
-        and isinstance(guest_value, str)
-        and 16 <= len(guest_value) <= 128
-    ):
-        return Detection(
-            "detected",
-            origin,
-            entry_url,
-            "magento",
-            origin,
-            ("magento_guest_cart_token",),
-        )
-    if (
-        isinstance(guest_value, dict)
-        and isinstance(guest_value.get("message"), str)
-        and ("parameters" in guest_value or "trace" in guest_value)
-    ):
-        return Detection(
-            "detected",
-            origin,
-            entry_url,
-            "magento",
-            origin,
-            ("magento_guest_cart_error",),
-        )
-
     graphql = http.request(
         "POST",
         origin + "/graphql",
         headers={"Content-Type": "application/json"},
         json={"query": DETECT_QUERY, "variables": {}},
     )
-    try:
-        graphql_value = graphql.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        graphql_value = None
-    if graphql.status_code == 200 and isinstance(graphql_value, dict):
-        data = graphql_value.get("data")
-        config = data.get("storeConfig") if isinstance(data, dict) else None
-        if isinstance(config, dict) and isinstance(config.get("base_url"), str):
-            return Detection(
-                "detected",
-                origin,
-                entry_url,
-                "magento",
-                origin,
-                ("magento_graphql_store_config",),
-            )
-    if markers:
-        return Detection(
-            "detected",
-            origin,
-            entry_url,
-            "magento",
-            origin,
-            tuple(markers),
+    if (
+        300 <= graphql.status_code < 400
+        or graphql.status_code == 429
+        or graphql.status_code >= 500
+    ):
+        raise ToolError(
+            f"Magento capability query returned transient HTTP {graphql.status_code}"
         )
+    if graphql.status_code in {400, 401, 403, 404, 405, 422}:
+        return _html_detection(origin, entry_url, markers)
+    if graphql.status_code != 200:
+        if markers:
+            raise ToolError(
+                f"Magento capability query returned unexpected HTTP {graphql.status_code}"
+            )
+        return None
+    try:
+        value = graphql.json()
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return _html_detection(origin, entry_url, markers)
+    if not isinstance(value, dict):
+        if markers:
+            raise ToolError("Magento capability query returned a contradictory JSON shape")
+        return None
+    data = value.get("data")
+    config = data.get("storeConfig") if isinstance(data, dict) else None
+    products = data.get("products") if isinstance(data, dict) else None
+    config_proof = (
+        isinstance(config, dict)
+        and isinstance(config.get("base_url"), str)
+        and bool(config["base_url"])
+    )
+    usable_products = (
+        isinstance(products, dict)
+        and type(products.get("total_count")) is int
+        and products["total_count"] >= 0
+    )
+    errors = value.get("errors")
+    if config_proof and usable_products:
+        return MagentoDetectedStore(
+            origin=origin,
+            entry_url=entry_url,
+            api_origin=origin,
+            evidence=("magento_graphql_product_search",),
+            search_source="graphql",
+        )
+    if isinstance(errors, list) and errors:
+        html = _html_detection(origin, entry_url, markers)
+        if html is not None:
+            return html
+        if config_proof:
+            raise ToolError(
+                "Magento capability query returned contradictory errors without independent proof"
+            )
+        return None
+    if markers or config_proof:
+        raise ToolError("Magento capability query returned a contradictory proven-Magento shape")
     return None
+
+
+def _html_detection(
+    origin: str, entry_url: str, markers: list[str]
+) -> MagentoDetectedStore | None:
+    if not markers:
+        return None
+    return MagentoDetectedStore(
+        origin=origin,
+        entry_url=entry_url,
+        api_origin=origin,
+        evidence=tuple(markers),
+        search_source="html",
+    )
 
 
 def _homepage_markers(homepage: httpx.Response) -> list[str]:
@@ -278,7 +296,19 @@ def _homepage_markers(homepage: httpx.Response) -> list[str]:
     return markers
 
 
-def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def search(
+    http: Http, detection: MagentoDetectedStore, query: str
+) -> dict[str, object]:
+    if detection.search_source == "graphql":
+        return _graphql_search(http, detection, query)
+    if detection.search_source == "html":
+        return _html_search(http, detection, query)
+    raise AssertionError(detection.search_source)
+
+
+def _graphql_search(
+    http: Http, detection: MagentoDetectedStore, query: str
+) -> dict[str, object]:
     origin = _magento_origin(detection)
     response = http.request(
         "POST",
@@ -286,13 +316,11 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
         headers={"Content-Type": "application/json"},
         json={"query": SEARCH_QUERY, "variables": {"search": query}},
     )
-    if response.status_code in {401, 403, 404}:
-        return _html_search(
-            http,
-            detection,
-            query,
-            [{"stage": "search", "status": response.status_code}],
-        )
+    denied = _denied(
+        "search", "/graphql", response, "public Magento GraphQL search refused"
+    )
+    if denied:
+        return denied
     if response.status_code != 200:
         raise ToolError(f"Magento GraphQL search returned HTTP {response.status_code}")
 
@@ -301,18 +329,32 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
     products = _products(envelope)
     if products is None:
         if errors:
-            return _html_search(http, detection, query, errors)
+            raise ToolError(
+                "Magento GraphQL search returned errors without product data"
+            )
         raise ToolError("Magento GraphQL search has no products data")
     candidates = products.get("items")
     if not isinstance(candidates, list):
         raise ToolError("Magento GraphQL search items must be an array")
     if not candidates:
-        return search_result("magento", query, [], source="graphql", api_errors=errors)
+        return search_result(
+            MagentoSearch(
+                source="graphql",
+                api_errors=tuple(errors),
+                configurable_products_omitted=0,
+            ),
+            query,
+            [],
+        )
 
     items: list[dict[str, Any]] = []
     omitted = 0
     for candidate in candidates[:MAX_SEARCH_RESULTS]:
-        if not isinstance(candidate, dict) or not isinstance(candidate.get("sku"), str):
+        if (
+            not isinstance(candidate, dict)
+            or not isinstance(candidate.get("sku"), str)
+            or not candidate["sku"]
+        ):
             raise ToolError("Magento GraphQL search candidate has no SKU")
         detail, detail_errors = _graphql_detail(http, origin, candidate["sku"])
         errors.extend(detail_errors)
@@ -324,18 +366,21 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
         items.extend(concrete)
         omitted += unsupported
     if not items and errors:
-        return _html_search(http, detection, query, errors)
+        raise ToolError("Magento GraphQL detail failed for every search candidate")
     return search_result(
-        "magento",
+        MagentoSearch(
+            source="graphql",
+            api_errors=tuple(errors),
+            configurable_products_omitted=omitted,
+        ),
         query,
         _unique_skus(items),
-        source="graphql",
-        api_errors=errors,
-        configurable_products_omitted=omitted,
     )
 
 
-def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]:
+def quote(
+    http: Http, detection: MagentoDetectedStore, reference: str
+) -> dict[str, object]:
     origin = _magento_origin(detection)
     selected = parse_item_ref(reference, "magento")
     if (
@@ -445,21 +490,24 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
     raw_rates = json_list(rates_response, "Magento shipping estimate")
     options = [_rate_option(rate, quote_currency, base_currency) for rate in raw_rates]
     return quote_outcome(
-        "magento",
+        MagentoQuote(
+            item={"sku": sku, "title": added.get("name"), "quantity": added_quantity},
+            base_subtotal=(
+                money(base_subtotal_value, base_currency)
+                if base_subtotal_value is not None
+                else None
+            ),
+            subtotal_incl_tax=(
+                money(totals["subtotal_incl_tax"], quote_currency)
+                if totals.get("subtotal_incl_tax") is not None
+                else None
+            ),
+        ),
         options,
         subtotal,
         no_quote_reason="empty_rate_list"
         if not raw_rates
         else "no_comparable_delivery_rate",
-        item={"sku": sku, "title": added.get("name"), "quantity": added_quantity},
-        base_subtotal=money(base_subtotal_value, base_currency)
-        if base_subtotal_value is not None
-        else None,
-        subtotal_incl_tax=(
-            money(totals["subtotal_incl_tax"], quote_currency)
-            if totals.get("subtotal_incl_tax") is not None
-            else None
-        ),
     )
 
 
@@ -467,13 +515,7 @@ def quote_path(value: str) -> str:
     return url_quote(value, safe="")
 
 
-def _magento_origin(detection: Detection) -> str:
-    if (
-        detection.kind != "detected"
-        or detection.platform != "magento"
-        or detection.api_origin is None
-    ):
-        raise ToolError("Magento adapter requires a positive Magento detection")
+def _magento_origin(detection: MagentoDetectedStore) -> str:
     return detection.api_origin
 
 
@@ -650,12 +692,19 @@ def _price(value: Any) -> dict[str, str] | None:
 
 def _html_search(
     http: Http,
-    detection: Detection,
+    detection: MagentoDetectedStore,
     query: str,
-    graphql_errors: list[dict[str, Any]],
 ) -> dict[str, object]:
     search_url = urljoin(detection.entry_url, "catalogsearch/result")
     response = http.request("GET", search_url, params={"q": query})
+    if response.status_code in {301, 302, 303, 307, 308}:
+        location = response.headers.get("location")
+        if not location:
+            raise ToolError("Magento HTML search redirect has no Location header")
+        redirect_url = urljoin(str(response.url), location)
+        if url_origin(canonical_url(redirect_url)) != detection.origin:
+            raise ToolError("Magento HTML search redirect must stay on the same storefront")
+        response = http.request("GET", redirect_url)
     denied = _denied(
         "search",
         "/catalogsearch/result",
@@ -697,12 +746,13 @@ def _html_search(
         items.extend(page_items)
         omitted += int(configured and not page_items)
     return search_result(
-        "magento",
+        MagentoSearch(
+            source="html",
+            api_errors=(),
+            configurable_products_omitted=omitted,
+        ),
         query,
         _unique_skus(items),
-        source="html",
-        api_errors=graphql_errors,
-        configurable_products_omitted=omitted,
     )
 
 
@@ -919,21 +969,29 @@ def _rate_option(rate: Any, quote_currency: str, base_currency: str) -> dict[str
     else:
         disposition = "delivery"
     return shipping_option(
+        MagentoShipping(
+            carrier_code=carrier,
+            method_code=method,
+            available=available,
+            error=error,
+            base_amount=(
+                money(rate["base_amount"], base_currency)
+                if rate.get("base_amount") is not None
+                else None
+            ),
+            price_excl_tax=(
+                money(rate["price_excl_tax"], quote_currency)
+                if rate.get("price_excl_tax") is not None
+                else None
+            ),
+            price_incl_tax=(
+                money(rate["price_incl_tax"], quote_currency)
+                if rate.get("price_incl_tax") is not None
+                else None
+            ),
+        ),
         option_id,
         title,
         disposition,
         amount,
-        carrier_code=carrier,
-        method_code=method,
-        available=available,
-        error=error,
-        base_amount=money(rate["base_amount"], base_currency)
-        if rate.get("base_amount") is not None
-        else None,
-        price_excl_tax=money(rate["price_excl_tax"], quote_currency)
-        if rate.get("price_excl_tax") is not None
-        else None,
-        price_incl_tax=money(rate["price_incl_tax"], quote_currency)
-        if rate.get("price_incl_tax") is not None
-        else None,
     )

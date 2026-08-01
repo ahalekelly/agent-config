@@ -16,11 +16,11 @@ import httpx
 
 ROOT = Path(__file__).parents[1]
 FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT))
 
 core = importlib.import_module("platform_api_core")
 magento = importlib.import_module("platforms.magento")
-Detection = core.Detection
+MagentoDetectedStore = core.MagentoDetectedStore
 Http = core.Http
 ToolError = core.ToolError
 parse_item_ref = core.parse_item_ref
@@ -47,14 +47,13 @@ def response(
     return httpx.Response(status, json=json_value, headers=headers, request=request)
 
 
-def detection() -> Detection:
-    return Detection(
-        kind="detected",
+def detection(source: str = "graphql") -> MagentoDetectedStore:
+    return MagentoDetectedStore(
         origin="https://magento.test",
         entry_url="https://magento.test/",
-        platform="magento",
         api_origin="https://magento.test",
-        evidence=("magento_guest_cart_response",),
+        evidence=("magento_graphql_product_search",),
+        search_source=source,
     )
 
 
@@ -63,53 +62,18 @@ class MagentoDetectionTests(unittest.TestCase):
         request = httpx.Request("GET", "https://magento.test/")
         return response(request, content=content)
 
-    def test_guest_cart_token_is_positive_evidence(self) -> None:
+    def test_product_search_capability_is_positive_read_only_evidence(self) -> None:
         calls = []
 
         def handler(request: httpx.Request) -> httpx.Response:
-            calls.append(request.url.path)
-            return response(request, json_value="guest-token-secret-1234567890")
-
-        http = Http(httpx.MockTransport(handler))
-        with http.client:
-            result = magento.detect(
-                http,
-                "https://magento.test",
-                "https://magento.test/",
-                self.homepage(),
-            )
-
-        self.assertEqual(result.platform, "magento")
-        self.assertEqual(result.evidence, ("magento_guest_cart_token",))
-        self.assertEqual(calls, ["/rest/V1/guest-carts"])
-
-    def test_magento_guest_cart_error_shape_is_positive_evidence(self) -> None:
-        def handler(request: httpx.Request) -> httpx.Response:
-            return response(
-                request,
-                400,
-                json_value={"message": "The request is invalid.", "parameters": []},
-            )
-
-        http = Http(httpx.MockTransport(handler))
-        with http.client:
-            result = magento.detect(
-                http,
-                "https://magento.test",
-                "https://magento.test/",
-                self.homepage(),
-            )
-
-        self.assertEqual(result.evidence, ("magento_guest_cart_error",))
-
-    def test_graphql_store_config_is_positive_evidence(self) -> None:
-        def handler(request: httpx.Request) -> httpx.Response:
-            if request.url.path == "/rest/V1/guest-carts":
-                return response(request, 404)
+            calls.append((request.method, request.url.path))
             return response(
                 request,
                 json_value={
-                    "data": {"storeConfig": {"base_url": "https://magento.test/"}}
+                    "data": {
+                        "storeConfig": {"base_url": "https://magento.test/"},
+                        "products": {"total_count": 0},
+                    }
                 },
             )
 
@@ -122,7 +86,44 @@ class MagentoDetectionTests(unittest.TestCase):
                 self.homepage(),
             )
 
-        self.assertEqual(result.evidence, ("magento_graphql_store_config",))
+        self.assertEqual(result.platform, "magento")
+        self.assertEqual(result.search_source, "graphql")
+        self.assertEqual(result.evidence, ("magento_graphql_product_search",))
+        self.assertEqual(calls, [("POST", "/graphql")])
+
+    def test_unavailable_graphql_with_homepage_proof_selects_html(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return response(request, 400)
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = magento.detect(
+                http,
+                "https://magento.test",
+                "https://magento.test/",
+                self.homepage(b'<script type="text/x-magento-init">{}</script>'),
+            )
+
+        self.assertEqual(result.search_source, "html")
+        self.assertEqual(result.evidence, ("magento_x_magento_init",))
+
+    def test_graphql_store_config_without_products_is_contradictory(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return response(
+                request,
+                json_value={
+                    "data": {"storeConfig": {"base_url": "https://magento.test/"}}
+                },
+            )
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client, self.assertRaisesRegex(ToolError, "contradictory"):
+            magento.detect(
+                http,
+                "https://magento.test",
+                "https://magento.test/",
+                self.homepage(),
+            )
 
     def test_generic_denials_without_magento_marker_do_not_detect(self) -> None:
         http = Http(
@@ -158,15 +159,13 @@ class MagentoDetectionTests(unittest.TestCase):
 
 
 class MagentoSearchTests(unittest.TestCase):
-    def test_html_fallback_uses_canonical_search_route_without_trailing_slash(
+    def test_html_strategy_uses_canonical_search_route_without_trailing_slash(
         self,
     ) -> None:
         paths: list[str] = []
 
         def handler(request: httpx.Request) -> httpx.Response:
             paths.append(request.url.path)
-            if request.url.path == "/graphql":
-                return response(request, 404)
             if request.url.path == "/catalogsearch/result":
                 self.assertEqual(request.url.params["q"], "bearing")
                 return response(request, content=b"<html></html>")
@@ -174,10 +173,44 @@ class MagentoSearchTests(unittest.TestCase):
 
         http = Http(httpx.MockTransport(handler))
         with http.client:
-            result = magento.search(http, detection(), "bearing")
+            result = magento.search(http, detection("html"), "bearing")
 
         self.assertEqual(result["source"], "html")
-        self.assertEqual(paths, ["/graphql", "/catalogsearch/result"])
+        self.assertEqual(paths, ["/catalogsearch/result"])
+
+    def test_html_strategy_accepts_one_same_origin_canonical_redirect(self) -> None:
+        paths: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
+            if request.url.path == "/catalogsearch/result":
+                return response(
+                    request,
+                    302,
+                    headers={"Location": "/search/bearing"},
+                )
+            if request.url.path == "/search/bearing":
+                return response(request, content=b"<html></html>")
+            raise AssertionError(request.url)
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = magento.search(http, detection("html"), "bearing")
+
+        self.assertEqual(result["source"], "html")
+        self.assertEqual(paths, ["/catalogsearch/result", "/search/bearing"])
+
+    def test_html_strategy_rejects_cross_origin_redirect(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return response(
+                request,
+                302,
+                headers={"Location": "https://other.test/search/bearing"},
+            )
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client, self.assertRaisesRegex(ToolError, "same storefront"):
+            magento.search(http, detection("html"), "bearing")
 
     def test_graphql_detail_accepts_null_suffix_and_uses_detected_entry_url(
         self,
@@ -203,6 +236,8 @@ class MagentoSearchTests(unittest.TestCase):
                         }
                     },
                 )
+            self.assertIn("products(search: $sku, pageSize: 20)", body["query"])
+            self.assertEqual(body["variables"], {"sku": "BRG-1"})
             self.assertNotIn("base_url", body["query"])
             self.assertNotIn("base_currency_code", body["query"])
             return response(
@@ -240,13 +275,12 @@ class MagentoSearchTests(unittest.TestCase):
                 },
             )
 
-        custom_detection = Detection(
-            kind="detected",
+        custom_detection = MagentoDetectedStore(
             origin="https://magento.test",
             entry_url="https://magento.test/us/",
-            platform="magento",
             api_origin="https://magento.test",
-            evidence=("magento_guest_cart_response",),
+            evidence=("magento_graphql_product_search",),
+            search_source="graphql",
         )
         http = Http(httpx.MockTransport(handler))
         with http.client:
@@ -295,6 +329,19 @@ class MagentoSearchTests(unittest.TestCase):
                 with self.assertRaisesRegex(ToolError, message):
                     magento._detail_items(detail, "BRG-PARENT", "https://magento.test/")
 
+    def test_url_key_detail_selects_the_exact_parent_sku(self) -> None:
+        detail = fixture_json("platform-magento-detail-partial.json")
+        other = dict(detail["data"]["products"]["items"][0])
+        other["sku"] = "BRG-OTHER"
+        detail["data"]["products"]["items"].insert(0, other)
+
+        items, omitted = magento._detail_items(
+            detail, "BRG-PARENT", "https://magento.test/"
+        )
+
+        self.assertEqual(omitted, 0)
+        self.assertEqual([item["sku"] for item in items], ["BRG-STEEL"])
+
     def test_graphql_detail_rejects_non_nullable_suffix_types(self) -> None:
         for suffix in (False, 7, {}, []):
             with self.subTest(suffix=suffix):
@@ -317,7 +364,8 @@ class MagentoSearchTests(unittest.TestCase):
                 return response(
                     request, content=fixture("platform-magento-search-partial.json")
                 )
-            self.assertIn("filter: {sku: {eq: $sku}}", query)
+            self.assertIn("products(search: $sku, pageSize: 20)", query)
+            self.assertIn("pageSize: 20", query)
             sku = body["variables"]["sku"]
             if sku == "BRG-PARENT":
                 return response(
@@ -382,13 +430,11 @@ class MagentoSearchTests(unittest.TestCase):
         self.assertEqual(len(result["api_errors"]), 2)
         self.assertEqual(len(calls), 3)
 
-    def test_graphql_denial_falls_back_to_bounded_same_origin_html(self) -> None:
+    def test_html_strategy_is_bounded_to_same_origin(self) -> None:
         fetched: list[str] = []
 
         def handler(request: httpx.Request) -> httpx.Response:
             fetched.append(str(request.url))
-            if request.url.path == "/graphql":
-                return response(request, 403, content=b"Forbidden")
             if request.url.path == "/catalogsearch/result":
                 self.assertEqual(request.url.params["q"], "bearing")
                 return response(
@@ -410,7 +456,7 @@ class MagentoSearchTests(unittest.TestCase):
 
         http = Http(httpx.MockTransport(handler))
         with http.client:
-            result = magento.search(http, detection(), "bearing")
+            result = magento.search(http, detection("html"), "bearing")
 
         self.assertEqual(result["kind"], "search")
         self.assertEqual(result["source"], "html")
@@ -425,17 +471,15 @@ class MagentoSearchTests(unittest.TestCase):
             any("other.test" in url or "mailto:" in url for url in fetched)
         )
 
-    def test_html_denial_after_graphql_failure_is_gated(self) -> None:
+    def test_html_denial_is_gated(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
-            if request.url.path == "/graphql":
-                return response(request, 404)
             if request.url.path == "/catalogsearch/result":
                 return response(request, 403, content=b"Forbidden")
             raise AssertionError(request.url)
 
         http = Http(httpx.MockTransport(handler))
         with http.client:
-            result = magento.search(http, detection(), "bearing")
+            result = magento.search(http, detection("html"), "bearing")
 
         self.assertEqual(result["kind"], "gated")
         self.assertEqual(result["endpoint"], "/catalogsearch/result")
@@ -445,8 +489,6 @@ class MagentoSearchTests(unittest.TestCase):
 
         def handler(request: httpx.Request) -> httpx.Response:
             paths.append(request.url.path)
-            if request.url.path == "/graphql":
-                return response(request, 404)
             if request.url.path == "/catalogsearch/result":
                 return response(request, 500)
             raise AssertionError(request.url)
@@ -456,14 +498,12 @@ class MagentoSearchTests(unittest.TestCase):
             http.client,
             self.assertRaisesRegex(ToolError, "Magento HTML search returned HTTP 500"),
         ):
-            magento.search(http, detection(), "bearing")
+            magento.search(http, detection("html"), "bearing")
 
-        self.assertEqual(paths, ["/graphql", "/catalogsearch/result"])
+        self.assertEqual(paths, ["/catalogsearch/result"])
 
     def test_html_challenge_is_bot_wall(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
-            if request.url.path == "/graphql":
-                return response(request, 404)
             return response(
                 request,
                 403,
@@ -472,7 +512,7 @@ class MagentoSearchTests(unittest.TestCase):
 
         http = Http(httpx.MockTransport(handler))
         with http.client:
-            result = magento.search(http, detection(), "bearing")
+            result = magento.search(http, detection("html"), "bearing")
 
         self.assertEqual(result["kind"], "bot_wall")
         self.assertEqual(result["system"], "cloudflare")
@@ -542,6 +582,7 @@ class MagentoQuoteTests(unittest.TestCase):
             ],
         )
         self.assertIn(("GET", f"/rest/V1/guest-carts/{token}/totals"), calls)
+        self.assertEqual(calls.count(("POST", "/rest/V1/guest-carts")), 1)
         self.assertNotIn(token, json.dumps(http.evidence))
 
     def test_add_item_requires_the_requested_quantity(self) -> None:

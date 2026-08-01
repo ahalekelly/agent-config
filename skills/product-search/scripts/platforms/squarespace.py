@@ -7,9 +7,13 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import httpx
+
 from platform_api_core import (
-    Detection,
+    DetectedStore,
     Http,
+    SquarespaceQuote,
+    SquarespaceSearch,
+    SquarespaceShipping,
     ToolError,
     bot_wall,
     canonical_url,
@@ -37,7 +41,9 @@ DUMMY_SF = {
 }
 
 
-def detect(response: httpx.Response, origin: str, entry_url: str) -> Detection | None:
+def detect(
+    response: httpx.Response, origin: str, entry_url: str
+) -> DetectedStore | None:
     evidence: list[str] = []
     if response.headers.get("server", "").casefold() == "squarespace":
         evidence.append("server=Squarespace")
@@ -46,7 +52,13 @@ def detect(response: httpx.Response, origin: str, entry_url: str) -> Detection |
         evidence.append("Squarespace static assets")
     if not evidence:
         return None
-    return Detection("detected", origin, entry_url, PLATFORM, origin, tuple(evidence))
+    return DetectedStore(
+        origin=origin,
+        entry_url=entry_url,
+        platform=PLATFORM,
+        api_origin=origin,
+        evidence=tuple(evidence),
+    )
 
 
 class SearchParser(HTMLParser):
@@ -61,7 +73,7 @@ class SearchParser(HTMLParser):
             self.urls.append(values["data-url"] or "")
 
 
-def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     if urlsplit(detection.entry_url).path not in {"", "/"}:
         response = http.request("GET", detection.entry_url, params={"format": "json"})
         terminal = _terminal(
@@ -76,7 +88,9 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
         items = _payload_items(
             json_object(response, "Squarespace commerce page"), query, detection.origin
         )
-        return search_result(PLATFORM, query, items, discovery="explicit_entry_url")
+        return search_result(
+            SquarespaceSearch(discovery="explicit_entry_url"), query, items
+        )
 
     response = http.request("GET", detection.origin + "/search", params={"q": query})
     terminal = _terminal(
@@ -120,10 +134,12 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
             if identity not in identities:
                 identities.add(identity)
                 items.append(item)
-    return search_result(PLATFORM, query, items, discovery="storefront_search")
+    return search_result(
+        SquarespaceSearch(discovery="storefront_search"), query, items
+    )
 
 
-def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]:
+def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
     selected = parse_item_ref(reference, PLATFORM)
     if set(selected) != {"collection_url", "item_id", "sku"}:
         raise ToolError("Squarespace item_ref has unexpected fields")
@@ -286,11 +302,10 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
     else:
         reason = "empty_rate_list"
     return quote_outcome(
-        PLATFORM,
+        SquarespaceQuote(shipping_options_status=status),
         options,
         subtotal,
         no_quote_reason=reason,
-        shipping_options_status=status,
     )
 
 
@@ -412,7 +427,9 @@ def _shipping_option(value: Any) -> dict[str, Any]:
         raise ToolError("Squarespace fulfillment option omitted its price")
     amount = money(price.get("decimalValue"), price.get("currencyCode"))
     disposition = "pickup" if value.get("isPickup") is True else "delivery"
-    return shipping_option(option_id, title, disposition, amount)
+    return shipping_option(
+        SquarespaceShipping(), option_id, title, disposition, amount
+    )
 
 
 def _cookie(http: Http, name: str) -> str:

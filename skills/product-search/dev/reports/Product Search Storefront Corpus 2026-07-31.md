@@ -1,10 +1,10 @@
 # Product-search storefront HTTP evidence — 2026-07-31
 
-This read-only acceptance rerun used one literal query (`a`) per store with no alternate-query retries. It called the production detection and platform search adapters over plain HTTP. The production detector's empty `POST /rest/V1/guest-carts` request is an authorized Magento-positive probe; the run created no product line, customer address, consignment, or shipping-rate request.
+This read-only acceptance rerun used one literal query (`a`) per store with no alternate-query retries. It called the production detection and platform search adapters over plain HTTP. Magento capability negotiation used one bounded product-search GraphQL query. The run created no cart, product line, customer address, consignment, or shipping-rate request.
 
 Opaque product references were hashed in memory and discarded. The JSONL contains only public detection evidence, whitelisted product fields, sanitized HTTP request metadata, and learned-cache domain joins.
 
-Every row carries source-tree SHA-256 `01d33015b4c9786e3f3a37acfc89686edbe621c6ae519781c2a66e160a173507`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 04:14:11–04:19:39 UTC (2026-07-31 local time).
+Every row carries source-tree SHA-256 `f812a3e3895a82d24c62e5ab39bc2c7851085971f753a10b5845ec2078cc5586`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 06:21:36–06:25:52 UTC (2026-07-31 local time).
 
 ## Summary
 
@@ -48,15 +48,15 @@ Every row carries source-tree SHA-256 `01d33015b4c9786e3f3a37acfc89686edbe621c6a
 | NRG Wave (`store.nrgwave.com`) | WooCommerce | woocommerce | search / wc_store_api | 4 | PHYTO PRO MAXX | — |
 | MYOLYN (`myolyn.com`) | WooCommerce | woocommerce | search / wc_store_api | 17 | MyoCycle V1 Stimulation Cable | AS-0017 |
 | SparkFun (`sparkfun.com`) | Magento | magento | search / magento_graphql | 10 | USB OTG Cable - Female A to Micro-A - 4&quot; | CAB-11604 |
-| DecksDirect (`decksdirect.com`) | Magento | magento | search / magento_html | 0 | — | — |
+| DecksDirect (`decksdirect.com`) | Magento | magento | search / magento_graphql | 251 | SMART-BIT® Depth Setter Tool by Starborn | BDA565A |
 | Barr Display (`barrdisplay.com`) | Magento | magento | search / magento_graphql | 10 | 90"H White Wall Showcase-- Modern Collection | 2066A |
 | Scout Shop (`scoutshop.org`) | Magento | magento | search / magento_graphql | 44 | Veteran Unit Bar Emblem | 105 |
-| Blanks.ca (`blanks.ca`) | Magento | magento | search / magento_graphql | 1197 | Alleson Athletic 705A - PRACTICE FOOTBALL JERSEY | 705A.B005.14 |
+| Blanks.ca (`blanks.ca`) | Magento | magento | search / magento_html | 0 | — | — |
 | Signet Australia (`signet.net.au`) | Magento | magento | search / magento_graphql | 10 | Disposable Apron - Blue (50 per box) | SIG_10246 |
-| ATX Fitness USA (`atxfitness.com`) | Magento | magento | search / magento_graphql | 0 | — | — |
+| ATX Fitness USA (`atxfitness.com`) | Magento | magento | search / magento_html | 0 | — | — |
 | The CPAP Shop (`thecpapshop.com`) | Magento | magento | search / magento_html | 0 | — | — |
 | Dillon Precision (`dillonprecision.com`) | Magento | magento | search / magento_html | 0 | — | — |
-| TileBar (`tilebar.com`) | Magento | magento | search / magento_html | 53 | Zelora | TLSEGBLNBG4X4 |
+| TileBar (`tilebar.com`) | Magento | magento | search / magento_html | 61 | Zelora | TLSEGBLNBG4X4 |
 | Bulk Reef Supply (`bulkreefsupply.com`) | Magento | magento | search / magento_html | 14 | 3-Pack ICP-OES Testing Kit | 210952B |
 | Aheadworks (`aheadworks.com`) | Magento | magento | search / magento_graphql | 20 | Follow Up Email | ext.fue-community-0 |
 | ServoCity (`servocity.com`) | BigCommerce | bigcommerce | search / html_search_and_product_pages | 3 | 15" x 15" ABS Sheet (0.250" Thickness) | ABS250-15-15 |
@@ -72,7 +72,7 @@ Every row carries source-tree SHA-256 `01d33015b4c9786e3f3a37acfc89686edbe621c6a
 | Valin (`valinonline.com`) | BigCommerce | bigcommerce | bot_wall / html_search_and_product_pages | — | — | — |
 | Frankly Good Coffee (`franklygoodcoffee.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 12 | Cold Brew Blend | Flagship-003-WB |
 | Archive07 (`archive07.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 25 | Spacebot V03 - Enamel Pin | SQ3537556 |
-| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1103 | Aimi Bar & Counter Stool | SQ5653938 |
+| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1088 | Aimi Bar & Counter Stool | SQ5653938 |
 | Izzy Wheels (`izzywheels.com`) | Wix | wix | search / catalog_reader | 10 | Amalfi Lemons | — |
 | Bestie Hugs (`bestiehugs.com`) | Wix | wix | search / catalog_reader | 0 | — | — |
 | Holzbuchstaben (`holzbuchstaben.ch`) | Wix | wix | search / catalog_reader | 2 | Modern \| Apricot Orange | — |

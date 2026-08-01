@@ -16,7 +16,14 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from platform_api_core import Detection, Http, ToolError, parse_item_ref  # noqa: E402
+from platform_api_core import (  # noqa: E402
+    DetectedStore,
+    Http,
+    NonMagentoPlatform,
+    StorefrontBotWall,
+    ToolError,
+    parse_item_ref,
+)
 from platforms import extra  # noqa: E402
 
 FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
@@ -26,12 +33,13 @@ def fixture(name: str) -> bytes:
     return (FIXTURES / f"platform-extra-{name}").read_bytes()
 
 
-def detected(platform: str, api_origin: str = "https://shop.example") -> Detection:
-    return Detection(
-        kind="detected",
+def detected(
+    platform: NonMagentoPlatform, api_origin: str = "https://shop.example"
+) -> DetectedStore:
+    return DetectedStore(
         origin="https://shop.example",
         entry_url="https://shop.example/",
-        platform=platform,  # type: ignore[arg-type]
+        platform=platform,
         api_origin=api_origin,
         evidence=(f"{platform} fixture",),
     )
@@ -89,7 +97,7 @@ class DetectionTests(unittest.TestCase):
         )
         result = extra.detect(response, "https://shop.example", "https://shop.example/")
         self.assertEqual(result.kind, "bot_wall")
-        self.assertIsNone(result.platform)
+        self.assertIs(type(result), StorefrontBotWall)
 
 
 class WixTests(unittest.TestCase):
@@ -259,8 +267,7 @@ class SfccTests(unittest.TestCase):
                     200, content=fixture("sfcc-search.html"), request=request
                 )
 
-            detection = Detection(
-                kind="detected",
+            detection = DetectedStore(
                 origin="https://shop.example",
                 entry_url=entry_url,
                 platform="sfcc",

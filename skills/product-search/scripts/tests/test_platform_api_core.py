@@ -14,18 +14,38 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from platform_api_core import (  # noqa: E402
-    Detection,
+    DetectedStore,
+    ShopifyQuote,
+    ShopifySearch,
+    ShopifyShipping,
     ToolError,
+    UnknownStore,
+    WooCommerceQuote,
+    WooCommerceShipping,
     canonical_url,
     item_ref,
     money,
     parse_item_ref,
+    public_detection,
     quote_outcome,
     search_result,
     shipping_option,
     unsupported_configuration,
     validate_result,
 )
+
+
+def shopify_item() -> dict[str, object]:
+    return {
+        "name": "Valve",
+        "variant": None,
+        "sku": "VALVE-1",
+        "barcode": None,
+        "available": True,
+        "price": money("10", "USD"),
+        "product_url": "https://shop.example/products/valve",
+        "item_ref": item_ref("shopify", {"variant_id": "gid://variant/1"}),
+    }
 
 
 class UrlTests(unittest.TestCase):
@@ -42,26 +62,24 @@ class UrlTests(unittest.TestCase):
 
 class DetectionTests(unittest.TestCase):
     def test_detected_state_is_exact(self) -> None:
-        detection = Detection(
-            kind="detected",
+        detection = DetectedStore(
             origin="https://shop.example",
             entry_url="https://shop.example/collections/tools",
             platform="shopify",
             api_origin="https://backend.myshopify.com",
             evidence=("data.shop",),
         )
-        self.assertEqual(detection.public()["platform"], "shopify")
+        self.assertEqual(public_detection(detection)["platform"], "shopify")
 
-    def test_contradictory_unknown_state_fails(self) -> None:
-        with self.assertRaisesRegex(ToolError, "Unknown storefront"):
-            Detection(
-                kind="unknown",
-                origin="https://shop.example",
-                entry_url="https://shop.example/",
-                platform="shopify",
-                api_origin=None,
-                evidence=("no positive signal",),
-            )
+    def test_unknown_state_has_no_positive_fields(self) -> None:
+        detection = UnknownStore(
+            origin="https://shop.example",
+            entry_url="https://shop.example/",
+            evidence=("no positive signal",),
+        )
+        self.assertEqual(
+            set(public_detection(detection)), {"kind", "origin", "evidence"}
+        )
 
 
 class ItemReferenceTests(unittest.TestCase):
@@ -76,36 +94,65 @@ class ItemReferenceTests(unittest.TestCase):
 
 class ResultTests(unittest.TestCase):
     def test_search_requires_item_references(self) -> None:
-        reference = item_ref("shopify", {"variant_id": "gid://variant/1"})
-        result = search_result(
-            "shopify", "valve", [{"name": "Valve", "item_ref": reference}]
-        )
+        product = shopify_item()
+        result = search_result(ShopifySearch(), "valve", [product])
         self.assertEqual(result["kind"], "search")
-        with self.assertRaisesRegex(ToolError, "requires items"):
-            search_result("shopify", "valve", [{"name": "Valve"}])
+        product.pop("item_ref")
+        with self.assertRaisesRegex(ToolError, "exact keys"):
+            search_result(ShopifySearch(), "valve", [product])
 
     def test_quote_preserves_noncomparable_options(self) -> None:
         options = [
-            shipping_option("ground", "Ground", "delivery", money("12.99", "USD")),
-            shipping_option("pickup", "Store pickup", "pickup", None),
-            shipping_option("freight", "Freight billed later", "paid_later", None),
+            shipping_option(
+                ShopifyShipping(code=None, description=None),
+                "ground",
+                "Ground",
+                "delivery",
+                money("12.99", "USD"),
+            ),
+            shipping_option(
+                ShopifyShipping(code=None, description=None),
+                "pickup",
+                "Store pickup",
+                "pickup",
+                None,
+            ),
+            shipping_option(
+                ShopifyShipping(code=None, description=None),
+                "freight",
+                "Freight billed later",
+                "paid_later",
+                None,
+            ),
         ]
-        result = quote_outcome("shopify", options, money("25.00", "USD"))
+        result = quote_outcome(ShopifyQuote(), options, money("25.00", "USD"))
         self.assertEqual(result["kind"], "quote")
         self.assertEqual([rate["option_id"] for rate in result["rates"]], ["ground"])
         self.assertEqual(len(result["shipping_options"]), 3)
 
     def test_empty_is_never_free_shipping(self) -> None:
-        result = quote_outcome("woocommerce", [], money("25.00", "USD"))
+        result = quote_outcome(
+            WooCommerceQuote(cart_totals={}, cleanup_status=200),
+            [],
+            money("25.00", "USD"),
+        )
         self.assertEqual(result["kind"], "empty")
         self.assertEqual(result["rates"], [])
         self.assertEqual(result["reason"], "empty_rate_list")
 
     def test_fallback_is_distinct(self) -> None:
         option = shipping_option(
-            "flat_fallback", "Flat rate", "fallback", money("19.95", "USD")
+            WooCommerceShipping(selected=False, tax={"amount": "0", "currency": "USD"}),
+            "flat_fallback",
+            "Flat rate",
+            "fallback",
+            money("19.95", "USD"),
         )
-        result = quote_outcome("woocommerce", [option], money("25.00", "USD"))
+        result = quote_outcome(
+            WooCommerceQuote(cart_totals={}, cleanup_status=200),
+            [option],
+            money("25.00", "USD"),
+        )
         self.assertEqual(result["kind"], "fallback")
         self.assertEqual(result["fallback_rate_ids"], ["flat_fallback"])
         self.assertEqual(result["rates"], [])
@@ -119,7 +166,11 @@ class ResultTests(unittest.TestCase):
                     "platform": "shopify",
                     "shipping_options": [
                         shipping_option(
-                            "ground", "Ground", "delivery", money("4", "USD")
+                            ShopifyShipping(code=None, description=None),
+                            "ground",
+                            "Ground",
+                            "delivery",
+                            money("4", "USD"),
                         )
                     ],
                     "rates": [],

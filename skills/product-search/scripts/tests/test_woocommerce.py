@@ -16,13 +16,12 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from platform_api_core import Detection, Http, parse_item_ref  # noqa: E402
+from platform_api_core import DetectedStore, Http, parse_item_ref  # noqa: E402
 from platforms import woocommerce  # noqa: E402
 
 
-def detection() -> Detection:
-    return Detection(
-        kind="detected",
+def detection() -> DetectedStore:
+    return DetectedStore(
         origin="https://store.example",
         entry_url="https://store.example/",
         platform="woocommerce",

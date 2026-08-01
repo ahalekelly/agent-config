@@ -43,7 +43,7 @@ Run `scripts/platform_api.py detect`, then `search` and `quote` with the returne
 | --- | --- | --- |
 | Shopify | signed tokenless Storefront GraphQL returns `data.shop` | helper; discover one `.myshopify.com` backend from source when a custom origin does not proxy |
 | WooCommerce | Store API cart returns `totals` and `Cart-Token` | helper; product search → add simple item → update customer → `shipping_rates` |
-| Magento | page fingerprint plus guest-cart response | helper; use an exact simple SKU; open guest cart → item → estimate methods; otherwise record gated |
+| Magento | one read-only GraphQL capability query; page markers establish HTML search when GraphQL is unavailable | helper follows the detected `graphql`/`html` strategy without switching; quote creates one guest cart, then adds an exact simple SKU and estimates methods |
 | BigCommerce | BigCommerce CDN/Stencil marker | helper; `/search.php`/`BCData` → Storefront REST cart → checkout consignment |
 | Squarespace | commerce collection `?format=json` returns items and a crumb | helper; exact item/SKU → cart entry → shipping location |
 | Wix / Ecwid | platform bootstrap and public catalog token | public search only; destination quote requires the supported storefront runtime in BrowserSwarm |

@@ -7,11 +7,15 @@ from typing import Any, ClassVar, Literal, cast
 from urllib.parse import urljoin, urlsplit
 
 import httpx
+
 from platform_api_core import (
-    Detection,
+    DetectedStore,
+    EcwidSearch,
     Http,
-    Platform,
+    SfccSearch,
+    StorefrontBotWall,
     ToolError,
+    WixSearch,
     bot_wall,
     canonical_url,
     gated,
@@ -33,15 +37,14 @@ ECWID_API_BASE = re.compile(r'"apiBaseUrl":"([^"]+)"')
 MAX_RESULTS = 20
 
 
-def detect(response: httpx.Response, origin: str, entry_url: str) -> Detection | None:
+def detect(
+    response: httpx.Response, origin: str, entry_url: str
+) -> DetectedStore | StorefrontBotWall | None:
     system = wall_system(response)
     if system is not None:
-        return Detection(
-            kind="bot_wall",
+        return StorefrontBotWall(
             origin=origin,
             entry_url=entry_url,
-            platform=None,
-            api_origin=None,
             evidence=(f"HTTP {response.status_code} {system} challenge",),
             system=system,
             status=response.status_code,
@@ -78,17 +81,16 @@ def detect(response: httpx.Response, origin: str, entry_url: str) -> Detection |
 
     platform = platforms[0]
     api_origin = "https://app.ecwid.com" if platform == "ecwid" else origin
-    return Detection(
-        kind="detected",
+    return DetectedStore(
         origin=origin,
         entry_url=entry_url,
-        platform=cast(Platform, platform),
+        platform=platform,
         api_origin=api_origin,
         evidence=tuple(matches[platform]),
     )
 
 
-def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     platform = _platform(detection)
     if not query.strip():
         raise ToolError(f"{platform} search requires a nonempty query")
@@ -101,7 +103,7 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
     raise AssertionError(platform)
 
 
-def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]:
+def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
     del http, reference
     platform = _platform(detection)
     reasons = {
@@ -114,7 +116,9 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
     )
 
 
-def _wix_search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def _wix_search(
+    http: Http, detection: DetectedStore, query: str
+) -> dict[str, object]:
     origin = _api_origin(detection, "wix")
     token_response = http.request("GET", origin + "/_api/v1/access-tokens")
     terminal = _wall(token_response, "wix")
@@ -153,14 +157,13 @@ def _wix_search(http: Http, detection: Detection, query: str) -> dict[str, objec
     if not isinstance(products, list) or not _count(total):
         raise ToolError("Wix product search requires products and totalResults")
     return search_result(
-        "wix",
+        WixSearch(total=total),
         query,
         [_wix_item(detection, product) for product in products],
-        total=total,
     )
 
 
-def _wix_item(detection: Detection, value: Any) -> dict[str, Any]:
+def _wix_item(detection: DetectedStore, value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ToolError("Wix product must be an object")
     product_id, name, sku = value.get("id"), value.get("name"), value.get("sku")
@@ -207,7 +210,9 @@ def _wix_item(detection: Detection, value: Any) -> dict[str, Any]:
     return item
 
 
-def _ecwid_search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def _ecwid_search(
+    http: Http, detection: DetectedStore, query: str
+) -> dict[str, object]:
     _api_origin(detection, "ecwid")
     homepage = http.request("GET", detection.entry_url)
     terminal = _wall(homepage, "ecwid")
@@ -247,7 +252,9 @@ def _ecwid_search(http: Http, detection: Detection, query: str) -> dict[str, obj
     if not isinstance(products, list) or not _count(total):
         raise ToolError("Ecwid product search requires items and total")
     items = [_ecwid_item(store_id, currency, product) for product in products]
-    return search_result("ecwid", query, items, store_id=store_id, total=total)
+    return search_result(
+        EcwidSearch(store_id=store_id, total=total), query, items
+    )
 
 
 def _ecwid_store_id(body: str) -> str:
@@ -340,7 +347,9 @@ def _ecwid_item(store_id: str, currency: str, value: Any) -> dict[str, Any]:
     return item
 
 
-def _sfcc_search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def _sfcc_search(
+    http: Http, detection: DetectedStore, query: str
+) -> dict[str, object]:
     _api_origin(detection, "sfcc")
     route = canonical_url(urljoin(detection.entry_url, "search"))
     if url_origin(route) != detection.origin:
@@ -370,7 +379,7 @@ def _sfcc_search(http: Http, detection: Detection, query: str) -> dict[str, obje
     parser = SfccProducts(detection.origin)
     parser.feed(response.text)
     parser.close()
-    return search_result("sfcc", query, parser.items[:MAX_RESULTS], endpoint=route)
+    return search_result(SfccSearch(endpoint=route), query, parser.items[:MAX_RESULTS])
 
 
 class SfccProducts(HTMLParser):
@@ -505,11 +514,9 @@ def _count(value: Any) -> bool:
     return not isinstance(value, bool) and isinstance(value, int) and value >= 0
 
 
-def _platform(detection: Detection) -> ExtraPlatform:
+def _platform(detection: DetectedStore) -> ExtraPlatform:
     if (
-        detection.kind != "detected"
-        or detection.platform not in EXTRA_PLATFORMS
-        or detection.api_origin is None
+        detection.platform not in EXTRA_PLATFORMS
     ):
         raise ToolError(
             "Extra storefront adapter requires a detected Wix, Ecwid, or SFCC store"
@@ -517,8 +524,8 @@ def _platform(detection: Detection) -> ExtraPlatform:
     return cast(ExtraPlatform, detection.platform)
 
 
-def _api_origin(detection: Detection, platform: ExtraPlatform) -> str:
-    if _platform(detection) != platform or detection.api_origin is None:
+def _api_origin(detection: DetectedStore, platform: ExtraPlatform) -> str:
+    if _platform(detection) != platform:
         raise ToolError(f"{platform} adapter received a different platform detection")
     return detection.api_origin
 

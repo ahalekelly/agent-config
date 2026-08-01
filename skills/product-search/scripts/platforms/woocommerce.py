@@ -4,10 +4,14 @@ from decimal import Decimal
 from typing import Any
 
 import httpx
+
 from platform_api_core import (
-    Detection,
+    DetectedStore,
     Http,
     ToolError,
+    WooCommerceQuote,
+    WooCommerceSearch,
+    WooCommerceShipping,
     bot_wall,
     gated,
     item_ref,
@@ -37,7 +41,7 @@ ADDRESS = {
 }
 
 
-def detect(http: Http, origin: str, entry_url: str) -> Detection | None:
+def detect(http: Http, origin: str, entry_url: str) -> DetectedStore | None:
     response = http.request("GET", origin + API_PATH + "/cart")
     if response.status_code != 200:
         return None
@@ -47,17 +51,16 @@ def detect(http: Http, origin: str, entry_url: str) -> Detection | None:
         return None
     if not isinstance(payload, dict) or not isinstance(payload.get("totals"), dict):
         return None
-    return Detection(
-        "detected",
-        origin,
-        entry_url,
-        "woocommerce",
-        origin,
-        ("WooCommerce Store API cart object with totals",),
+    return DetectedStore(
+        origin=origin,
+        entry_url=entry_url,
+        platform="woocommerce",
+        api_origin=origin,
+        evidence=("WooCommerce Store API cart object with totals",),
     )
 
 
-def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
+def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     base = _api_base(detection)
     response = http.request(
         "GET", f"{base}/products", params={"search": query, "per_page": "20"}
@@ -67,11 +70,11 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
         return terminal
     products = json_list(response, "WooCommerce product search")
     return search_result(
-        "woocommerce", query, [_product_item(product) for product in products]
+        WooCommerceSearch(), query, [_product_item(product) for product in products]
     )
 
 
-def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]:
+def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
     selected = parse_item_ref(reference, "woocommerce")
     product_id = selected.get("product_id")
     product_type = selected.get("product_type")
@@ -130,16 +133,16 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
         "DELETE", f"{base}/cart/items/{item_key}", headers=headers
     )
     return quote_outcome(
-        "woocommerce",
+        WooCommerceQuote(
+            cart_totals=totals, cleanup_status=cleanup_response.status_code
+        ),
         options,
         subtotal,
-        cart_totals=totals,
-        cleanup_status=cleanup_response.status_code,
     )
 
 
-def _api_base(detection: Detection) -> str:
-    if detection.platform != "woocommerce" or detection.api_origin is None:
+def _api_base(detection: DetectedStore) -> str:
+    if detection.platform != "woocommerce":
         raise ToolError(
             "WooCommerce adapter requires a detected WooCommerce API origin"
         )
@@ -302,10 +305,12 @@ def _shipping_option(rate: Any, expected_currency: str) -> dict[str, Any]:
         else "delivery"
     )
     return shipping_option(
+        WooCommerceShipping(
+            selected=rate.get("selected"),
+            tax={"amount": format(tax, "f"), "currency": currency},
+        ),
         rate_id,
         name,
         disposition,
         amount,
-        selected=rate.get("selected"),
-        tax={"amount": format(tax, "f"), "currency": currency},
     )

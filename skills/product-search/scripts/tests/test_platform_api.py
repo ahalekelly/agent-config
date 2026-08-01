@@ -23,17 +23,17 @@ sys.path.insert(0, str(Path(__file__).parents[1]))
 
 import platform_api  # noqa: E402
 from platform_api_core import (  # noqa: E402
-    Detection,
+    DetectedStore,
     Http,
+    ShopifySearch,
     ToolError,
     item_ref,
     search_result,
 )
 
 
-def detected(platform: str = "shopify") -> Detection:
-    return Detection(
-        kind="detected",
+def detected(platform: str = "shopify") -> DetectedStore:
+    return DetectedStore(
         origin="https://store.example",
         entry_url="https://store.example/",
         platform=platform,
@@ -42,16 +42,32 @@ def detected(platform: str = "shopify") -> Detection:
     )
 
 
+def shopify_item(reference: str, **facts: object) -> dict[str, object]:
+    return {
+        "name": "Valve",
+        "variant": None,
+        "sku": "VALVE-1",
+        "barcode": None,
+        "available": True,
+        "price": {"amount": "10", "currency": "USD"},
+        "product_url": "https://store.example/products/valve",
+        "item_ref": reference,
+        **facts,
+    }
+
+
 class FakeAdapter:
     def __init__(self, items: list[dict[str, object]]) -> None:
         self.items = items
         self.quoted: list[str] = []
 
-    def search(self, http: Http, detection: Detection, query: str) -> dict[str, object]:
-        return search_result("shopify", query, self.items)
+    def search(
+        self, http: Http, detection: DetectedStore, query: str
+    ) -> dict[str, object]:
+        return search_result(ShopifySearch(), query, self.items)
 
     def quote(
-        self, http: Http, detection: Detection, reference: str
+        self, http: Http, detection: DetectedStore, reference: str
     ) -> dict[str, object]:
         self.quoted.append(reference)
         return {
@@ -64,6 +80,39 @@ class FakeAdapter:
 
 
 class DetectionTests(unittest.TestCase):
+    def test_positive_non_magento_detection_skips_magento_capability_probe(
+        self,
+    ) -> None:
+        paths: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
+            if request.method == "GET" and request.url.path == "/":
+                return httpx.Response(200, text="Shopify", request=request)
+            if request.url.path == "/wp-json/wc/store/v1/cart":
+                return httpx.Response(404, request=request)
+            if request.url.path == "/api/2026-07/graphql.json":
+                return httpx.Response(
+                    200,
+                    json={"data": {"shop": {"name": "Store"}}, "errors": []},
+                    request=request,
+                )
+            raise AssertionError(request.url)
+
+        def unsigned_send(
+            client: httpx.Client, request: httpx.Request
+        ) -> httpx.Response:
+            return client.send(request, follow_redirects=False)
+
+        http = Http(httpx.MockTransport(handler))
+        with mock.patch.object(
+            platform_api.shopify, "send_signed", side_effect=unsigned_send
+        ):
+            result = platform_api.detect_store(http, "store.example")
+
+        self.assertEqual(result.platform, "shopify")
+        self.assertNotIn("/graphql", paths)
+
     def test_shopify_redirect_boundary_allows_later_magento_detection(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             if request.method == "GET" and request.url.path == "/":
@@ -80,9 +129,16 @@ class DetectionTests(unittest.TestCase):
                     headers={"Location": "https://different.example/graphql"},
                     request=request,
                 )
-            if request.url.path == "/rest/V1/guest-carts":
+            if request.url.path == "/graphql":
                 return httpx.Response(
-                    200, json="guest-token-secret-1234567890", request=request
+                    200,
+                    json={
+                        "data": {
+                            "storeConfig": {"base_url": "https://store.example/"},
+                            "products": {"total_count": 0},
+                        }
+                    },
+                    request=request,
                 )
             raise AssertionError(request.url)
 
@@ -98,7 +154,8 @@ class DetectionTests(unittest.TestCase):
             result = platform_api.detect_store(http, "store.example")
 
         self.assertEqual(result.platform, "magento")
-        self.assertEqual(result.evidence, ("magento_guest_cart_token",))
+        self.assertEqual(result.search_source, "graphql")
+        self.assertEqual(result.evidence, ("magento_graphql_product_search",))
 
     def test_conflicting_positive_platforms_fail_loudly(self) -> None:
         def home(request: httpx.Request) -> httpx.Response:
@@ -146,8 +203,8 @@ class EntrypointTests(unittest.TestCase):
         available = item_ref("shopify", {"variant_id": "available"})
         adapter = FakeAdapter(
             [
-                {"item_ref": unavailable, "available": False},
-                {"item_ref": available, "available": True},
+                shopify_item(unavailable, available=False),
+                shopify_item(available),
             ]
         )
         with (
@@ -166,7 +223,7 @@ class EntrypointTests(unittest.TestCase):
 
     def test_no_usable_candidate_keeps_the_search_result(self) -> None:
         reference = item_ref("shopify", {"variant_id": "configured"})
-        adapter = FakeAdapter([{"item_ref": reference, "requires_configuration": True}])
+        adapter = FakeAdapter([shopify_item(reference, requires_configuration=True)])
         with (
             mock.patch.object(platform_api, "detect_store", return_value=detected()),
             mock.patch.dict(platform_api.ADAPTERS, {"shopify": adapter}),
@@ -187,13 +244,8 @@ class EntrypointTests(unittest.TestCase):
         available = item_ref("shopify", {"variant_id": "available"})
         adapter = FakeAdapter(
             [
-                {
-                    "item_ref": quote_only,
-                    "available": True,
-                    "purchasable": False,
-                    "price": None,
-                },
-                {"item_ref": available, "available": True},
+                shopify_item(quote_only, purchasable=False),
+                shopify_item(available),
             ]
         )
         with (
@@ -235,7 +287,7 @@ class CorpusTests(unittest.TestCase):
             output_path.write_text(
                 json.dumps(
                     {
-                        "schema_version": 1,
+                        "schema_version": 2,
                         "input": {"store": "https://one.example", "query": "valve"},
                         "detection": {"kind": "unknown"},
                     }
@@ -247,7 +299,7 @@ class CorpusTests(unittest.TestCase):
                 command: str, store: str, query: str, http: Http
             ) -> dict[str, object]:
                 return {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "input": {"store": store, "query": query},
                     "detection": {"kind": "unknown"},
                 }

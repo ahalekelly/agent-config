@@ -20,7 +20,7 @@ from typing import Any
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 REPORT_DIR = SKILL_DIR / "dev" / "reports"
@@ -166,11 +166,45 @@ SEARCH_COMMON_KEYS = {
     "selected_product",
     "item_ref_sha256",
 }
+EXPECTED_SEARCH_OUTCOMES = Counter({"search": 56, "not_run": 2, "bot_wall": 1})
+EXPECTED_POSITIVE_SEARCHES = 47
+EXPECTED_EMPTY_SEARCHES = 9
+EXPECTED_SEARCH_DISPOSITIONS_SHA256 = (
+    "e2fe21adead9f169cb5e9d92ba47fa7454f80637d7fbc6a6b76a99ba43c7c1ac"
+)
 EXPECTED_TERMINALS = {
-    "tech7000.com": ("not_run", "detection_not_positive"),
-    "valinonline.com": ("bot_wall", "challenge response"),
-    "wyliebeckert.com": ("not_run", "detection_not_positive"),
+    "tech7000.com": (
+        "not_run",
+        None,
+        None,
+        "detection_not_positive",
+        None,
+        None,
+    ),
+    "valinonline.com": (
+        "bot_wall",
+        "bigcommerce",
+        "html_search_and_product_pages",
+        "challenge response",
+        "cloudflare",
+        403,
+    ),
+    "wyliebeckert.com": (
+        "not_run",
+        None,
+        None,
+        "detection_not_positive",
+        None,
+        None,
+    ),
 }
+MUTATING_PATH_PREFIXES = (
+    "/rest/V1/guest-carts",
+    "/api/storefront/carts",
+    "/api/storefront/checkouts",
+    "/api/commerce/shopping-cart",
+    "/api/3/commerce/cart",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -383,7 +417,7 @@ def run_job(
     try:
         try:
             detection = platform_api.detect_store(http, entry_url)
-        except Exception as error:
+        except platform_api.ToolError as error:
             outcome = {
                 "kind": "tool_error",
                 "stage": "detection",
@@ -396,7 +430,7 @@ def run_job(
                 "message": safe_error(error),
             }
         else:
-            detection_public = detection.public()
+            detection_public = platform_api.public_detection(detection)
             resolved_origin = detection.origin
             if detection.kind != "detected":
                 outcome = {
@@ -411,14 +445,16 @@ def run_job(
                     "reason": "detection_not_positive",
                 }
             else:
-                if detection.platform is None:
-                    raise AssertionError("detected store has no platform")
-                source = source_name(detection.platform, None)
+                source = (
+                    f"magento_{detection.search_source}"
+                    if detection.platform == "magento"
+                    else source_name(detection.platform, None)
+                )
                 try:
                     result = platform_api.ADAPTERS[detection.platform].search(
                         http, detection, job["query"]
                     )
-                except Exception as error:
+                except platform_api.ToolError as error:
                     outcome = {
                         "kind": "tool_error",
                         "stage": "search",
@@ -431,7 +467,17 @@ def run_job(
                         "message": safe_error(error),
                     }
                 else:
-                    source = source_name(detection.platform, result)
+                    if detection.platform == "magento":
+                        if (
+                            result["kind"] == "search"
+                            and result.get("source") != detection.search_source
+                        ):
+                            raise SystemExit(
+                                "Magento result source differs from detection"
+                            )
+                        source = f"magento_{detection.search_source}"
+                    else:
+                        source = source_name(detection.platform, result)
                     if result["kind"] == "search":
                         items = result["items"]
                         selected_index, selected_product, reference_hash = (
@@ -488,11 +534,13 @@ def validate_rows(
     if any(row["shipping_cache_domain"] not in cache_domains for row in rows):
         raise SystemExit("one or more output rows have no learned-cache join")
     tree_hashes = {row["source_tree_sha256"] for row in rows}
-    if (
-        len(tree_hashes) != 1
-        or re.fullmatch(r"[0-9a-f]{64}", tree_hashes.pop()) is None
-    ):
+    if len(tree_hashes) != 1:
         raise SystemExit("output must contain one valid source-tree SHA-256")
+    tree_hash = next(iter(tree_hashes))
+    if re.fullmatch(r"[0-9a-f]{64}", tree_hash) is None:
+        raise SystemExit("output must contain one valid source-tree SHA-256")
+    if tree_hash != source_tree_hash(SCRIPT_DIR):
+        raise SystemExit("source-tree SHA-256 differs from current production source")
 
     for row, job in zip(rows, jobs, strict=True):
         if set(row) != TOP_KEYS:
@@ -519,12 +567,29 @@ def validate_rows(
         detection = row["detection"]
         if detection is not None:
             allowed = {
-                "detected": {"kind", "origin", "platform", "api_origin", "evidence"},
+                "detected": (
+                    {
+                        "kind",
+                        "origin",
+                        "platform",
+                        "api_origin",
+                        "search_source",
+                        "evidence",
+                    }
+                    if detection.get("platform") == "magento"
+                    else {"kind", "origin", "platform", "api_origin", "evidence"}
+                ),
                 "unknown": {"kind", "origin", "evidence"},
                 "bot_wall": {"kind", "origin", "system", "status", "evidence"},
             }[detection["kind"]]
             if set(detection) != allowed:
                 raise SystemExit(f"detection has unsafe keys: {row['domain']}")
+            if detection.get("platform") == "magento" and detection.get(
+                "search_source"
+            ) not in {"graphql", "html"}:
+                raise SystemExit(
+                    f"Magento detection has invalid search_source: {row['domain']}"
+                )
         product = row["search"]["selected_product"]
         search = row["search"]
         allowed_search_keys = {
@@ -548,6 +613,14 @@ def validate_rows(
         }.get(search["kind"])
         if allowed_search_keys is None or set(search) != allowed_search_keys:
             raise SystemExit(f"search outcome has unsafe keys: {row['domain']}")
+        if (
+            detection is not None
+            and detection.get("platform") == "magento"
+            and search["source"] != f"magento_{detection['search_source']}"
+        ):
+            raise SystemExit(
+                f"Magento result source differs from detection: {row['domain']}"
+            )
         if product is not None and not set(product) <= PRODUCT_KEYS:
             raise SystemExit(f"selected product has unsafe keys: {row['domain']}")
         reference_hash = search["item_ref_sha256"]
@@ -574,25 +647,21 @@ def validate_rows(
                 raise SystemExit(f"HTTP evidence has unsafe keys: {row['domain']}")
             if re.fullmatch(r"[0-9a-f]{64}", request["sha256"]) is None:
                 raise SystemExit(f"HTTP evidence hash is invalid: {row['domain']}")
-
-    positive = sum(
-        row["search"]["kind"] == "search" and row["search"]["candidate_count"] > 0
-        for row in rows
-    )
-    empty = sum(
-        row["search"]["kind"] == "search" and row["search"]["candidate_count"] == 0
-        for row in rows
-    )
-    errors = sum(row["search"]["kind"] == "tool_error" for row in rows)
-    if (positive, empty, errors) != (47, 9, 0):
-        raise SystemExit("unexpected positive, empty, or error disposition counts")
-    terminals = {
-        row["domain"]: (row["search"]["kind"], row["search"]["reason"])
-        for row in rows
-        if row["search"]["kind"] not in {"search", "tool_error"}
-    }
-    if terminals != EXPECTED_TERMINALS:
-        raise SystemExit("terminal dispositions differ from the accepted run")
+            for key in ("requested_url", "final_url"):
+                path = urlsplit(request[key]).path.rstrip("/")
+                if any(
+                    path == prefix or path.startswith(prefix + "/")
+                    for prefix in MUTATING_PATH_PREFIXES
+                ) or (
+                    request["method"] != "GET"
+                    and (
+                        path == "/wp-json/wc/store/v1/cart"
+                        or path.startswith("/wp-json/wc/store/v1/cart/")
+                    )
+                ):
+                    raise SystemExit(
+                        f"detection/search evidence used a mutating endpoint: {row['domain']}"
+                    )
 
     serialized = "\n".join(json.dumps(row, sort_keys=True) for row in rows)
     forbidden_patterns = {
@@ -608,6 +677,44 @@ def validate_rows(
     for label, pattern in forbidden_patterns.items():
         if re.search(pattern, serialized):
             raise SystemExit(f"output contains forbidden {label}")
+
+    outcomes = Counter(row["search"]["kind"] for row in rows)
+    positive = sum(
+        row["search"]["kind"] == "search" and row["search"]["candidate_count"] > 0
+        for row in rows
+    )
+    empty = sum(
+        row["search"]["kind"] == "search" and row["search"]["candidate_count"] == 0
+        for row in rows
+    )
+    if (
+        outcomes != EXPECTED_SEARCH_OUTCOMES
+        or positive != EXPECTED_POSITIVE_SEARCHES
+        or empty != EXPECTED_EMPTY_SEARCHES
+    ):
+        raise SystemExit("search outcome counts differ from the accepted corpus")
+    terminals = {
+        row["domain"]: (
+            row["search"]["kind"],
+            row["search"]["platform"],
+            row["search"]["source"],
+            row["search"].get("reason"),
+            row["search"].get("system"),
+            row["search"].get("status"),
+        )
+        for row in rows
+        if row["search"]["kind"] != "search"
+    }
+    if terminals != EXPECTED_TERMINALS:
+        raise SystemExit("terminal dispositions differ from the accepted corpus")
+    dispositions = [
+        {"domain": row["domain"], "search": row["search"]} for row in rows
+    ]
+    disposition_digest = hashlib.sha256(
+        json.dumps(dispositions, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    if disposition_digest != EXPECTED_SEARCH_DISPOSITIONS_SHA256:
+        raise SystemExit("per-store search dispositions differ from the accepted corpus")
 
 
 def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -668,7 +775,7 @@ def report(rows: list[dict[str, Any]], summary: dict[str, Any]) -> str:
     lines = [
         f"# Product-search storefront HTTP evidence — {local_date}",
         "",
-        "This read-only acceptance rerun used one literal query (`a`) per store with no alternate-query retries. It called the production detection and platform search adapters over plain HTTP. The production detector's empty `POST /rest/V1/guest-carts` request is an authorized Magento-positive probe; the run created no product line, customer address, consignment, or shipping-rate request.",
+        "This read-only acceptance rerun used one literal query (`a`) per store with no alternate-query retries. It called the production detection and platform search adapters over plain HTTP. Magento capability negotiation used one bounded product-search GraphQL query. The run created no cart, product line, customer address, consignment, or shipping-rate request.",
         "",
         "Opaque product references were hashed in memory and discarded. The JSONL contains only public detection evidence, whitelisted product fields, sanitized HTTP request metadata, and learned-cache domain joins.",
         "",
