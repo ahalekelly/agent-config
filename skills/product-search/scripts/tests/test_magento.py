@@ -158,6 +158,102 @@ class MagentoDetectionTests(unittest.TestCase):
 
 
 class MagentoSearchTests(unittest.TestCase):
+    def test_html_fallback_uses_canonical_search_route_without_trailing_slash(
+        self,
+    ) -> None:
+        paths: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
+            if request.url.path == "/graphql":
+                return response(request, 404)
+            if request.url.path == "/catalogsearch/result":
+                self.assertEqual(request.url.params["q"], "bearing")
+                return response(request, content=b"<html></html>")
+            raise AssertionError(request.url)
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = magento.search(http, detection(), "bearing")
+
+        self.assertEqual(result["source"], "html")
+        self.assertEqual(paths, ["/graphql", "/catalogsearch/result"])
+
+    def test_graphql_detail_accepts_null_suffix_and_uses_detected_entry_url(
+        self,
+    ) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            if "ProductSearch" in body["query"]:
+                return response(
+                    request,
+                    json_value={
+                        "data": {
+                            "products": {
+                                "items": [
+                                    {
+                                        "__typename": "SimpleProduct",
+                                        "name": "Bearing",
+                                        "sku": "BRG-1",
+                                        "stock_status": "IN_STOCK",
+                                        "url_key": "bearing",
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                )
+            self.assertNotIn("base_url", body["query"])
+            self.assertNotIn("base_currency_code", body["query"])
+            return response(
+                request,
+                json_value={
+                    "data": {
+                        "storeConfig": {
+                            "base_url": "http://merchant-controlled.example/",
+                            "product_url_suffix": None,
+                        },
+                        "products": {
+                            "items": [
+                                {
+                                    "__typename": "SimpleProduct",
+                                    "name": "Bearing",
+                                    "sku": "BRG-1",
+                                    "stock_status": "IN_STOCK",
+                                    "url_key": "bearing",
+                                    "price_range": {
+                                        "minimum_price": {
+                                            "final_price": {
+                                                "value": 2.5,
+                                                "currency": "USD",
+                                            },
+                                            "regular_price": {
+                                                "value": 2.5,
+                                                "currency": "USD",
+                                            },
+                                        }
+                                    },
+                                }
+                            ]
+                        },
+                    }
+                },
+            )
+
+        custom_detection = Detection(
+            kind="detected",
+            origin="https://magento.test",
+            entry_url="https://magento.test/us/",
+            platform="magento",
+            api_origin="https://magento.test",
+            evidence=("magento_guest_cart_response",),
+        )
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = magento.search(http, custom_detection, "bearing")
+
+        self.assertEqual(result["items"][0]["url"], "https://magento.test/us/bearing")
+
     def test_configurable_page_does_not_emit_plain_product_json_ld(self) -> None:
         page = magento.ProductPage()
         page.feed(
@@ -185,7 +281,6 @@ class MagentoSearchTests(unittest.TestCase):
 
     def test_graphql_detail_requires_storefront_url_fields(self) -> None:
         cases = [
-            ("base_url", "storeConfig.base_url"),
             ("product_url_suffix", "storeConfig.product_url_suffix"),
             ("url_key", "product url_key"),
         ]
@@ -198,7 +293,16 @@ class MagentoSearchTests(unittest.TestCase):
                     detail["data"]["storeConfig"].pop(field)
 
                 with self.assertRaisesRegex(ToolError, message):
-                    magento._detail_items(detail, "BRG-PARENT")
+                    magento._detail_items(detail, "BRG-PARENT", "https://magento.test/")
+
+    def test_graphql_detail_rejects_non_nullable_suffix_types(self) -> None:
+        for suffix in (False, 7, {}, []):
+            with self.subTest(suffix=suffix):
+                detail = fixture_json("platform-magento-detail-partial.json")
+                detail["data"]["storeConfig"]["product_url_suffix"] = suffix
+
+                with self.assertRaisesRegex(ToolError, "must be a string or null"):
+                    magento._detail_items(detail, "BRG-PARENT", "https://magento.test/")
 
     def test_narrow_search_then_exact_detail_preserves_partial_errors(self) -> None:
         calls: list[dict[str, Any]] = []
@@ -285,7 +389,7 @@ class MagentoSearchTests(unittest.TestCase):
             fetched.append(str(request.url))
             if request.url.path == "/graphql":
                 return response(request, 403, content=b"Forbidden")
-            if request.url.path == "/catalogsearch/result/":
+            if request.url.path == "/catalogsearch/result":
                 self.assertEqual(request.url.params["q"], "bearing")
                 return response(
                     request, content=fixture("platform-magento-search.html")
@@ -325,7 +429,7 @@ class MagentoSearchTests(unittest.TestCase):
         def handler(request: httpx.Request) -> httpx.Response:
             if request.url.path == "/graphql":
                 return response(request, 404)
-            if request.url.path == "/catalogsearch/result/":
+            if request.url.path == "/catalogsearch/result":
                 return response(request, 403, content=b"Forbidden")
             raise AssertionError(request.url)
 
@@ -334,7 +438,27 @@ class MagentoSearchTests(unittest.TestCase):
             result = magento.search(http, detection(), "bearing")
 
         self.assertEqual(result["kind"], "gated")
-        self.assertEqual(result["endpoint"], "/catalogsearch/result/")
+        self.assertEqual(result["endpoint"], "/catalogsearch/result")
+
+    def test_canonical_html_search_failure_is_not_retried(self) -> None:
+        paths: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
+            if request.url.path == "/graphql":
+                return response(request, 404)
+            if request.url.path == "/catalogsearch/result":
+                return response(request, 500)
+            raise AssertionError(request.url)
+
+        http = Http(httpx.MockTransport(handler))
+        with (
+            http.client,
+            self.assertRaisesRegex(ToolError, "Magento HTML search returned HTTP 500"),
+        ):
+            magento.search(http, detection(), "bearing")
+
+        self.assertEqual(paths, ["/graphql", "/catalogsearch/result"])
 
     def test_html_challenge_is_bot_wall(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:

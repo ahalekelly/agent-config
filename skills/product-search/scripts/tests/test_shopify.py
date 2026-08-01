@@ -80,6 +80,24 @@ class ShopifyTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result.api_origin, "https://main-us-attitude.myshopify.com")
 
+    def test_detection_treats_signed_redirect_boundary_as_no_match(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                307,
+                headers={"Location": "https://different.example/graphql"},
+                request=request,
+            )
+
+        homepage_request = httpx.Request("GET", "https://store.example/")
+        homepage = httpx.Response(200, text="<html></html>", request=homepage_request)
+        http = Http(httpx.MockTransport(handler))
+        with mock.patch.object(shopify, "send_signed", side_effect=unsigned_send):
+            result = shopify.detect(
+                http, "https://store.example", "https://store.example/", homepage
+            )
+
+        self.assertIsNone(result)
+
     def test_search_flattens_exact_variants(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             self.assertEqual(request.url.host, "backend.myshopify.com")
@@ -309,13 +327,32 @@ class ShopifyTests(unittest.TestCase):
                         shopify, "send_signed", side_effect=unsigned_send
                     ) as signer,
                     self.assertRaisesRegex(
-                        shopify.ToolError,
+                        shopify.SignedRedirectBoundary,
                         "redirect target must use the detected API authority",
                     ),
                 ):
                     shopify.search(http, detection(), "bearing")
                 self.assertEqual(len(requests), 1)
                 self.assertEqual(signer.call_count, 1)
+
+    def test_quote_propagates_signed_redirect_boundary(self) -> None:
+        http = Http(
+            httpx.MockTransport(
+                lambda request: httpx.Response(
+                    307,
+                    headers={"Location": "https://different.example/graphql"},
+                    request=request,
+                )
+            )
+        )
+        reference = shopify.item_ref(
+            "shopify", {"variant_id": "gid://shopify/ProductVariant/7"}
+        )
+        with (
+            mock.patch.object(shopify, "send_signed", side_effect=unsigned_send),
+            self.assertRaises(shopify.SignedRedirectBoundary),
+        ):
+            shopify.quote(http, detection(), reference)
 
     def test_empty_rate_list_is_not_free_shipping(self) -> None:
         responses = iter(

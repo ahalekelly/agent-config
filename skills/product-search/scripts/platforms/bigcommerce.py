@@ -92,6 +92,8 @@ class SearchParser(HTMLParser):
         href = values.get("href")
         if not href:
             return
+        if (values.get("data-button-type") or "").casefold() == "add-cart":
+            return
         marker = " ".join(
             str(values.get(name, ""))
             for name in (
@@ -381,8 +383,13 @@ def _product(page: str, product_url: str) -> dict[str, Any]:
     parsed = _parse_product(page)
     attributes = parsed.attributes
     price = attributes.get("price")
+    if price is not None and not isinstance(price, dict):
+        raise ToolError("BigCommerce product price has an unexpected type")
     current = price.get("without_tax") if isinstance(price, dict) else None
-    if not isinstance(current, dict):
+    if current is not None and not isinstance(current, dict):
+        raise ToolError("BigCommerce product current price has an unexpected type")
+    purchasable = attributes["purchasable"]
+    if purchasable and current is None:
         raise ToolError("BigCommerce product omitted its current price")
     sku = attributes.get("sku")
     if not isinstance(sku, str) or not sku:
@@ -399,9 +406,11 @@ def _product(page: str, product_url: str) -> dict[str, Any]:
         "variant": None,
         "sku": sku,
         "barcode": barcode,
-        "available": attributes.get("instock") is True
-        and attributes.get("purchasable") is True,
-        "price": money(current.get("value"), current.get("currency")),
+        "available": attributes["instock"],
+        "purchasable": purchasable,
+        "price": money(current.get("value"), current.get("currency"))
+        if current is not None
+        else None,
         "compare_at_price": money(compare.get("value"), compare.get("currency"))
         if isinstance(compare, dict)
         else None,

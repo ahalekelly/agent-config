@@ -92,6 +92,43 @@ class BigCommerceTests(unittest.TestCase):
             )
         )
 
+    def test_search_ignores_add_to_cart_anchors(self) -> None:
+        product_calls: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/search.php":
+                return response(
+                    request,
+                    content=b"""
+                    <a href="/cart.php?action=add&amp;product_id=123"
+                       class="button card-figcaption-button"
+                       data-button-type="add-cart" data-product-id="123">
+                      Add to Cart
+                    </a>
+                    <a href="/precision-bearing/" data-card-type="product"
+                       data-product-id="123"
+                       data-sku="BRG-1" title="Precision Bearing">
+                      Precision Bearing
+                    </a>
+                    """,
+                    headers={"Content-Type": "text/html"},
+                )
+            product_calls.append(str(request.url))
+            if request.url.path != "/precision-bearing/":
+                raise AssertionError(request.url)
+            return response(
+                request,
+                content=fixture("platform-bigcommerce-product.html"),
+                headers={"Content-Type": "text/html"},
+            )
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = bigcommerce.search(http, detection(), "bearing")
+
+        self.assertEqual(len(result["items"]), 1)
+        self.assertEqual(product_calls, ["https://bigcommerce.test/precision-bearing/"])
+
     def test_search_hydrates_three_exact_ranked_query_free_products(self) -> None:
         product_page = fixture("platform-bigcommerce-product.html")
         product_calls: list[str] = []
@@ -145,6 +182,53 @@ class BigCommerceTests(unittest.TestCase):
         )
         self.assertTrue(all("?" not in url and "#" not in url for url in product_calls))
         self.assertNotIn("fourth-bearing", " ".join(product_calls))
+
+    def test_search_preserves_quote_only_product_without_inventing_a_price(
+        self,
+    ) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/search.php":
+                return response(
+                    request,
+                    content=b"""
+                    <a href="/quote-bearing/" data-card-type="product"
+                       data-sku="QUOTE-1" title="Quote Bearing">Quote Bearing</a>
+                    <a href="/precision-bearing/" data-card-type="product"
+                       data-sku="BRG-1" title="Precision Bearing">Precision Bearing</a>
+                    """,
+                    headers={"Content-Type": "text/html"},
+                )
+            if request.url.path == "/quote-bearing/":
+                return response(
+                    request,
+                    content=(
+                        b"<script>var BCData = "
+                        b'{"product_attributes":{"sku":"QUOTE-1","weight":null,'
+                        b'"instock":true,"purchasable":false}};</script>'
+                        b"<h1>Quote Bearing</h1>"
+                        b'<form><input name="product_id" value="400"></form>'
+                    ),
+                    headers={"Content-Type": "text/html"},
+                )
+            if request.url.path == "/precision-bearing/":
+                return response(
+                    request,
+                    content=fixture("platform-bigcommerce-product.html"),
+                    headers={"Content-Type": "text/html"},
+                )
+            raise AssertionError(request.url)
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = bigcommerce.search(http, detection(), "bearing")
+
+        self.assertEqual(len(result["items"]), 2)
+        quote_only = result["items"][0]
+        self.assertEqual(quote_only["sku"], "QUOTE-1")
+        self.assertTrue(quote_only["available"])
+        self.assertFalse(quote_only["purchasable"])
+        self.assertIsNone(quote_only["price"])
+        self.assertEqual(result["items"][1]["sku"], "BRG-1")
 
     def test_quote_uses_clean_rest_cart_and_preserves_option_semantics(self) -> None:
         checkout = json.loads(fixture("platform-bigcommerce-shipping.json"))

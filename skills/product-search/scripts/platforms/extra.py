@@ -14,6 +14,7 @@ from platform_api_core import (
     ToolError,
     bot_wall,
     canonical_url,
+    gated,
     item_ref,
     json_object,
     money,
@@ -339,29 +340,36 @@ def _ecwid_item(store_id: str, currency: str, value: Any) -> dict[str, Any]:
 
 
 def _sfcc_search(http: Http, detection: Detection, query: str) -> dict[str, object]:
-    origin = _api_origin(detection, "sfcc")
-    response = http.request(
-        "GET", origin + "/Search-Show", params={"q": query}, follow_redirects=True
-    )
+    _api_origin(detection, "sfcc")
+    route = canonical_url(urljoin(detection.entry_url, "search"))
+    if url_origin(route) != detection.origin:
+        raise ToolError("SFCC search route must stay on the detected storefront")
+    response = http.request("GET", route, params={"q": query}, follow_redirects=True)
+    final_url = canonical_url(str(response.url))
+    if url_origin(final_url) != detection.origin:
+        raise ToolError("SFCC search redirected outside the detected storefront")
     terminal = _wall(response, "sfcc")
     if terminal is not None:
         return terminal
-    _require_ok(response, "SFCC Search-Show")
-    final_url = canonical_url(str(response.url))
-    if url_origin(final_url) != origin:
-        raise ToolError("SFCC Search-Show redirected outside the detected storefront")
+    if response.status_code in {401, 403}:
+        return gated(
+            "search",
+            "sfcc",
+            route,
+            response,
+            "public SFCC search refused",
+        )
+    _require_ok(response, "SFCC search")
     lower = response.text[:2_000_000].lower()
     if (
         "x-dw-request-base-id" not in response.headers
         and "/on/demandware." not in lower
     ):
-        raise ToolError("SFCC Search-Show response has no SFCC storefront signature")
-    parser = SfccProducts(origin)
+        raise ToolError("SFCC search response has no SFCC storefront signature")
+    parser = SfccProducts(detection.origin)
     parser.feed(response.text)
     parser.close()
-    return search_result(
-        "sfcc", query, parser.items[:MAX_RESULTS], endpoint=origin + "/Search-Show"
-    )
+    return search_result("sfcc", query, parser.items[:MAX_RESULTS], endpoint=route)
 
 
 class SfccProducts(HTMLParser):

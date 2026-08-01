@@ -217,9 +217,44 @@ class EcwidTests(unittest.TestCase):
 
 
 class SfccTests(unittest.TestCase):
-    def test_search_show_returns_bounded_stable_product_references(self) -> None:
+    def test_search_route_is_relative_to_the_detected_entry_url(self) -> None:
+        def check(entry_url: str, expected_path: str) -> None:
+            paths: list[str] = []
+
+            def handler(request: httpx.Request) -> httpx.Response:
+                paths.append(request.url.path)
+                self.assertEqual(request.url.path, expected_path)
+                return httpx.Response(
+                    200, content=fixture("sfcc-search.html"), request=request
+                )
+
+            detection = Detection(
+                kind="detected",
+                origin="https://shop.example",
+                entry_url=entry_url,
+                platform="sfcc",
+                api_origin="https://shop.example",
+                evidence=("sfcc fixture",),
+            )
+            result = extra.search(
+                Http(httpx.MockTransport(handler)), detection, "towel"
+            )
+
+            self.assertEqual(result["endpoint"], f"https://shop.example{expected_path}")
+            self.assertEqual(paths, [expected_path])
+
+        cases = (
+            ("https://shop.example/", "/search"),
+            ("https://shop.example/it_IT/", "/it_IT/search"),
+            ("https://shop.example/us/home", "/us/search"),
+        )
+        for entry_url, expected_path in cases:
+            with self.subTest(entry_url=entry_url):
+                check(entry_url, expected_path)
+
+    def test_search_route_returns_bounded_stable_product_references(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
-            self.assertEqual(request.url.path, "/Search-Show")
+            self.assertEqual(request.url.path, "/search")
             self.assertEqual(request.url.params["q"], "towel")
             return httpx.Response(
                 200, content=fixture("sfcc-search.html"), request=request
@@ -239,8 +274,9 @@ class SfccTests(unittest.TestCase):
             "https://shop.example/srixon/summer-major-towel/MT25SM.html",
         )
         self.assertEqual(parse_item_ref(first["item_ref"], "sfcc"), {"pid": "12133488"})
+        self.assertEqual(result["endpoint"], "https://shop.example/search")
 
-    def test_search_show_rejects_non_sfcc_html(self) -> None:
+    def test_search_route_rejects_non_sfcc_html(self) -> None:
         transport = httpx.MockTransport(
             lambda request: httpx.Response(
                 200, text="<html>unrelated landing page</html>", request=request
@@ -248,6 +284,68 @@ class SfccTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ToolError, "no SFCC storefront signature"):
             extra.search(Http(transport), detected("sfcc"), "towel")
+
+    def test_search_denials_are_gated_but_recognized_walls_stay_bot_walls(
+        self,
+    ) -> None:
+        def check(
+            status: int,
+            headers: dict[str, str],
+            content: bytes,
+            expected_kind: str,
+        ) -> None:
+            paths: list[str] = []
+
+            def handler(request: httpx.Request) -> httpx.Response:
+                paths.append(request.url.path)
+                return httpx.Response(
+                    status, headers=headers, content=content, request=request
+                )
+
+            result = extra.search(
+                Http(httpx.MockTransport(handler)), detected("sfcc"), "towel"
+            )
+
+            self.assertEqual(result["kind"], expected_kind)
+            self.assertEqual(paths, ["/search"])
+            if expected_kind == "gated":
+                self.assertIs(result["browser_required"], True)
+                self.assertEqual(result["endpoint"], "https://shop.example/search")
+            else:
+                self.assertEqual(result["system"], "cloudflare")
+                self.assertNotIn("browser_required", result)
+
+        cases = (
+            (401, {}, b"Unauthorized", "gated"),
+            (403, {}, b"Forbidden", "gated"),
+            (
+                403,
+                {"cf-mitigated": "challenge"},
+                b"Just a moment",
+                "bot_wall",
+            ),
+        )
+        for status, headers, content, expected_kind in cases:
+            with self.subTest(status=status, expected_kind=expected_kind):
+                check(status, headers, content, expected_kind)
+
+    def test_search_rejects_off_origin_redirect(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.host == "shop.example":
+                return httpx.Response(
+                    302,
+                    headers={"Location": "https://different.example/search"},
+                    request=request,
+                )
+            return httpx.Response(
+                200,
+                headers={"x-dw-request-base-id": "base"},
+                content=fixture("sfcc-search.html"),
+                request=request,
+            )
+
+        with self.assertRaisesRegex(ToolError, "outside the detected storefront"):
+            extra.search(Http(httpx.MockTransport(handler)), detected("sfcc"), "towel")
 
 
 class QuoteBoundaryTests(unittest.TestCase):

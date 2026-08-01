@@ -39,7 +39,7 @@ query ProductSearch($search: String!) {
 
 DETAIL_QUERY = """\
 query ProductDetail($sku: String!) {
-  storeConfig { base_url product_url_suffix base_currency_code }
+  storeConfig { product_url_suffix }
   products(filter: {sku: {eq: $sku}}, pageSize: 1) {
     items {
       __typename name sku stock_status url_key
@@ -318,7 +318,9 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
         errors.extend(detail_errors)
         if detail is None:
             continue
-        concrete, unsupported = _detail_items(detail, candidate["sku"])
+        concrete, unsupported = _detail_items(
+            detail, candidate["sku"], detection.entry_url
+        )
         items.extend(concrete)
         omitted += unsupported
     if not items and errors:
@@ -531,6 +533,7 @@ def _products(envelope: dict[str, Any]) -> dict[str, Any] | None:
 def _detail_items(
     envelope: dict[str, Any],
     selected_sku: str,
+    entry_url: str,
 ) -> tuple[list[dict[str, Any]], int]:
     products = _products(envelope)
     rows = products.get("items") if products else None
@@ -546,16 +549,19 @@ def _detail_items(
     config = data.get("storeConfig") if isinstance(data, dict) else None
     if not isinstance(config, dict):
         raise ToolError("Magento GraphQL detail has no storeConfig")
-    base_url = config.get("base_url")
-    if not isinstance(base_url, str) or not base_url:
-        raise ToolError("Magento GraphQL detail has no storeConfig.base_url")
-    suffix = config.get("product_url_suffix")
-    if not isinstance(suffix, str):
+    if "product_url_suffix" not in config:
         raise ToolError("Magento GraphQL detail has no storeConfig.product_url_suffix")
+    raw_suffix = config["product_url_suffix"]
+    if raw_suffix is not None and not isinstance(raw_suffix, str):
+        raise ToolError(
+            "Magento GraphQL detail storeConfig.product_url_suffix must be "
+            "a string or null"
+        )
+    suffix = raw_suffix or ""
     url_key = parent.get("url_key")
     if not isinstance(url_key, str) or not url_key:
         raise ToolError("Magento GraphQL detail product has no product url_key")
-    product_url = canonical_url(urljoin(base_url, url_key + suffix))
+    product_url = canonical_url(urljoin(entry_url, url_key + suffix))
     if parent.get("__typename") == "SimpleProduct":
         return [_graphql_item(parent, parent, product_url, [])], 0
     variants = parent.get("variants")
@@ -648,11 +654,11 @@ def _html_search(
     query: str,
     graphql_errors: list[dict[str, Any]],
 ) -> dict[str, object]:
-    search_url = urljoin(detection.entry_url, "catalogsearch/result/")
+    search_url = urljoin(detection.entry_url, "catalogsearch/result")
     response = http.request("GET", search_url, params={"q": query})
     denied = _denied(
         "search",
-        "/catalogsearch/result/",
+        "/catalogsearch/result",
         response,
         "public Magento HTML search refused",
     )

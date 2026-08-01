@@ -80,6 +80,10 @@ ADDRESS = {
 }
 
 
+class SignedRedirectBoundary(ToolError):
+    """A signed request cannot safely follow the storefront redirect."""
+
+
 def detect(
     http: Http, origin: str, entry_url: str, homepage: httpx.Response
 ) -> Detection | None:
@@ -102,12 +106,15 @@ def detect(
         if backend != origin:
             candidates.append(backend)
     for api_origin in candidates:
-        response = _signed_post(
-            http,
-            api_origin + API_PATH,
-            {"query": "{ shop { name } }"},
-            "application/json",
-        )
+        try:
+            response = _signed_post(
+                http,
+                api_origin + API_PATH,
+                {"query": "{ shop { name } }"},
+                "application/json",
+            )
+        except SignedRedirectBoundary:
+            continue
         if response.status_code != 200:
             continue
         try:
@@ -248,24 +255,26 @@ def _signed_post(
         if response.status_code not in {301, 302, 303, 307, 308}:
             return response
         if attempt == 1:
-            raise ToolError("Shopify GraphQL exceeded one signed redirect")
+            raise SignedRedirectBoundary("Shopify GraphQL exceeded one signed redirect")
         location = response.headers.get("location")
         if not location:
-            raise ToolError("Shopify GraphQL redirect has no Location header")
+            raise SignedRedirectBoundary(
+                "Shopify GraphQL redirect has no Location header"
+            )
         target = urljoin(target, location)
         parts = urlsplit(target)
         try:
             redirect_authority = (parts.hostname, parts.port or 443)
         except ValueError as error:
-            raise ToolError(
+            raise SignedRedirectBoundary(
                 "Shopify GraphQL redirect target has an invalid port"
             ) from error
         if parts.scheme != "https" or redirect_authority != api_authority:
-            raise ToolError(
+            raise SignedRedirectBoundary(
                 "Shopify GraphQL redirect target must use the detected API authority"
             )
         if parts.username is not None or parts.password is not None:
-            raise ToolError(
+            raise SignedRedirectBoundary(
                 "Shopify GraphQL redirect target must not contain credentials"
             )
     raise AssertionError("Shopify redirect loop must return or raise")

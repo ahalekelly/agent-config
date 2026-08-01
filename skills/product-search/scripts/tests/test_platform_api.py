@@ -64,6 +64,42 @@ class FakeAdapter:
 
 
 class DetectionTests(unittest.TestCase):
+    def test_shopify_redirect_boundary_allows_later_magento_detection(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET" and request.url.path == "/":
+                return httpx.Response(
+                    200,
+                    text='<script type="text/x-magento-init">{}</script>',
+                    request=request,
+                )
+            if request.url.path == "/wp-json/wc/store/v1/cart":
+                return httpx.Response(404, request=request)
+            if request.url.path == "/api/2026-07/graphql.json":
+                return httpx.Response(
+                    307,
+                    headers={"Location": "https://different.example/graphql"},
+                    request=request,
+                )
+            if request.url.path == "/rest/V1/guest-carts":
+                return httpx.Response(
+                    200, json="guest-token-secret-1234567890", request=request
+                )
+            raise AssertionError(request.url)
+
+        def unsigned_send(
+            client: httpx.Client, request: httpx.Request
+        ) -> httpx.Response:
+            return client.send(request, follow_redirects=False)
+
+        http = Http(httpx.MockTransport(handler))
+        with mock.patch.object(
+            platform_api.shopify, "send_signed", side_effect=unsigned_send
+        ):
+            result = platform_api.detect_store(http, "store.example")
+
+        self.assertEqual(result.platform, "magento")
+        self.assertEqual(result.evidence, ("magento_guest_cart_token",))
+
     def test_conflicting_positive_platforms_fail_loudly(self) -> None:
         def home(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, text="store", request=request)
@@ -143,6 +179,35 @@ class EntrypointTests(unittest.TestCase):
             )
         self.assertEqual(adapter.quoted, [])
         self.assertEqual(record["result"]["kind"], "search")
+
+    def test_probe_skips_nonpurchasable_item_and_quotes_the_next_candidate(
+        self,
+    ) -> None:
+        quote_only = item_ref("shopify", {"variant_id": "quote-only"})
+        available = item_ref("shopify", {"variant_id": "available"})
+        adapter = FakeAdapter(
+            [
+                {
+                    "item_ref": quote_only,
+                    "available": True,
+                    "purchasable": False,
+                    "price": None,
+                },
+                {"item_ref": available, "available": True},
+            ]
+        )
+        with (
+            mock.patch.object(platform_api, "detect_store", return_value=detected()),
+            mock.patch.dict(platform_api.ADAPTERS, {"shopify": adapter}),
+        ):
+            platform_api.execute(
+                "probe",
+                "store.example",
+                "valve",
+                Http(httpx.MockTransport(lambda request: None)),
+            )
+
+        self.assertEqual(adapter.quoted, [available])
 
     def test_parser_exposes_search_and_no_products_alias(self) -> None:
         parser = platform_api._parser()
