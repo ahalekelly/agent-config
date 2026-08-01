@@ -380,7 +380,7 @@ Interpret both `shippingOptionsStatus` and `fulfillmentOptions`. Three exact-add
 
 ## Wix
 
-Wix detection and public product data generalize, but destination cart quoting does not. Obtain an anonymous e-commerce app token from `/_api/v1/access-tokens`, then query `/_api/catalog-reader-server/api/v1/products/query`. Keep the token in memory only.
+Wix detection and public product data generalize, but destination cart quoting does not. Obtain an anonymous e-commerce app token from `/_api/v1/access-tokens`, then query `/_api/catalog-reader-server/api/v1/products/query`. The product ID is the stable identity used by `item_ref`; product-level `sku` is optional and is returned as `null` when absent, while a present non-string SKU is a schema error. Keep the token in memory only.
 
 Cart creation requires Wix's supported storefront SDK/runtime because catalog-reference and renderer state are site-specific. Treat cart/address/shipping as a BrowserSwarm or merchant integration case. Three tested stores exposed public product data; none produced a generic destination quote.
 
@@ -467,7 +467,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 116/116 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 118/118 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 

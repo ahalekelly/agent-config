@@ -130,6 +130,37 @@ class WixTests(unittest.TestCase):
             parse_item_ref(product["item_ref"], "wix"), {"product_id": product["id"]}
         )
 
+    def test_public_search_preserves_product_without_optional_sku(self) -> None:
+        products = json.loads(fixture("wix-products.json"))
+        products["products"][0].pop("sku")
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/_api/v1/access-tokens":
+                return httpx.Response(
+                    200, content=fixture("wix-tokens.json"), request=request
+                )
+            if request.url.path == "/_api/catalog-reader-server/api/v1/products/query":
+                return httpx.Response(200, json=products, request=request)
+            raise AssertionError(request.url)
+
+        result = extra.search(
+            Http(httpx.MockTransport(handler)), detected("wix"), "wheel"
+        )
+
+        product = result["items"][0]
+        self.assertIsNone(product["sku"])
+        self.assertEqual(
+            parse_item_ref(product["item_ref"], "wix"), {"product_id": product["id"]}
+        )
+
+    def test_product_rejects_present_non_string_sku(self) -> None:
+        product = json.loads(fixture("wix-products.json"))["products"][0]
+        for sku in (False, 7, {}, []):
+            with self.subTest(sku=sku):
+                product["sku"] = sku
+                with self.assertRaisesRegex(ToolError, "sku must be a string or null"):
+                    extra._wix_item(detected("wix"), product)
+
     def test_missing_ecommerce_token_is_a_schema_error(self) -> None:
         transport = httpx.MockTransport(
             lambda request: httpx.Response(200, json={"apps": {}}, request=request)

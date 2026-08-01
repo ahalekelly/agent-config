@@ -169,9 +169,10 @@ def _wix_item(detection: Detection, value: Any) -> dict[str, Any]:
         or not product_id
         or not isinstance(name, str)
         or not name
-        or not isinstance(sku, str)
     ):
-        raise ToolError("Wix product requires string id, name, and sku fields")
+        raise ToolError("Wix product requires nonempty string id and name fields")
+    if sku is not None and not isinstance(sku, str):
+        raise ToolError("Wix product sku must be a string or null")
     price = value.get("priceData")
     stock = value.get("stock")
     page = value.get("productPageUrl")
