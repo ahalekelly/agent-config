@@ -405,6 +405,23 @@ POST /on/demandware.store/Sites-<site>-Site/<locale>/CheckoutShippingServices-Su
 
 Preserve the page's session cookie, CSRF token, shipment UUIDs, exact form field names, and shipping method IDs. Dunlop completed the full plain-HTTP flow for exact 94103 and returned Ground $6.99, 2 Day $14.99, $3.19 tax, and $40.17 Ground total. Alcott returned 500 and HUGO BOSS redirected to HTML. Treat customized controllers as a BrowserSwarm/site-specific case rather than inventing fields.
 
+## Secondary-platform acceptance corpus
+
+| Store | Platform | Product probe | Cart/address boundary | Destination result |
+| --- | --- | --- | --- | --- |
+| Frankly Good Coffee | Squarespace | subscription `SQ6853991` | anonymous cart | `SHIPPING_NOT_REQUIRED` |
+| Archive07 | Squarespace | shirt `SQ0817768` | anonymous cart | `POSTAL_CODE_NOT_APPLICABLE` |
+| Marie Burgos Collection | Squarespace | chair `SQ3115437` | anonymous cart and exact address | Standard $161.13; Oversized $562.13 |
+| Izzy Wheels | Wix | Catalog Reader: Jurassic, €169 | generic cart reference returned `ITEM_NOT_FOUND`; older endpoint returned empty | no destination quote |
+| Bestie Hugs | Wix | public product data: Galaxy Purple | no cart past the generic boundary | no destination quote |
+| `malcowallshop.com` → `holzbuchstaben.ch` | Wix | public product data | no cart past the generic boundary | no destination quote |
+| Northbound Coffee | Ecwid | Spoonbender `spb12` | checkout/address returned HTTP 400; $5 pre-address fallback | fallback is not an SF quote |
+| CakeSafe | Ecwid | Floating Cake Bases | no cart past the address boundary | no destination quote |
+| Wylie Beckert | Ecwid | Wicked Kingdom `WK-UNCUT-FLAW` | no cart past the generic boundary | no destination quote |
+| Dunlop Sports US | Salesforce Commerce Cloud | towel `12133488` | full guest flow | Ground $6.99; 2 Day $14.99; tax $3.19; Ground total $40.17 |
+| Alcott | Salesforce Commerce Cloud | sneakers `SC0071DOAY15` | `Cart-AddProduct` returned HTTP 500 | no destination quote |
+| HUGO BOSS | Salesforce Commerce Cloud | watch `hbna58034135_999` | `Cart-AddProduct` redirected to HTML | no destination quote |
+
 ## OpenCart and custom storefronts
 
 OpenCart product options are page-specific. StepperOnline/OMC is OpenCart with Journal3 behind Cloudflare. A known product add without the warehouse option returned structured validation; the complete US warehouse selection returned a managed challenge and left the cart empty. No quote was reached. Report the endpoint-specific cart-write wall and stop repeated writes.
@@ -460,6 +477,33 @@ No approved Affiliate credentials were available, so transport, encoding, respon
 
 ## Reproducible verification
 
+The fixed detection-and-search acceptance uses [the bounded runner](scripts/platform_search_acceptance.py), [the 59-store corpus input](<dev/reports/Product Search Storefront Corpus 2026-07-31.input.json>), [the sanitized JSONL evidence](<dev/reports/Product Search Storefront Corpus 2026-07-31.jsonl>), and [the dated report](<dev/reports/Product Search Storefront Corpus 2026-07-31.md>). Validate the saved artifact offline with:
+
+```sh
+uv run skills/product-search/scripts/platform_search_acceptance.py validate
+```
+
+Run the deliberate live HTTP search corpus only into fresh temporary outputs:
+
+```sh
+uv run skills/product-search/scripts/platform_search_acceptance.py run \
+  /private/tmp/product-search-storefront-corpus.jsonl \
+  /private/tmp/product-search-storefront-corpus.md
+```
+
+The fresh run records platform detection and one literal search query per store. Its source-tree hash covers only `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`; runner, test, report, and documentation edits do not change that identity. It joins each row to the learned shipping cache by domain, but it does not create product lines, addresses, or rate requests and does not prove that its selected search product is the item used by an earlier quote run.
+
+| Expected platform | Stores | Positive candidates | Empty search | Terminal/not run | Tool errors |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Shopify | 12 | 12 | 0 | 0 | 0 |
+| WooCommerce | 12 | 11 | 0 | 1 | 0 |
+| Magento | 12 | 8 | 4 | 0 | 0 |
+| BigCommerce | 11 | 8 | 2 | 1 | 0 |
+| Squarespace | 3 | 3 | 0 | 0 | 0 |
+| Wix | 3 | 2 | 1 | 0 | 0 |
+| Ecwid | 3 | 0 | 2 | 1 | 0 |
+| Salesforce Commerce Cloud | 3 | 3 | 0 | 0 | 0 |
+
 Run deterministic unit tests from the repository root:
 
 ```sh
@@ -467,7 +511,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 118/118 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 122/122 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 
@@ -481,7 +525,7 @@ uv run skills/product-search/scripts/platform_api.py quote https://dernord.com '
 
 Live network probes are deliberate, not part of unit tests. Corpus inputs must remain bounded, and any raw diagnostic wire evidence belongs in a temporary directory rather than the repository.
 
-The dated storefront corpus contained 59 stores: 12 Shopify, 12 WooCommerce, 12 Magento (10 open and 2 gated controls), 11 BigCommerce, and 3 each for Squarespace, Wix, Ecwid, and Salesforce Commerce Cloud. Tracked vendors inside those counts were DERNORD and Mettle Air (Shopify), SparkFun (Magento), and goBILDA and ServoCity (BigCommerce). Three additional tracked wall investigations covered Bolt Depot, Glacier Tanks, and StepperOnline, for 62 distinct store entry domains overall; Glacier Tanks used the Magento workflow, while Bolt Depot and StepperOnline used their detected custom/OpenCart flows. The core outcomes were:
+The destination-quote acceptance corpus contained 59 stores: 12 Shopify, 12 WooCommerce, 12 Magento (10 open and 2 gated controls), 11 BigCommerce, and 3 each for Squarespace, Wix, Ecwid, and Salesforce Commerce Cloud. Tracked vendors inside those counts were DERNORD and Mettle Air (Shopify), SparkFun (Magento), and goBILDA and ServoCity (BigCommerce). Three additional tracked wall investigations covered Bolt Depot, Glacier Tanks, and StepperOnline, for 62 distinct store entry domains overall; Glacier Tanks used the Magento workflow, while Bolt Depot and StepperOnline used their detected custom/OpenCart flows. The destination-quote outcomes were:
 
 | Platform | Product result | Cart/address result | SF shipping result |
 | --- | --- | --- | --- |
