@@ -419,7 +419,7 @@ Keep clearance, shopper session, and page antiforgery token in one isolated cont
 
 ## BrowserSwarm boundary
 
-Before browser work, read `~/.agents/browser-swarm/README.md`. Attach to the shared fingerprint-Chromium daemon through the documented MCP agent configuration. Use isolated contexts, respect the two-tab cap across the whole swarm, and stop existing fan-outs before starting more. Do not stop the shared daemon explicitly. Keep browser work headless/invisible and never use the user's interactive browser.
+Before browser work, read `~/.agents/browser-swarm/README.md`. Attach to the shared fingerprint-Chromium daemon through the documented MCP agent configuration. Each browser agent receives an isolated context capped at two open tabs. Close tabs after extracting the needed data and end browser agents when their work is finished; the shared daemon auto-stops when no clients remain. Keep browser work headless/invisible and never use the user's interactive browser.
 
 Production DataDome blocked every tested headless engine. Do not burn repeated probes trying to bypass it. Akamai-only storefronts were readable in headless Firefox or fingerprint Chromium. Browser evidence begins only after plain HTTP has positively identified a wall or an operation requires a supported runtime.
 

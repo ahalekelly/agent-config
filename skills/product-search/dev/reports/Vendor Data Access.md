@@ -1,8 +1,13 @@
-# product-search dev memory — bot-walls & shipping quotes
+---
+created: 2026-07-30
+verified: 2026-07-31
+---
 
-Working notes on reaching vendor data — **shipping quotes and product detail** — without fighting bot walls. Artifacts in this folder: `benchmark_results.json` (reference engine benchmark), `benchmark_results-2026-07-30-headless-local.json` (local rerun, six headless configurations), `benchmark-plots-2026-07-30.html` (scatter plots + live-finding annotations).
+# Vendor data access
 
-The headline shift: **the platform storefront APIs solved the problem the browser work was trying to solve.** Shopify, WooCommerce, open-guest-API Magento, BigCommerce Stencil, and Squarespace hand real shipping quotes and structured product data to anonymous callers, so the engine-versus-wall research below now matters only for the residue — unsupported storefront runtimes, challenged endpoints, and vendors like Amazon whose data is reachable no other way.
+Findings on reaching vendor data — **shipping quotes and product detail** — without fighting bot walls. Artifacts in the parent directory: `benchmark_results.json` (reference engine benchmark), `benchmark_results-2026-07-30-headless-local.json` (local rerun, six headless configurations), `benchmark-plots-2026-07-30.html` (scatter plots + live-finding annotations).
+
+**Platform storefront APIs are the primary path.** Shopify, WooCommerce, open-guest-API Magento, BigCommerce Stencil, and Squarespace provide real shipping quotes and structured product data to anonymous callers. The engine-versus-wall research covers unsupported storefront runtimes, challenged endpoints, and vendors such as Amazon whose data is reachable no other way.
 
 ## Bottom line (read this first)
 
@@ -24,7 +29,7 @@ Get one **representative shipping quote per store**, cache it in `vendors.md`, r
   - **Headed background computer-use** (cua-driver / Codex Computer Use) — universal fallback; drives a real headed browser cold on any store's GUI, invisibly. Slow and token-heavy → reserve for walled, high-stakes finalists.
 - **Per-vendor learned optimizations** (only pay off on the recurring head — optimizations, not the strategy): representative-quote cache; record-once/replay-cheap (capture the checkout XHR from a successful browser run, cache the endpoint, replay as one HTTP request). Auto-populate into `vendors.md`.
 
-`vendors.md` shifts from a hand-curated list to **curated head + auto-growing learned cache** keyed by domain (platform, working endpoint, origin, carrier, representative quote, bot-wall status). Unknown vendor → run the general cold-path → write back what was learned.
+`vendors.md` combines a **curated head + auto-growing learned cache** keyed by domain (platform, working endpoint, origin, carrier, representative quote, bot-wall status). Unknown vendor → run the general cold-path → write back what was learned.
 
 `scripts/platform_api.py` is the production cold-path helper. It implements product search for Shopify, WooCommerce, Magento, BigCommerce, Squarespace, Wix, Ecwid, and SFCC; the first five also implement destination quotes, while the last three return explicit browser-required quote boundaries. It emits sanitized JSON and runs resumable bounded corpora. Its opaque item references are platform-specific and must be passed through exactly as returned.
 
@@ -44,7 +49,7 @@ Get one **representative shipping quote per store**, cache it in `vendors.md`, r
 
 `benchmark_results-2026-07-30-headless-local.json`, run from this machine's own IP with proxies disabled, six headless configurations against the same ten targets. Rates: patchright 4/10, tf-stealth-chromium 5/10, tf-stealth-firefox 6/10, cloakbrowser 7/10, cloakbrowser+patchright 6/10, **fingerprint-chromium+patchright 7/10**. Cloudflare, PerimeterX and Reddit passed for everything; Google Search and one DataDome target failed for everything; the discriminating targets were the second DataDome site, Amazon, Ticketmaster, Akamai, and Kasada.
 
-Two conclusions. **Akamai now has a Chromium answer** — both patched builds clear it where every stock engine fails. And **cloakbrowser is an unattributed fork of [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)**, which is BSD-3, free, tracks a newer Chromium, and scores the same; prefer the upstream, accepting that its WebGL spoofing is Linux-only so on macOS it leaks the real GPU. Rates agreed closely with the reference run despite different hardware, a two-month gap, and no proxy, which suggests these measure engine capability rather than IP reputation. Still n=1 per target — don't over-read single-target differences, especially on DataDome, which tightens on repeat visits.
+Two conclusions. **Akamai has a Chromium answer** — both patched builds clear it where every stock engine fails. And **cloakbrowser is an unattributed fork of [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)**, which is BSD-3, free, tracks a newer Chromium, and scores the same; prefer the upstream, accepting that its WebGL spoofing is Linux-only so on macOS it leaks the real GPU. Rates agreed closely with the reference run despite different hardware, a two-month gap, and no proxy, which suggests these measure engine capability rather than IP reputation. Still n=1 per target — don't over-read single-target differences, especially on DataDome, which tightens on repeat visits.
 
 ## Evidence — benchmark
 
@@ -123,7 +128,7 @@ Neither is usable as a data source: ACP governs checkout, while product discover
 
 ## Leads worth chasing
 
-- **Shopware** is the next major untested platform. Squarespace now has a reusable anonymous cart/address flow; Salesforce Commerce Cloud's SFRA convention can quote but is merchant-customizable; Wix and Ecwid have explicit storefront-runtime boundaries.
+- **Shopware** is the next major untested platform. Squarespace exposes a reusable anonymous cart/address flow; Salesforce Commerce Cloud's SFRA convention can quote but is merchant-customizable; Wix and Ecwid have explicit storefront-runtime boundaries.
 - **Storefront search providers** — Algolia, Searchspring, Klevu, Constructor.io — ship a public search-only key in the page bundle by design. Where a store uses one, that is faceted catalog search on sites that are not Shopify at all, potentially a wider net than any single platform API.
 - **Free vendor API keys** would convert known blockers into structured sources. Mouser is the prize: it is Akamai+DataDome walled and unreachable by every headless engine tested, and offers a free search API. Digi-Key's MCP credentials have expired and merely need renewing. Nexar/Octopart and Element14/Farnell also have free tiers.
 - **Shopify Web Bot Auth**: the request signer emits the fixed Ed25519 profile and passes local verification, and the public key directory serves the expected key in a verifiable signed response. Shopify documents higher limits for signed traffic without requiring Cloudflare enrollment for the baseline tier, but publishes neither numeric thresholds nor a caller-visible recognition signal. Bounded signed/unsigned trials did not expose a crossover. On 2026-07-31 Cloudflare crawltest reported the helper's request as an unknown key with HTTP 401 and rejected a malformed control with HTTP 400; because Cloudflare enrollment is not required by Shopify, this does not classify the key at Shopify. Shopify Partner Support is the confirmation path.
@@ -133,10 +138,10 @@ Neither is usable as a data source: ACP governs checkout, while product discover
 1. **Primary unproven step: does headed patchright/cloakbrowser via cua-driver actually clear live DataDome?** Spike headed cloakbrowser or patchright against Grainger through cua-driver background computer-use. This is the recommended DataDome route and needs confirmation before the skill relies on it.
 2. **Content-verify the Akamai-only 200s** (Omega, Lowes, Misumi, Arrow) — confirm they're real pages, not soft 200 challenges (only Master Electronics was screenshot-verified).
 3. `adspower_headless` is the last untested benchmark DataDome-passer (commercial) — low priority given cloakbrowser failed.
-4. Doc-state nit: the plot's "live-tested" rings cover only 2 of the 4 engines later tested (Firefox, camoufox); tf-stealth and cloakbrowser were tested afterward and not ring-annotated.
+4. Doc-state nit: the plot's "live-tested" rings cover Firefox and camoufox, but not tf-stealth or cloakbrowser.
 
 ## Shared pieces live in the `browser-swarm` submodule
 
-The engine-vs-wall decision table, the launched-mode Firefox config, the wall-detection markers, and the MCP driving constraints are general browser-tooling knowledge and live in [bot-detection.md](~/.agents/browser-swarm/docs/bot-detection.md); `browser-swarm` is a public repo, so anything vendor-specific or private stays out of it. This folder keeps the vendor-specific wall map, the shipping-quote strategy, and the raw benchmark data. Update both when a finding changes which one it belongs to.
+The engine-vs-wall decision table, the launched-mode Firefox config, the wall-detection markers, and the MCP driving constraints are general browser-tooling knowledge and live in [bot-detection.md](~/.agents/browser-swarm/docs/bot-detection.md); `browser-swarm` is a public repo, so anything vendor-specific or private stays out of it. This report keeps the vendor-specific wall map and shipping-quote strategy; the parent directory keeps the raw benchmark data. Update both when a finding changes which one it belongs to.
 
-Still unpromoted: a reusable **wall-detection helper script** (the markers are documented, the script was never written).
+A reusable **wall-detection helper script** remains a candidate; the markers are documented, but the script is not implemented.

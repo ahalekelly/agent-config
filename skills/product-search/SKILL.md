@@ -42,7 +42,7 @@ Sources are roughly in order of cost. Treat this as a default to depart from, no
 2. **An API** — either a working vendor API recorded in `vendors.md`, or a public storefront API. The generic platform workflows cover Shopify, WooCommerce, Magento guest carts, BigCommerce Stencil, and Squarespace; Wix, Ecwid, Salesforce Commerce Cloud, and OpenCart have explicit browser or merchant-customization boundaries. Use `vendors.md` for dispatch and `platform-apis.md` for the exact contracts.
 3. **Web search** — useful for discovery, but unstructured and possibly stale. Check that a price came from the vendor before trusting it.
 4. **A fetch through a GPT leaf** (Pi's `fetch_content`) — useful for descriptions, specifications, and published policies when plain WebFetch fails. It does not interact, often misses dynamic offers, and crosses a policy boundary when a site excludes crawlers. Try plain WebFetch first.
-5. **BrowserSwarm** — last. Use it when the task needs interaction, rendered-only price or stock, a site-specific SDK, or a bot-wall session. Before attaching, read `~/.agents/browser-swarm/README.md`. The daemon uses fingerprint Chromium, isolated contexts, and a two-tab cap across the whole swarm; stop fan-outs before starting more browser work.
+5. **BrowserSwarm** — last. Use it when the task needs interaction, rendered-only price or stock, a site-specific SDK, or a bot-wall session. Before attaching, read `~/.agents/browser-swarm/README.md`. The daemon uses fingerprint Chromium and gives each browser agent an isolated context with a two-open-tab cap. Close tabs after extracting the needed data and end browser agents when their work is finished; the shared daemon auto-stops when no clients remain.
 
 Choose per task; none are mandatory:
 
