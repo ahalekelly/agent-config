@@ -1,6 +1,6 @@
 ---
 created: 2026-07-31
-verified: 2026-07-31
+verified: 2026-08-01
 ---
 
 # Storefront platform APIs
@@ -28,7 +28,8 @@ Use these outcomes consistently:
 | --- | --- |
 | `quote` | One or more destination-specific delivery methods returned. A named zero-dollar delivery method may be real free shipping. |
 | `empty` | The rate list is empty. This is no quote, never free shipping. |
-| `fallback` | A provider-specific marker says a merchant fallback replaced a failed live carrier calculation. Keep it distinct from a live quote. |
+| `fallback` | No comparable delivery rate exists and a provider-specific marker says a merchant fallback replaced a failed live carrier calculation. If a comparable delivery rate also exists, the outcome is `quote` and the marked option remains only in `shipping_options`. |
+| `quote_not_attempted` | Product search completed, but none of its candidates was eligible for the quote operation. `reason:no_quotable_product` records this boundary without creating a cart. |
 | `gated` | A known storefront API refused the operation because merchant or customer authorization is required. |
 | `bot_wall` | The response contains positive challenge evidence. A generic 401/403 is not enough to name a wall or platform. |
 | `unsupported_operation` | The platform is detected, but the CLI intentionally has no generic product or quote adapter for that operation. |
@@ -51,11 +52,11 @@ uv run "$PLATFORM_API" probe STORE QUERY
 uv run "$PLATFORM_API" corpus INPUT.json OUTPUT.jsonl
 ```
 
-`detect` resolves the storefront origin and identifies the platform. `search` returns exact product candidates. Pass the selected candidate's `item_ref` verbatim to `quote`; its opaque representation is platform-specific and must not be guessed. `probe` selects the first available candidate that does not require configuration and performs the complete flow.
+`detect` resolves the storefront origin and identifies the platform. `search` returns exact product candidates. Pass the selected candidate's `item_ref` verbatim to `quote`; its opaque representation is platform-specific and must not be guessed. `probe` selects the first available, purchasable candidate that does not require configuration and quotes it. When search succeeds but no candidate qualifies, `probe` returns `quote_not_attempted` with `reason:no_quotable_product`, the query, and the candidate count; it does not call the quote adapter or create a cart.
 
 Product-search adapters cover Shopify, WooCommerce, Magento, BigCommerce, Squarespace, Wix, Ecwid, and Salesforce Commerce Cloud. Destination-quote adapters cover the first five. Wix, Ecwid, and Salesforce Commerce Cloud return `unsupported_operation` with `browser_required:true` for quote because their generic public search paths do not establish portable cart state.
 
-Successful operation commands print one compact schema-v2 JSON record with `schema_version`, `observed_at`, `input`, resolved `origin`, `detection`, normalized `result`, and sanitized `evidence`. Positive Magento detection includes the required `search_source` discriminant, `graphql` or `html`; the search result repeats the selected source. Result kinds are `search`, `quote`, `empty`, `fallback`, `gated`, `bot_wall`, `unsupported_operation`, and `unsupported_product_configuration`. `detect` and any command that cannot positively detect a platform omit `result`; the discriminated `detection` is the outcome. Contract, transport, parser, and schema errors print a terse message to stderr and exit nonzero.
+Successful operation commands print one compact schema-v2 JSON record with `schema_version`, `observed_at`, `input`, resolved `origin`, `detection`, normalized `result`, and sanitized `evidence`. Positive Magento detection includes the required `search_source` discriminant, `graphql` or `html`; the search result repeats the selected source. Result kinds are `search`, `quote`, `empty`, `fallback`, `quote_not_attempted`, `gated`, `bot_wall`, `unsupported_operation`, and `unsupported_product_configuration`. `quote_not_attempted` is an exact quote-operation disposition, not a search result or an unsupported operation. `detect` and any command that cannot positively detect a platform omit `result`; the discriminated `detection` is the outcome. Contract, transport, parser, and schema errors print a terse message to stderr and exit nonzero.
 
 Corpus input is a JSON array of 1–100 objects, each containing exactly two nonempty strings:
 
@@ -185,7 +186,7 @@ response = send_signed(client, request)
 
 `send_signed` is the only public signing surface. It loads `/Users/akelly/.agents/web-bot-auth/private.pem`, verifies that the Ed25519 public JWK thumbprint equals `PtFPEn59EWaohh4V82GazSOYlIBm3LqPOhoLUu--1So`, signs the prepared HTTPS authority with a fresh 64-byte nonce and 60-second lifetime, and immediately sends with redirects disabled. It rejects credentials, non-HTTPS targets, preexisting signature headers, and replay of the mutated request. Follow at most one GraphQL redirect, require the validated API authority to remain unchanged, and build and sign a fresh request for that same-authority target. A redirect outside that boundary is a Shopify no-match during platform detection and a hard error during search or quote. Never log generated signature headers.
 
-The public directory at the `Signature-Agent` URL serves the expected key in a signed response, and the local signer and directory signature both verify against that key.
+The public directory at the `Signature-Agent` URL serves the expected public JWK as JSON over HTTPS. Local helper tests verify that the directory key matches the private signing key and that outbound Web Bot Auth requests verify against it. The directory response is not itself signed; TLS authenticates the fixed directory authority, while the outbound requests carry the Web Bot Auth signatures.
 
 [Shopify's Storefront API limits](https://shopify.dev/docs/api/usage/limits#storefront-api-rate-limits) and [Web Bot Auth announcement](https://shopify.dev/changelog/bots-and-agents-should-identify-themselves-via-web-bot-auth) state that signed traffic receives higher limits than unsigned bots and that the baseline signed tier does not require Cloudflare enrollment. Shopify publishes neither numeric thresholds nor a caller-visible recognition signal. Bounded signed/unsigned trials at 3, 25, 50, and 100 requests all returned HTTP 200 without a crossover or tier header, so this key's Shopify classification remains unconfirmed; [Shopify Partner Support](https://help.shopify.com/en/partners/help-support/getting-support) is the confirmation path.
 
@@ -291,7 +292,7 @@ curl -X POST 'https://STORE/rest/V1/guest-carts/MASKED_ID/estimate-shipping-meth
   --data-binary '{"address":{"firstname":"Jordan","lastname":"Smith","company":"Pacific Prototyping LLC","street":["747 Howard St"],"city":"San Francisco","region":"California","region_code":"CA","region_id":12,"postcode":"94103","country_id":"US","telephone":"4155550132"}}'
 ```
 
-Quote creates exactly one guest cart and reuses its masked ID for the selected item, totals, and shipping estimate. Read carrier/method codes, titles, availability, `amount`, `price_excl_tax`, and `price_incl_tax`. Exclude pickup. Treat account-priced zero, “freight”, and similar ambiguous methods as unusable until verified; a named `freeshipping/freeshipping` zero is a real candidate.
+Quote creates exactly one guest cart and reuses its masked ID for the selected item, totals, and shipping estimate. Read carrier/method codes, titles, availability, `amount`, `price_excl_tax`, and `price_incl_tax`. Every rate must contain a boolean `available`; a missing, null, or non-boolean value is a schema error, and explicit `false` remains unavailable. Exclude pickup. Treat account-priced zero, “freight”, and similar ambiguous methods as unusable until verified; a named `freeshipping/freeshipping` zero is a real candidate.
 
 ### Corpus result
 
@@ -481,7 +482,7 @@ No approved Affiliate credentials were available, so transport, encoding, respon
 
 ## Reproducible verification
 
-The fixed detection-and-search acceptance uses [the bounded runner](scripts/platform_search_acceptance.py), [the 59-store corpus input](<dev/reports/Product Search Storefront Corpus 2026-07-31.input.json>), [the sanitized JSONL evidence](<dev/reports/Product Search Storefront Corpus 2026-07-31.jsonl>), and [the dated report](<dev/reports/Product Search Storefront Corpus 2026-07-31.md>). Validate the saved artifact offline with:
+The fixed detection-and-search acceptance uses [the bounded runner](scripts/platform_search_acceptance.py), [the 59-store corpus input](<dev/reports/Product Search Storefront Corpus 2026-07-31.input.json>), [the sanitized JSONL evidence](<dev/reports/Product Search Storefront Corpus 2026-08-01.jsonl>), and [the dated report](<dev/reports/Product Search Storefront Corpus 2026-08-01.md>). Validate the saved artifact offline with:
 
 ```sh
 uv run skills/product-search/scripts/platform_search_acceptance.py validate
@@ -515,7 +516,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 145 tests plus 96 subtests on 2026-07-31. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 151 tests plus 105 subtests on 2026-08-01. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 

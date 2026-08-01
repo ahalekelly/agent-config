@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parents[1]))
 import platform_search_acceptance as acceptance  # noqa: E402
 
 EXPECTED_SOURCE_HASH = (
-    "f812a3e3895a82d24c62e5ab39bc2c7851085971f753a10b5845ec2078cc5586"
+    "c3c6afaa12f7fd052d726abc6332172fde27f7c36c8ac8db937e2f8de45c0e00"
 )
 
 
@@ -53,6 +53,12 @@ class SavedCorpusTests(unittest.TestCase):
             acceptance.source_tree_hash(acceptance.SCRIPT_DIR),
             EXPECTED_SOURCE_HASH,
         )
+
+    def test_saved_report_is_generated_from_the_saved_corpus(self) -> None:
+        generated = acceptance.report(self.rows, acceptance.summarize(self.rows))
+        saved = acceptance.DEFAULT_JSONL.with_suffix(".md").read_text()
+
+        self.assertEqual(generated, saved)
 
     def test_validator_rejects_count_uniqueness_and_identity_changes(self) -> None:
         cases = []

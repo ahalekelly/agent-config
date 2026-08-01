@@ -937,7 +937,9 @@ def _rate_option(rate: Any, quote_currency: str, base_currency: str) -> dict[str
     )
     label = f"{option_id} {title}".lower()
     error = str(rate["error_message"]) if rate.get("error_message") else None
-    available = rate.get("available") is not False
+    available = rate.get("available")
+    if not isinstance(available, bool):
+        raise ToolError("Magento shipping rate available must be a boolean")
     amount_value = (
         rate.get("price_incl_tax")
         if rate.get("price_incl_tax") is not None

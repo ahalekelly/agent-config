@@ -643,6 +643,55 @@ class MagentoQuoteTests(unittest.TestCase):
         self.assertEqual(result["reason"], "no_comparable_delivery_rate")
         self.assertEqual(len(result["shipping_options"]), 3)
 
+    def test_rate_available_requires_an_exact_boolean(self) -> None:
+        for value in (None, "false", 0):
+            with self.subTest(value=value):
+                rate = fixture_json("platform-magento-rates.json")[0]
+                rate["available"] = value
+                handler, _, _ = self.handler([rate])
+                http = Http(httpx.MockTransport(handler))
+                with (
+                    http.client,
+                    self.assertRaisesRegex(ToolError, "available must be a boolean"),
+                ):
+                    magento.quote(
+                        http,
+                        detection(),
+                        magento.item_ref("magento", {"sku": "BRG-STEEL"}),
+                    )
+
+        missing = fixture_json("platform-magento-rates.json")[0]
+        missing.pop("available")
+        handler, _, _ = self.handler([missing])
+        http = Http(httpx.MockTransport(handler))
+        with (
+            http.client,
+            self.assertRaisesRegex(ToolError, "available must be a boolean"),
+        ):
+            magento.quote(
+                http,
+                detection(),
+                magento.item_ref("magento", {"sku": "BRG-STEEL"}),
+            )
+
+    def test_explicitly_unavailable_rate_stays_unavailable_without_an_error(self) -> None:
+        rate = fixture_json("platform-magento-rates.json")[0]
+        rate["available"] = False
+        rate["error_message"] = ""
+        handler, _, _ = self.handler([rate])
+        http = Http(httpx.MockTransport(handler))
+
+        with http.client:
+            result = magento.quote(
+                http,
+                detection(),
+                magento.item_ref("magento", {"sku": "BRG-STEEL"}),
+            )
+
+        self.assertEqual(result["kind"], "empty")
+        self.assertEqual(result["rates"], [])
+        self.assertEqual(result["shipping_options"][0]["disposition"], "unavailable")
+
     def test_guest_cart_denial_is_gated_and_challenge_is_bot_wall(self) -> None:
         def denial(response_headers: dict[str, str], response_content: bytes):
             def handle(request: httpx.Request) -> httpx.Response:

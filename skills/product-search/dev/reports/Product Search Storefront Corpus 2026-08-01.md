@@ -1,10 +1,10 @@
-# Product-search storefront HTTP evidence — 2026-07-31
+# Product-search storefront HTTP evidence — 2026-08-01
 
 This read-only acceptance rerun used one literal query (`a`) per store with no alternate-query retries. It called the production detection and platform search adapters over plain HTTP. Magento capability negotiation used one bounded product-search GraphQL query. The run created no cart, product line, customer address, consignment, or shipping-rate request.
 
 Opaque product references were hashed in memory and discarded. The JSONL contains only public detection evidence, whitelisted product fields, sanitized HTTP request metadata, and learned-cache domain joins.
 
-Every row carries source-tree SHA-256 `f812a3e3895a82d24c62e5ab39bc2c7851085971f753a10b5845ec2078cc5586`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 06:21:36–06:25:52 UTC (2026-07-31 local time).
+Every row carries source-tree SHA-256 `c3c6afaa12f7fd052d726abc6332172fde27f7c36c8ac8db937e2f8de45c0e00`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 08:56:28–09:01:05 UTC (2026-08-01 local time).
 
 ## Summary
 
@@ -57,7 +57,7 @@ Every row carries source-tree SHA-256 `f812a3e3895a82d24c62e5ab39bc2c7851085971f
 | The CPAP Shop (`thecpapshop.com`) | Magento | magento | search / magento_html | 0 | — | — |
 | Dillon Precision (`dillonprecision.com`) | Magento | magento | search / magento_html | 0 | — | — |
 | TileBar (`tilebar.com`) | Magento | magento | search / magento_html | 61 | Zelora | TLSEGBLNBG4X4 |
-| Bulk Reef Supply (`bulkreefsupply.com`) | Magento | magento | search / magento_html | 14 | 3-Pack ICP-OES Testing Kit | 210952B |
+| Bulk Reef Supply (`bulkreefsupply.com`) | Magento | magento | search / magento_html | 13 | Tig Pods & OceanMagik Phytoplankton | 212733 |
 | Aheadworks (`aheadworks.com`) | Magento | magento | search / magento_graphql | 20 | Follow Up Email | ext.fue-community-0 |
 | ServoCity (`servocity.com`) | BigCommerce | bigcommerce | search / html_search_and_product_pages | 3 | 15" x 15" ABS Sheet (0.250" Thickness) | ABS250-15-15 |
 | Hi-Line (`hi-line.com`) | BigCommerce | bigcommerce | search / html_search_and_product_pages | 3 | Aerosol Topper | ACR13 |
@@ -71,8 +71,8 @@ Every row carries source-tree SHA-256 `f812a3e3895a82d24c62e5ab39bc2c7851085971f
 | TackleDirect (`tackledirect.com`) | BigCommerce | bigcommerce | search / html_search_and_product_pages | 0 | — | — |
 | Valin (`valinonline.com`) | BigCommerce | bigcommerce | bot_wall / html_search_and_product_pages | — | — | — |
 | Frankly Good Coffee (`franklygoodcoffee.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 12 | Cold Brew Blend | Flagship-003-WB |
-| Archive07 (`archive07.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 25 | Spacebot V03 - Enamel Pin | SQ3537556 |
-| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1088 | Aimi Bar & Counter Stool | SQ5653938 |
+| Archive07 (`archive07.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 25 | Spacebot V02 - Enamel Pin | SQ4446814 |
+| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1046 | Aimi Bar & Counter Stool | SQ5653938 |
 | Izzy Wheels (`izzywheels.com`) | Wix | wix | search / catalog_reader | 10 | Amalfi Lemons | — |
 | Bestie Hugs (`bestiehugs.com`) | Wix | wix | search / catalog_reader | 0 | — | — |
 | Holzbuchstaben (`holzbuchstaben.ch`) | Wix | wix | search / catalog_reader | 2 | Modern \| Apricot Orange | — |
@@ -81,7 +81,7 @@ Every row carries source-tree SHA-256 `f812a3e3895a82d24c62e5ab39bc2c7851085971f
 | Wylie Beckert (`wyliebeckert.com`) | Ecwid | unknown | not_run / — | — | — | — |
 | Dunlop Sports US (`us.dunlopsports.com`) | Salesforce Commerce Cloud | sfcc | search / search_show | 12 | XXIO - XXIO 14+ Irons | — |
 | Alcott (`alcott.eu`) | Salesforce Commerce Cloud | sfcc | search / search_show | 20 | Borsa a spalla a mezzaluna | — |
-| HUGO BOSS (`hugoboss.com`) | Salesforce Commerce Cloud | sfcc | search / search_show | 9 | — | — |
+| HUGO BOSS (`hugoboss.com`) | Salesforce Commerce Cloud | sfcc | search / search_show | 11 | — | — |
 
 ## Detection mismatches
 

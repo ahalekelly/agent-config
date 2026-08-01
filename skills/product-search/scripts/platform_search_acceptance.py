@@ -25,7 +25,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 REPORT_DIR = SKILL_DIR / "dev" / "reports"
 DEFAULT_INPUT = REPORT_DIR / "Product Search Storefront Corpus 2026-07-31.input.json"
-DEFAULT_JSONL = REPORT_DIR / "Product Search Storefront Corpus 2026-07-31.jsonl"
+DEFAULT_JSONL = REPORT_DIR / "Product Search Storefront Corpus 2026-08-01.jsonl"
 DEFAULT_VENDORS = SKILL_DIR / "vendors.md"
 EXPECTED_PLATFORMS = {
     "Shopify": "shopify",
@@ -170,7 +170,7 @@ EXPECTED_SEARCH_OUTCOMES = Counter({"search": 56, "not_run": 2, "bot_wall": 1})
 EXPECTED_POSITIVE_SEARCHES = 47
 EXPECTED_EMPTY_SEARCHES = 9
 EXPECTED_SEARCH_DISPOSITIONS_SHA256 = (
-    "e2fe21adead9f169cb5e9d92ba47fa7454f80637d7fbc6a6b76a99ba43c7c1ac"
+    "444136d9f7ce8f2cb2284fd78fed18aab9c7ea51eb4f1d2e8798cb79f5a8690e"
 )
 EXPECTED_TERMINALS = {
     "tech7000.com": (

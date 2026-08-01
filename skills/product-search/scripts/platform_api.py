@@ -27,6 +27,7 @@ from platform_api_core import (
     canonical_url,
     normalize_store_url,
     public_detection,
+    quote_not_attempted,
     url_origin,
     validate_result,
     wall_system,
@@ -176,7 +177,11 @@ def execute(command: str, store: str, value: str | None, http: Http) -> dict[str
                 None,
             )
             record["result"] = (
-                found
+                quote_not_attempted(
+                    detection.platform,
+                    value,
+                    len(found["items"]),
+                )
                 if candidate is None
                 else adapter.quote(http, detection, candidate)
             )

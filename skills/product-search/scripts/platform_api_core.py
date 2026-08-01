@@ -7,7 +7,7 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Literal, assert_never
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -342,7 +342,13 @@ def money(amount: Any, currency: Any) -> dict[str, str]:
         raise ToolError(f"Money amount has unexpected type {type(amount).__name__}")
     if not isinstance(currency, str) or not currency:
         raise ToolError("Money requires a nonempty currency code")
-    return {"amount": format(Decimal(str(amount)), "f"), "currency": currency}
+    try:
+        value = Decimal(str(amount))
+    except (InvalidOperation, ValueError) as error:
+        raise ToolError("Money amount must be a valid decimal") from error
+    if not value.is_finite():
+        raise ToolError("Money amount must be finite")
+    return {"amount": format(value, "f"), "currency": currency}
 
 
 def minor_money(amount: Any, currency: Any, digits: Any) -> dict[str, str]:
@@ -565,7 +571,7 @@ def quote_outcome(
     fallback_ids = [
         option["id"] for option in options if option.get("disposition") == "fallback"
     ]
-    kind = "fallback" if fallback_ids else "quote" if rates else "empty"
+    kind = "quote" if rates else "fallback" if fallback_ids else "empty"
     result: dict[str, Any] = {
         "kind": kind,
         "operation": "quote",
@@ -576,10 +582,25 @@ def quote_outcome(
         "destination": "dummy_sf",
         **_quote_facts(context),
     }
-    if fallback_ids:
+    if kind == "fallback":
         result["fallback_rate_ids"] = fallback_ids
     if kind == "empty":
         result["reason"] = no_quote_reason
+    validate_result(result)
+    return result
+
+
+def quote_not_attempted(
+    platform: Platform, query: str, candidate_count: int
+) -> dict[str, Any]:
+    result = {
+        "kind": "quote_not_attempted",
+        "operation": "quote",
+        "platform": platform,
+        "reason": "no_quotable_product",
+        "query": query,
+        "candidate_count": candidate_count,
+    }
     validate_result(result)
     return result
 
@@ -1031,11 +1052,35 @@ def validate_result(result: dict[str, Any]) -> None:
         expected_fallback_ids = [
             option["id"] for option in options if option["disposition"] == "fallback"
         ]
+        expected_kind = (
+            "quote" if rates else "fallback" if expected_fallback_ids else "empty"
+        )
+        if kind != expected_kind:
+            raise ToolError("Quote, fallback, and empty results must be exclusive")
         if (
             kind == "fallback"
             and result.get("fallback_rate_ids") != expected_fallback_ids
         ):
             raise ToolError("Fallback result requires fallback rate IDs")
+        return
+    if kind == "quote_not_attempted" and operation == "quote":
+        if set(result) != {
+            "kind",
+            "operation",
+            "platform",
+            "reason",
+            "query",
+            "candidate_count",
+        }:
+            raise ToolError("quote_not_attempted result requires exact keys")
+        if (
+            result.get("reason") != "no_quotable_product"
+            or not isinstance(result.get("query"), str)
+            or not result["query"]
+            or type(result.get("candidate_count")) is not int
+            or result["candidate_count"] < 0
+        ):
+            raise ToolError("quote_not_attempted result has invalid facts")
         return
     if kind in TERMINAL_KINDS and operation in {"search", "quote"}:
         expected_keys = {
@@ -1120,13 +1165,21 @@ def validate_result(result: dict[str, Any]) -> None:
 
 
 def _valid_money(value: Any) -> bool:
-    if not isinstance(value, dict) or set(value) != {"amount", "currency"}:
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"amount", "currency"}
+        or not isinstance(value["amount"], str)
+    ):
         return False
     try:
-        Decimal(value["amount"])
-    except (ValueError, TypeError):
+        amount = Decimal(value["amount"])
+    except (InvalidOperation, ValueError):
         return False
-    return isinstance(value["currency"], str) and bool(value["currency"])
+    return (
+        amount.is_finite()
+        and isinstance(value["currency"], str)
+        and bool(value["currency"])
+    )
 
 
 def _validate_search_item(value: Any, platform: Platform) -> None:

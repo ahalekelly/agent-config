@@ -37,7 +37,7 @@ Platform labels are a scan aid; operational platform, wall, shipping, and verifi
 
 ## Using platform APIs
 
-Run `scripts/platform_api.py detect`, then `search` and `quote` with the returned opaque `item_ref`; `probe` performs the complete flow. Follow redirects, keep one cookie jar per origin, and treat a challenge as unresolved access rather than platform absence. Use BrowserSwarm only at the explicit boundaries below. See `platform-apis.md` for copyable requests, exact schemas, redaction rules, and failure modes.
+Run `scripts/platform_api.py detect`, then `search` and `quote` with the returned opaque `item_ref`; `probe` searches and quotes the first eligible candidate. If none qualifies, it records `quote_not_attempted` with `reason:no_quotable_product` without creating a cart. Follow redirects, keep one cookie jar per origin, and treat a challenge as unresolved access rather than platform absence. Use BrowserSwarm only at the explicit boundaries below. See `platform-apis.md` for copyable requests, exact schemas, redaction rules, and failure modes.
 
 | Platform | Positive probe | Product and quote path |
 | --- | --- | --- |

@@ -221,7 +221,7 @@ class EntrypointTests(unittest.TestCase):
         self.assertEqual(record["result"]["kind"], "unsupported_operation")
         self.assertEqual(record["search"]["kind"], "search")
 
-    def test_no_usable_candidate_keeps_the_search_result(self) -> None:
+    def test_no_usable_candidate_records_quote_not_attempted(self) -> None:
         reference = item_ref("shopify", {"variant_id": "configured"})
         adapter = FakeAdapter([shopify_item(reference, requires_configuration=True)])
         with (
@@ -235,7 +235,17 @@ class EntrypointTests(unittest.TestCase):
                 Http(httpx.MockTransport(lambda request: None)),
             )
         self.assertEqual(adapter.quoted, [])
-        self.assertEqual(record["result"]["kind"], "search")
+        self.assertEqual(
+            record["result"],
+            {
+                "kind": "quote_not_attempted",
+                "operation": "quote",
+                "platform": "shopify",
+                "reason": "no_quotable_product",
+                "query": "valve",
+                "candidate_count": 1,
+            },
+        )
 
     def test_probe_skips_nonpurchasable_item_and_quotes_the_next_candidate(
         self,

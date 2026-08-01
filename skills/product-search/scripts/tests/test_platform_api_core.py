@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from decimal import Decimal
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
@@ -27,6 +28,7 @@ from platform_api_core import (  # noqa: E402
     money,
     parse_item_ref,
     public_detection,
+    quote_not_attempted,
     quote_outcome,
     search_result,
     shipping_option,
@@ -156,6 +158,91 @@ class ResultTests(unittest.TestCase):
         self.assertEqual(result["kind"], "fallback")
         self.assertEqual(result["fallback_rate_ids"], ["flat_fallback"])
         self.assertEqual(result["rates"], [])
+
+    def test_comparable_rate_takes_precedence_over_fallback_marker(self) -> None:
+        fallback = shipping_option(
+            WooCommerceShipping(selected=False, tax=money("0", "USD")),
+            "flat_fallback",
+            "Flat fallback",
+            "fallback",
+            money("19.95", "USD"),
+        )
+        delivery = shipping_option(
+            WooCommerceShipping(selected=True, tax=money("0", "USD")),
+            "ground",
+            "Ground",
+            "delivery",
+            money("12.00", "USD"),
+        )
+
+        result = quote_outcome(
+            WooCommerceQuote(cart_totals={}, cleanup_status=200),
+            [fallback, delivery],
+            money("25.00", "USD"),
+        )
+
+        self.assertEqual(result["kind"], "quote")
+        self.assertNotIn("fallback_rate_ids", result)
+        self.assertEqual(result["shipping_options"][0]["disposition"], "fallback")
+
+        result["kind"] = "fallback"
+        result["fallback_rate_ids"] = ["flat_fallback"]
+        with self.assertRaisesRegex(ToolError, "exclusive"):
+            validate_result(result)
+
+    def test_money_requires_a_finite_decimal(self) -> None:
+        for amount in (
+            "NaN",
+            "Infinity",
+            "-Infinity",
+            float("nan"),
+            float("inf"),
+            Decimal("NaN"),
+        ):
+            with self.subTest(amount=amount), self.assertRaisesRegex(
+                ToolError, "finite"
+            ):
+                money(amount, "USD")
+
+        with self.assertRaisesRegex(ToolError, "valid decimal"):
+            money("not-a-number", "USD")
+
+        option = shipping_option(
+            ShopifyShipping(code=None, description=None),
+            "ground",
+            "Ground",
+            "delivery",
+            money("4", "USD"),
+        )
+        with self.assertRaisesRegex(ToolError, "currency-bearing subtotal"):
+            quote_outcome(
+                ShopifyQuote(),
+                [option],
+                {"amount": "NaN", "currency": "USD"},
+            )
+
+    def test_quote_not_attempted_schema_is_closed(self) -> None:
+        result = quote_not_attempted("shopify", "valve", 2)
+        self.assertEqual(
+            set(result),
+            {
+                "kind",
+                "operation",
+                "platform",
+                "reason",
+                "query",
+                "candidate_count",
+            },
+        )
+
+        result["candidate_count"] = True
+        with self.assertRaisesRegex(ToolError, "invalid facts"):
+            validate_result(result)
+
+        result = quote_not_attempted("shopify", "valve", 2)
+        result["items"] = []
+        with self.assertRaisesRegex(ToolError, "exact keys"):
+            validate_result(result)
 
     def test_contradictory_success_result_fails(self) -> None:
         with self.assertRaisesRegex(ToolError, "exactly match"):
