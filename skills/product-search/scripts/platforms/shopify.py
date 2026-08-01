@@ -8,7 +8,6 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import httpx
-
 from platform_api_core import (
     DetectedStore,
     Http,
@@ -461,9 +460,7 @@ def _shipping_option(option: Any) -> dict[str, Any]:
         title,
     )
     return shipping_option(
-        ShopifyShipping(
-            code=option.get("code"), description=option.get("description")
-        ),
+        ShopifyShipping(code=option.get("code"), description=option.get("description")),
         option_id,
         title,
         disposition,

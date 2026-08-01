@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["httpx>=0.28,<0.29"]
+# dependencies = ["cryptography>=45,<47", "httpx>=0.28,<0.29"]
 # ///
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import platform_api  # noqa: E402
-from platform_api_core import (  # noqa: E402
+import platform_api
+from platform_api_core import (
     DetectedStore,
     MagentoDetectedStore,
     MagentoSearch,
@@ -37,7 +37,7 @@ from platform_api_core import (  # noqa: E402
     shipping_option,
     validate_result,
 )
-from platforms import magento  # noqa: E402
+from platforms import magento, woocommerce
 
 
 def response(
@@ -140,6 +140,66 @@ class DetectionVariantTests(unittest.TestCase):
 
         self.assertEqual(detection, positive)
         detect_magento.assert_not_called()
+
+    def test_all_strong_platform_detectors_run_before_magento(self) -> None:
+        calls: list[str] = []
+        homepage_response = httpx.Response(
+            200,
+            text="store",
+            request=httpx.Request("GET", "https://store.test/"),
+        )
+        http = platform_api.Http(httpx.MockTransport(lambda request: homepage_response))
+
+        def no_detection(name: str) -> Any:
+            calls.append(name)
+            return None
+
+        with (
+            mock.patch.object(
+                platform_api.woocommerce,
+                "detect",
+                side_effect=lambda *args: no_detection("woocommerce"),
+            ),
+            mock.patch.object(
+                platform_api.shopify,
+                "detect",
+                side_effect=lambda *args: no_detection("shopify"),
+            ),
+            mock.patch.object(
+                platform_api.bigcommerce,
+                "detect",
+                side_effect=lambda *args: no_detection("bigcommerce"),
+            ),
+            mock.patch.object(
+                platform_api.squarespace,
+                "detect",
+                side_effect=lambda *args: no_detection("squarespace"),
+            ),
+            mock.patch.object(
+                platform_api.extra,
+                "detect",
+                side_effect=lambda *args: no_detection("extra"),
+            ),
+            mock.patch.object(
+                platform_api.magento,
+                "detect",
+                side_effect=lambda *args: no_detection("magento"),
+            ),
+            http.client,
+        ):
+            platform_api.detect_store(http, "store.test")
+
+        self.assertEqual(
+            calls,
+            [
+                "woocommerce",
+                "shopify",
+                "bigcommerce",
+                "squarespace",
+                "extra",
+                "magento",
+            ],
+        )
 
 
 class MagentoNegotiationTests(unittest.TestCase):
@@ -462,6 +522,52 @@ class ClosedResultTests(unittest.TestCase):
         squarespace_result["shipping_options_status"] = "bogus"
         with self.assertRaisesRegex(ToolError, "invalid platform fields"):
             validate_result(squarespace_result)
+
+
+class WooCommerceDetectionTests(unittest.TestCase):
+    def test_detection_uses_only_the_read_only_product_capability(self) -> None:
+        requests: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return response(request, json_value=[])
+
+        http = woocommerce.Http(httpx.MockTransport(handler))
+        with http.client:
+            detection = woocommerce.detect(
+                http,
+                "https://woo.test",
+                "https://woo.test/",
+            )
+
+        self.assertIsInstance(detection, DetectedStore)
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0].method, "GET")
+        self.assertEqual(requests[0].url.path, "/wp-json/wc/store/v1/products")
+        self.assertEqual(
+            dict(requests[0].url.params),
+            {"search": "__codex_platform_probe__", "per_page": "1"},
+        )
+        self.assertNotIn("cart", str(requests[0].url))
+
+    def test_product_capability_wall_is_an_explicit_detection_wall(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                403,
+                headers={"server": "cloudflare", "cf-mitigated": "challenge"},
+                content=b"challenge",
+                request=request,
+            )
+
+        http = woocommerce.Http(httpx.MockTransport(handler))
+        with http.client:
+            detection = woocommerce.detect(
+                http,
+                "https://woo.test",
+                "https://woo.test/",
+            )
+
+        self.assertIsInstance(detection, StorefrontBotWall)
 
 
 if __name__ == "__main__":

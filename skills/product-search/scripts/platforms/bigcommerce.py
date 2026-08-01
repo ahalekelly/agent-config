@@ -9,7 +9,6 @@ from urllib.parse import quote as url_quote
 from urllib.parse import unquote, urljoin
 
 import httpx
-
 from platform_api_core import (
     BigCommerceQuote,
     BigCommerceSearch,

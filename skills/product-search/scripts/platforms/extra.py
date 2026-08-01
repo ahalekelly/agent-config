@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Literal, cast
 from urllib.parse import urljoin, urlsplit
 
 import httpx
-
 from platform_api_core import (
     DetectedStore,
     EcwidSearch,
@@ -116,9 +115,7 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
     )
 
 
-def _wix_search(
-    http: Http, detection: DetectedStore, query: str
-) -> dict[str, object]:
+def _wix_search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     origin = _api_origin(detection, "wix")
     token_response = http.request("GET", origin + "/_api/v1/access-tokens")
     terminal = _wall(token_response, "wix")
@@ -252,9 +249,7 @@ def _ecwid_search(
     if not isinstance(products, list) or not _count(total):
         raise ToolError("Ecwid product search requires items and total")
     items = [_ecwid_item(store_id, currency, product) for product in products]
-    return search_result(
-        EcwidSearch(store_id=store_id, total=total), query, items
-    )
+    return search_result(EcwidSearch(store_id=store_id, total=total), query, items)
 
 
 def _ecwid_store_id(body: str) -> str:
@@ -347,9 +342,7 @@ def _ecwid_item(store_id: str, currency: str, value: Any) -> dict[str, Any]:
     return item
 
 
-def _sfcc_search(
-    http: Http, detection: DetectedStore, query: str
-) -> dict[str, object]:
+def _sfcc_search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     _api_origin(detection, "sfcc")
     route = canonical_url(urljoin(detection.entry_url, "search"))
     if url_origin(route) != detection.origin:
@@ -515,9 +508,7 @@ def _count(value: Any) -> bool:
 
 
 def _platform(detection: DetectedStore) -> ExtraPlatform:
-    if (
-        detection.platform not in EXTRA_PLATFORMS
-    ):
+    if detection.platform not in EXTRA_PLATFORMS:
         raise ToolError(
             "Extra storefront adapter requires a detected Wix, Ecwid, or SFCC store"
         )

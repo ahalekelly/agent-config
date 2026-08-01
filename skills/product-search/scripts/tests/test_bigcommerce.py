@@ -14,16 +14,16 @@ import httpx
 
 ROOT = Path(__file__).parents[1]
 FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT))
 
-from platform_api_core import (  # noqa: E402
+from platform_api_core import (
     DetectedStore,
     Http,
     ToolError,
     item_ref,
     parse_item_ref,
 )
-from platforms import bigcommerce  # noqa: E402
+from platforms import bigcommerce
 
 
 def fixture(name: str) -> bytes:

@@ -4,7 +4,7 @@ This read-only acceptance rerun used one literal query (`a`) per store with no a
 
 Opaque product references were hashed in memory and discarded. The JSONL contains only public detection evidence, whitelisted product fields, sanitized HTTP request metadata, and learned-cache domain joins.
 
-Every row carries source-tree SHA-256 `c3c6afaa12f7fd052d726abc6332172fde27f7c36c8ac8db937e2f8de45c0e00`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 08:56:28–09:01:05 UTC (2026-08-01 local time).
+Every row carries source-tree SHA-256 `ca14da8df33d4f9ee8bd4d9320edaf5227597b36c10d10da4adc1514e85d21bf`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 10:06:29–10:10:55 UTC (2026-08-01 local time).
 
 ## Summary
 
@@ -71,8 +71,8 @@ Every row carries source-tree SHA-256 `c3c6afaa12f7fd052d726abc6332172fde27f7c36
 | TackleDirect (`tackledirect.com`) | BigCommerce | bigcommerce | search / html_search_and_product_pages | 0 | — | — |
 | Valin (`valinonline.com`) | BigCommerce | bigcommerce | bot_wall / html_search_and_product_pages | — | — | — |
 | Frankly Good Coffee (`franklygoodcoffee.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 12 | Cold Brew Blend | Flagship-003-WB |
-| Archive07 (`archive07.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 25 | Spacebot V02 - Enamel Pin | SQ4446814 |
-| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1046 | Aimi Bar & Counter Stool | SQ5653938 |
+| Archive07 (`archive07.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 25 | Spacebot V04 - Enamel Pin | SQ7114658 |
+| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1103 | Aimi Bar & Counter Stool | SQ5653938 |
 | Izzy Wheels (`izzywheels.com`) | Wix | wix | search / catalog_reader | 10 | Amalfi Lemons | — |
 | Bestie Hugs (`bestiehugs.com`) | Wix | wix | search / catalog_reader | 0 | — | — |
 | Holzbuchstaben (`holzbuchstaben.ch`) | Wix | wix | search / catalog_reader | 2 | Modern \| Apricot Orange | — |

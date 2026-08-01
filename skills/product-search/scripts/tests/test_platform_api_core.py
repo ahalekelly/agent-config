@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from platform_api_core import (  # noqa: E402
+from platform_api_core import (
     DetectedStore,
     ShopifyQuote,
     ShopifySearch,
@@ -199,8 +199,9 @@ class ResultTests(unittest.TestCase):
             float("inf"),
             Decimal("NaN"),
         ):
-            with self.subTest(amount=amount), self.assertRaisesRegex(
-                ToolError, "finite"
+            with (
+                self.subTest(amount=amount),
+                self.assertRaisesRegex(ToolError, "finite"),
             ):
                 money(amount, "USD")
 

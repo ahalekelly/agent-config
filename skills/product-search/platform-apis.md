@@ -78,7 +78,7 @@ Always follow the homepage redirect and probe the resolved storefront origin. An
 | Platform | Positive evidence | Product path | Destination quote path |
 | --- | --- | --- | --- |
 | Shopify | `POST /api/2026-07/graphql.json` returns `data.shop`; a discovered `.myshopify.com` backend may be the API origin | tokenless Storefront GraphQL | tokenless Storefront GraphQL cart with deferred carrier rates |
-| WooCommerce | `GET /wp-json/wc/store/v1/cart` returns a cart object with `totals` | Store API `/products` | `Cart-Token`, add item, update customer |
+| WooCommerce | one bounded `GET /wp-json/wc/store/v1/products` returns an array | Store API `/products` | fetch `Cart-Token`, add item, update customer |
 | Magento / Adobe Commerce | one read-only GraphQL capability query plus independent page markers when GraphQL is unavailable | detection-selected GraphQL or canonical same-origin HTML search | guest-cart REST when open |
 | BigCommerce Stencil | `cdn*.bigcommerce.com/s-<hash>`, Stencil assets, or `x-bc-store-id` | sitemap/search/product form; conditional page token GraphQL | Storefront REST cart plus checkout consignment |
 | Squarespace | Squarespace server/static assets and commerce collection JSON | `?format=json` collection data | anonymous cart entry plus shipping-location update |
@@ -213,16 +213,26 @@ Twelve of twelve stores completed product discovery, cart creation, and a rate r
 
 ## WooCommerce
 
-### Product and cart
+### Product detection and search
 
-Probe the Store API and capture the response `Cart-Token`:
+Detection makes exactly one read-only request to the product collection. An empty array is a valid capability response; a challenge is an explicit wall, and any other response is not positive WooCommerce evidence:
 
 ```sh
-curl -i 'https://STORE/wp-json/wc/store/v1/cart'
+curl 'https://STORE/wp-json/wc/store/v1/products?search=__codex_platform_probe__&per_page=1'
 curl --get 'https://STORE/wp-json/wc/store/v1/products' --data-urlencode 'search=bearing' --data 'per_page=20'
 ```
 
-Use the token on every mutation:
+Select an exact simple product or variation before creating cart state.
+
+### Cart and rates
+
+Start one cookie jar, fetch the cart, capture the response `Cart-Token`, and use the token on every mutation:
+
+```sh
+curl -i 'https://STORE/wp-json/wc/store/v1/cart'
+```
+
+Then add the selected item and destination:
 
 ```sh
 curl -X POST 'https://STORE/wp-json/wc/store/v1/cart/add-item' \
@@ -275,7 +285,7 @@ curl 'https://STORE/graphql' -H 'Content-Type: application/json' \
   --data-binary '{"query":"query($search:String!){products(search:$search,pageSize:10){total_count items{__typename name sku stock_status url_key}}}","variables":{"search":"bearing"}}'
 ```
 
-Run one bounded full-text detail query for each candidate SKU and require exactly one returned parent with that SKU. This avoids storefronts that reject SKU filters or silently ignore URL-key filters without adding a retry path. Read `storeConfig.product_url_suffix`, price range, and configurable children from that response. Resolve product URLs from the validated detected entry URL; `product_url_suffix:null` means no suffix, while a missing or non-string/non-null suffix is a schema error. Preserve usable partial `data` while recording GraphQL errors. The HTML strategy starts at the canonical same-origin `/catalogsearch/result?q=…` route, follows at most one same-origin redirect, and extracts exact simple SKUs from product JSON-LD or Magento page configuration. Any other redirect or failure on the selected route is terminal. Add an in-stock simple SKU, never a configurable or bundle parent.
+Run one bounded `products(search:$sku,pageSize:20)` detail query for each candidate SKU. Prefer exactly one matching top-level row; only when that tier has no match, accept exactly one matching configurable child. A zero-match detail is recorded for that candidate and search continues, while duplicate matches at either tier fail loudly. This accommodates storefronts that reject SKU filters or silently ignore URL-key filters without adding a retry strategy. Read `storeConfig.product_url_suffix`, price range, and configurable children from that response. Resolve product URLs from the validated detected entry URL; `product_url_suffix:null` means no suffix, while a missing or non-string/non-null suffix is a schema error. Preserve usable partial `data` while recording GraphQL errors. The HTML strategy starts at the canonical same-origin `/catalogsearch/result?q=…` route, follows at most one same-origin redirect, and extracts exact simple SKUs from product JSON-LD or Magento page configuration. Any other redirect or failure on the selected route is terminal. Add an in-stock simple SKU, never a configurable or bundle parent.
 
 ### Guest cart and rates
 
@@ -516,7 +526,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 151 tests plus 105 subtests on 2026-08-01. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 159 tests plus 109 subtests on 2026-08-01. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 

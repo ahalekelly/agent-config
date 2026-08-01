@@ -4,10 +4,10 @@ from decimal import Decimal
 from typing import Any
 
 import httpx
-
 from platform_api_core import (
     DetectedStore,
     Http,
+    StorefrontBotWall,
     ToolError,
     WooCommerceQuote,
     WooCommerceSearch,
@@ -41,22 +41,39 @@ ADDRESS = {
 }
 
 
-def detect(http: Http, origin: str, entry_url: str) -> DetectedStore | None:
-    response = http.request("GET", origin + API_PATH + "/cart")
+def detect(
+    http: Http, origin: str, entry_url: str
+) -> DetectedStore | StorefrontBotWall | None:
+    response = http.request(
+        "GET",
+        origin + API_PATH + "/products",
+        params={"search": "__codex_platform_probe__", "per_page": "1"},
+    )
+    system = wall_system(response)
+    if system is not None:
+        return StorefrontBotWall(
+            origin=origin,
+            entry_url=entry_url,
+            evidence=(f"HTTP {response.status_code} {system} challenge",),
+            system=system,
+            status=response.status_code,
+        )
     if response.status_code != 200:
         return None
     try:
         payload = response.json()
     except (ValueError, UnicodeDecodeError):
         return None
-    if not isinstance(payload, dict) or not isinstance(payload.get("totals"), dict):
+    if not isinstance(payload, list) or any(
+        not isinstance(product, dict) for product in payload
+    ):
         return None
     return DetectedStore(
         origin=origin,
         entry_url=entry_url,
         platform="woocommerce",
         api_origin=origin,
-        evidence=("WooCommerce Store API cart object with totals",),
+        evidence=("WooCommerce Store API product collection",),
     )
 
 

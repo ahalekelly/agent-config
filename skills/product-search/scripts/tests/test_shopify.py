@@ -18,8 +18,8 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from platform_api_core import DetectedStore, Http  # noqa: E402
-from platforms import shopify  # noqa: E402
+from platform_api_core import DetectedStore, Http
+from platforms import shopify
 
 
 def detection() -> DetectedStore:

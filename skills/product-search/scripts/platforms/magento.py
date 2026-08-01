@@ -9,7 +9,6 @@ from urllib.parse import quote as url_quote
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
-
 from platform_api_core import (
     Http,
     MagentoDetectedStore,
@@ -94,6 +93,10 @@ query PlatformProbe {
   products(search: "__codex_platform_probe__", pageSize: 1) { total_count }
 }
 """
+
+
+class DetailSkuNotFound(ToolError):
+    pass
 
 
 class ProductLinks(HTMLParser):
@@ -228,7 +231,9 @@ def detect(
         return _html_detection(origin, entry_url, markers)
     if not isinstance(value, dict):
         if markers:
-            raise ToolError("Magento capability query returned a contradictory JSON shape")
+            raise ToolError(
+                "Magento capability query returned a contradictory JSON shape"
+            )
         return None
     data = value.get("data")
     config = data.get("storeConfig") if isinstance(data, dict) else None
@@ -262,7 +267,9 @@ def detect(
             )
         return None
     if markers or config_proof:
-        raise ToolError("Magento capability query returned a contradictory proven-Magento shape")
+        raise ToolError(
+            "Magento capability query returned a contradictory proven-Magento shape"
+        )
     return None
 
 
@@ -360,9 +367,19 @@ def _graphql_search(
         errors.extend(detail_errors)
         if detail is None:
             continue
-        concrete, unsupported = _detail_items(
-            detail, candidate["sku"], detection.entry_url
-        )
+        try:
+            concrete, unsupported = _detail_items(
+                detail, candidate["sku"], detection.entry_url
+            )
+        except DetailSkuNotFound as error:
+            errors.append(
+                {
+                    "stage": "detail",
+                    "sku": candidate["sku"],
+                    "message": str(error),
+                }
+            )
+            continue
         items.extend(concrete)
         omitted += unsupported
     if not items and errors:
@@ -581,12 +598,44 @@ def _detail_items(
     rows = products.get("items") if products else None
     if not isinstance(rows, list):
         raise ToolError("Magento GraphQL detail items must be an array")
-    matches = [
+    parent_matches = [
         row for row in rows if isinstance(row, dict) and row.get("sku") == selected_sku
     ]
-    if len(matches) != 1:
-        raise ToolError("Magento exact parent SKU did not resolve exactly once")
-    parent = matches[0]
+    if len(parent_matches) > 1:
+        raise ToolError("Magento selected top-level SKU resolved more than once")
+    selected_variant = None
+    if parent_matches:
+        parent = parent_matches[0]
+    else:
+        child_matches = []
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ToolError(
+                    "Magento GraphQL detail product has an unexpected shape"
+                )
+            variants = row.get("variants")
+            if row.get("__typename") != "ConfigurableProduct" or not isinstance(
+                variants, list
+            ):
+                continue
+            for variant in variants:
+                if not isinstance(variant, dict) or not isinstance(
+                    variant.get("product"), dict
+                ):
+                    raise ToolError(
+                        "Magento configurable variant has an unexpected shape"
+                    )
+                if variant["product"].get("sku") == selected_sku:
+                    child_matches.append((row, variant))
+        if not child_matches:
+            raise DetailSkuNotFound(
+                "Magento SKU detail did not contain the selected SKU"
+            )
+        if len(child_matches) > 1:
+            raise ToolError(
+                "Magento selected configurable child SKU resolved more than once"
+            )
+        parent, selected_variant = child_matches[0]
     data = envelope.get("data")
     config = data.get("storeConfig") if isinstance(data, dict) else None
     if not isinstance(config, dict):
@@ -604,6 +653,18 @@ def _detail_items(
     if not isinstance(url_key, str) or not url_key:
         raise ToolError("Magento GraphQL detail product has no product url_key")
     product_url = canonical_url(urljoin(entry_url, url_key + suffix))
+    if selected_variant is not None:
+        child = selected_variant["product"]
+        if child.get("__typename") != "SimpleProduct":
+            raise ToolError(
+                "Magento selected configurable child is not a simple product"
+            )
+        attributes = (
+            selected_variant.get("attributes")
+            if isinstance(selected_variant.get("attributes"), list)
+            else []
+        )
+        return [_graphql_item(child, parent, product_url, attributes)], 0
     if parent.get("__typename") == "SimpleProduct":
         return [_graphql_item(parent, parent, product_url, [])], 0
     variants = parent.get("variants")
@@ -703,7 +764,9 @@ def _html_search(
             raise ToolError("Magento HTML search redirect has no Location header")
         redirect_url = urljoin(str(response.url), location)
         if url_origin(canonical_url(redirect_url)) != detection.origin:
-            raise ToolError("Magento HTML search redirect must stay on the same storefront")
+            raise ToolError(
+                "Magento HTML search redirect must stay on the same storefront"
+            )
         response = http.request("GET", redirect_url)
     denied = _denied(
         "search",

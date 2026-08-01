@@ -65,9 +65,7 @@ def detect_store(http: Http, store: str) -> StorefrontDetection:
 
     platforms = {detection.platform for detection in detections}
     if len(platforms) > 1:
-        names = ", ".join(
-            sorted(platforms)
-        )
+        names = ", ".join(sorted(platforms))
         raise ToolError(f"Conflicting positive storefront detections: {names}")
     if detections:
         chosen = detections[0]
@@ -129,7 +127,9 @@ def detect_store(http: Http, store: str) -> StorefrontDetection:
     return UnknownStore(
         origin=origin,
         entry_url=entry_url,
-        evidence=(f"No positive platform signal; homepage HTTP {homepage.status_code}",),
+        evidence=(
+            f"No positive platform signal; homepage HTTP {homepage.status_code}",
+        ),
     )
 
 

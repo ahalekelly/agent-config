@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import copy
 import importlib
 import json
 import sys
@@ -159,6 +160,224 @@ class MagentoDetectionTests(unittest.TestCase):
 
 
 class MagentoSearchTests(unittest.TestCase):
+    def test_exact_top_level_sku_takes_precedence_over_matching_child(self) -> None:
+        price_range = {
+            "minimum_price": {
+                "final_price": {"value": 10, "currency": "USD"},
+                "regular_price": {"value": 10, "currency": "USD"},
+            }
+        }
+        envelope = {
+            "data": {
+                "storeConfig": {"product_url_suffix": ""},
+                "products": {
+                    "items": [
+                        {
+                            "__typename": "SimpleProduct",
+                            "name": "Exact product",
+                            "sku": "SAME",
+                            "stock_status": "IN_STOCK",
+                            "url_key": "exact-product",
+                            "price_range": price_range,
+                        },
+                        {
+                            "__typename": "ConfigurableProduct",
+                            "name": "Unrelated parent",
+                            "sku": "PARENT",
+                            "url_key": "unrelated-parent",
+                            "variants": [
+                                {
+                                    "attributes": [],
+                                    "product": {
+                                        "__typename": "SimpleProduct",
+                                        "name": "Matching child",
+                                        "sku": "SAME",
+                                        "stock_status": "IN_STOCK",
+                                        "price_range": price_range,
+                                    },
+                                }
+                            ],
+                        },
+                    ]
+                },
+            }
+        }
+
+        items, omitted = magento._detail_items(envelope, "SAME", "https://store.test/")
+
+        self.assertEqual(items[0]["title"], "Exact product")
+        self.assertEqual(omitted, 0)
+
+    def test_duplicate_exact_configurable_children_fail_loudly(self) -> None:
+        child = {
+            "attributes": [],
+            "product": {
+                "__typename": "SimpleProduct",
+                "name": "Matching child",
+                "sku": "SAME",
+            },
+        }
+        envelope = {
+            "data": {
+                "storeConfig": {"product_url_suffix": ""},
+                "products": {
+                    "items": [
+                        {
+                            "__typename": "ConfigurableProduct",
+                            "name": "Parent",
+                            "sku": "PARENT",
+                            "url_key": "parent",
+                            "variants": [child, copy.deepcopy(child)],
+                        }
+                    ]
+                },
+            }
+        }
+
+        with self.assertRaisesRegex(ToolError, "child SKU resolved more than once"):
+            magento._detail_items(envelope, "SAME", "https://store.test/")
+
+    def test_sku_detail_accepts_one_exact_configurable_child(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            if "ProductSearch" in body["query"]:
+                return response(
+                    request,
+                    json_value={
+                        "data": {
+                            "products": {
+                                "items": [
+                                    {
+                                        "__typename": "SimpleProduct",
+                                        "name": "Extension Open Source",
+                                        "sku": "CHILD",
+                                        "stock_status": "IN_STOCK",
+                                        "url_key": "extension",
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                )
+            return response(
+                request,
+                json_value={
+                    "data": {
+                        "storeConfig": {"product_url_suffix": ""},
+                        "products": {
+                            "items": [
+                                {
+                                    "__typename": "ConfigurableProduct",
+                                    "name": "Extension",
+                                    "sku": "PARENT",
+                                    "url_key": "extension",
+                                    "variants": [
+                                        {
+                                            "attributes": [
+                                                {
+                                                    "code": "license",
+                                                    "label": "Open Source",
+                                                    "value_index": 1,
+                                                }
+                                            ],
+                                            "product": {
+                                                "__typename": "SimpleProduct",
+                                                "name": "Extension Open Source",
+                                                "sku": "CHILD",
+                                                "stock_status": "IN_STOCK",
+                                                "price_range": {
+                                                    "minimum_price": {
+                                                        "final_price": {
+                                                            "value": 199,
+                                                            "currency": "USD",
+                                                        },
+                                                        "regular_price": {
+                                                            "value": 199,
+                                                            "currency": "USD",
+                                                        },
+                                                    }
+                                                },
+                                            },
+                                        }
+                                    ],
+                                }
+                            ]
+                        },
+                    }
+                },
+            )
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = magento.search(http, detection(), "extension")
+
+        self.assertEqual([item["sku"] for item in result["items"]], ["CHILD"])
+
+    def test_missing_exact_sku_is_recorded_per_candidate(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            if "ProductSearch" in body["query"]:
+                return response(
+                    request,
+                    json_value={
+                        "data": {
+                            "products": {
+                                "items": [
+                                    {
+                                        "__typename": "SimpleProduct",
+                                        "name": "Missing",
+                                        "sku": "MISSING",
+                                        "stock_status": "IN_STOCK",
+                                        "url_key": "missing",
+                                    },
+                                    {
+                                        "__typename": "SimpleProduct",
+                                        "name": "Good",
+                                        "sku": "GOOD",
+                                        "stock_status": "IN_STOCK",
+                                        "url_key": "good",
+                                    },
+                                ]
+                            }
+                        }
+                    },
+                )
+            sku = body["variables"]["sku"]
+            items = []
+            if sku == "GOOD":
+                items.append(
+                    {
+                        "__typename": "SimpleProduct",
+                        "name": "Good",
+                        "sku": "GOOD",
+                        "stock_status": "IN_STOCK",
+                        "url_key": "good",
+                        "price_range": {
+                            "minimum_price": {
+                                "final_price": {"value": 10, "currency": "USD"},
+                                "regular_price": {"value": 10, "currency": "USD"},
+                            }
+                        },
+                    }
+                )
+            return response(
+                request,
+                json_value={
+                    "data": {
+                        "storeConfig": {"product_url_suffix": ""},
+                        "products": {"items": items},
+                    }
+                },
+            )
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client:
+            result = magento.search(http, detection(), "bearing")
+
+        self.assertEqual([item["sku"] for item in result["items"]], ["GOOD"])
+        self.assertEqual(result["api_errors"][0]["stage"], "detail")
+        self.assertEqual(result["api_errors"][0]["sku"], "MISSING")
+
     def test_html_strategy_uses_canonical_search_route_without_trailing_slash(
         self,
     ) -> None:
@@ -674,7 +893,9 @@ class MagentoQuoteTests(unittest.TestCase):
                 magento.item_ref("magento", {"sku": "BRG-STEEL"}),
             )
 
-    def test_explicitly_unavailable_rate_stays_unavailable_without_an_error(self) -> None:
+    def test_explicitly_unavailable_rate_stays_unavailable_without_an_error(
+        self,
+    ) -> None:
         rate = fixture_json("platform-magento-rates.json")[0]
         rate["available"] = False
         rate["error_message"] = ""

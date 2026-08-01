@@ -7,7 +7,6 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import httpx
-
 from platform_api_core import (
     DetectedStore,
     Http,
@@ -134,9 +133,7 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
             if identity not in identities:
                 identities.add(identity)
                 items.append(item)
-    return search_result(
-        SquarespaceSearch(discovery="storefront_search"), query, items
-    )
+    return search_result(SquarespaceSearch(discovery="storefront_search"), query, items)
 
 
 def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
@@ -427,9 +424,7 @@ def _shipping_option(value: Any) -> dict[str, Any]:
         raise ToolError("Squarespace fulfillment option omitted its price")
     amount = money(price.get("decimalValue"), price.get("currencyCode"))
     disposition = "pickup" if value.get("isPickup") is True else "delivery"
-    return shipping_option(
-        SquarespaceShipping(), option_id, title, disposition, amount
-    )
+    return shipping_option(SquarespaceShipping(), option_id, title, disposition, amount)
 
 
 def _cookie(http: Http, name: str) -> str:

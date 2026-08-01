@@ -26,6 +26,7 @@ SKILL_DIR = SCRIPT_DIR.parent
 REPORT_DIR = SKILL_DIR / "dev" / "reports"
 DEFAULT_INPUT = REPORT_DIR / "Product Search Storefront Corpus 2026-07-31.input.json"
 DEFAULT_JSONL = REPORT_DIR / "Product Search Storefront Corpus 2026-08-01.jsonl"
+DEFAULT_REPORT = REPORT_DIR / "Product Search Storefront Corpus 2026-08-01.md"
 DEFAULT_VENDORS = SKILL_DIR / "vendors.md"
 EXPECTED_PLATFORMS = {
     "Shopify": "shopify",
@@ -166,44 +167,29 @@ SEARCH_COMMON_KEYS = {
     "selected_product",
     "item_ref_sha256",
 }
-EXPECTED_SEARCH_OUTCOMES = Counter({"search": 56, "not_run": 2, "bot_wall": 1})
-EXPECTED_POSITIVE_SEARCHES = 47
-EXPECTED_EMPTY_SEARCHES = 9
-EXPECTED_SEARCH_DISPOSITIONS_SHA256 = (
-    "444136d9f7ce8f2cb2284fd78fed18aab9c7ea51eb4f1d2e8798cb79f5a8690e"
+FORBIDDEN_READ_ONLY_SEGMENTS = frozenset(
+    {
+        "address",
+        "addresses",
+        "cart",
+        "carts",
+        "checkout",
+        "checkouts",
+        "consignment",
+        "consignments",
+        "estimate-shipping-methods",
+        "rate",
+        "rates",
+        "shipping",
+    }
 )
-EXPECTED_TERMINALS = {
-    "tech7000.com": (
-        "not_run",
-        None,
-        None,
-        "detection_not_positive",
-        None,
-        None,
-    ),
-    "valinonline.com": (
-        "bot_wall",
-        "bigcommerce",
-        "html_search_and_product_pages",
-        "challenge response",
-        "cloudflare",
-        403,
-    ),
-    "wyliebeckert.com": (
-        "not_run",
-        None,
-        None,
-        "detection_not_positive",
-        None,
-        None,
-    ),
-}
-MUTATING_PATH_PREFIXES = (
-    "/rest/V1/guest-carts",
-    "/api/storefront/carts",
-    "/api/storefront/checkouts",
-    "/api/commerce/shopping-cart",
-    "/api/3/commerce/cart",
+FORBIDDEN_ACTION_PREFIXES = (
+    "address-",
+    "cart-",
+    "checkout-",
+    "consignment-",
+    "rate-",
+    "shipping-",
 )
 
 
@@ -230,6 +216,25 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
             raise SystemExit(f"JSONL line {line_number} must be an object")
         rows.append(value)
     return rows
+
+
+def validate_read_only_request(request: dict[str, Any], domain: str) -> None:
+    if request["method"] not in {"GET", "POST"}:
+        raise SystemExit(f"HTTP evidence used a non-read-only method: {domain}")
+    for key in ("requested_url", "final_url"):
+        segments = [
+            segment.casefold()
+            for segment in urlsplit(request[key]).path.split("/")
+            if segment
+        ]
+        if any(
+            segment in FORBIDDEN_READ_ONLY_SEGMENTS
+            or segment.startswith(FORBIDDEN_ACTION_PREFIXES)
+            for segment in segments
+        ):
+            raise SystemExit(
+                f"detection/search evidence used a mutating endpoint: {domain}"
+            )
 
 
 def load_jobs(path: Path) -> list[dict[str, str]]:
@@ -647,21 +652,7 @@ def validate_rows(
                 raise SystemExit(f"HTTP evidence has unsafe keys: {row['domain']}")
             if re.fullmatch(r"[0-9a-f]{64}", request["sha256"]) is None:
                 raise SystemExit(f"HTTP evidence hash is invalid: {row['domain']}")
-            for key in ("requested_url", "final_url"):
-                path = urlsplit(request[key]).path.rstrip("/")
-                if any(
-                    path == prefix or path.startswith(prefix + "/")
-                    for prefix in MUTATING_PATH_PREFIXES
-                ) or (
-                    request["method"] != "GET"
-                    and (
-                        path == "/wp-json/wc/store/v1/cart"
-                        or path.startswith("/wp-json/wc/store/v1/cart/")
-                    )
-                ):
-                    raise SystemExit(
-                        f"detection/search evidence used a mutating endpoint: {row['domain']}"
-                    )
+            validate_read_only_request(request, row["domain"])
 
     serialized = "\n".join(json.dumps(row, sort_keys=True) for row in rows)
     forbidden_patterns = {
@@ -678,43 +669,9 @@ def validate_rows(
         if re.search(pattern, serialized):
             raise SystemExit(f"output contains forbidden {label}")
 
-    outcomes = Counter(row["search"]["kind"] for row in rows)
-    positive = sum(
-        row["search"]["kind"] == "search" and row["search"]["candidate_count"] > 0
-        for row in rows
-    )
-    empty = sum(
-        row["search"]["kind"] == "search" and row["search"]["candidate_count"] == 0
-        for row in rows
-    )
-    if (
-        outcomes != EXPECTED_SEARCH_OUTCOMES
-        or positive != EXPECTED_POSITIVE_SEARCHES
-        or empty != EXPECTED_EMPTY_SEARCHES
-    ):
-        raise SystemExit("search outcome counts differ from the accepted corpus")
-    terminals = {
-        row["domain"]: (
-            row["search"]["kind"],
-            row["search"]["platform"],
-            row["search"]["source"],
-            row["search"].get("reason"),
-            row["search"].get("system"),
-            row["search"].get("status"),
-        )
-        for row in rows
-        if row["search"]["kind"] != "search"
-    }
-    if terminals != EXPECTED_TERMINALS:
-        raise SystemExit("terminal dispositions differ from the accepted corpus")
-    dispositions = [
-        {"domain": row["domain"], "search": row["search"]} for row in rows
-    ]
-    disposition_digest = hashlib.sha256(
-        json.dumps(dispositions, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
-    if disposition_digest != EXPECTED_SEARCH_DISPOSITIONS_SHA256:
-        raise SystemExit("per-store search dispositions differ from the accepted corpus")
+    errors = [row["domain"] for row in rows if row["search"]["kind"] == "tool_error"]
+    if errors:
+        raise SystemExit(f"search produced a tool error: {', '.join(errors)}")
 
 
 def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:

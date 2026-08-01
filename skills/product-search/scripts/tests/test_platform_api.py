@@ -21,8 +21,8 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import platform_api  # noqa: E402
-from platform_api_core import (  # noqa: E402
+import platform_api
+from platform_api_core import (
     DetectedStore,
     Http,
     ShopifySearch,
@@ -89,7 +89,11 @@ class DetectionTests(unittest.TestCase):
             paths.append(request.url.path)
             if request.method == "GET" and request.url.path == "/":
                 return httpx.Response(200, text="Shopify", request=request)
-            if request.url.path == "/wp-json/wc/store/v1/cart":
+            if request.url.path == "/wp-json/wc/store/v1/products":
+                self.assertEqual(
+                    dict(request.url.params),
+                    {"search": "__codex_platform_probe__", "per_page": "1"},
+                )
                 return httpx.Response(404, request=request)
             if request.url.path == "/api/2026-07/graphql.json":
                 return httpx.Response(
@@ -121,7 +125,11 @@ class DetectionTests(unittest.TestCase):
                     text='<script type="text/x-magento-init">{}</script>',
                     request=request,
                 )
-            if request.url.path == "/wp-json/wc/store/v1/cart":
+            if request.url.path == "/wp-json/wc/store/v1/products":
+                self.assertEqual(
+                    dict(request.url.params),
+                    {"search": "__codex_platform_probe__", "per_page": "1"},
+                )
                 return httpx.Response(404, request=request)
             if request.url.path == "/api/2026-07/graphql.json":
                 return httpx.Response(

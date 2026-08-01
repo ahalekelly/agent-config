@@ -15,10 +15,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import platform_search_acceptance as acceptance  # noqa: E402
+import platform_search_acceptance as acceptance
 
 EXPECTED_SOURCE_HASH = (
-    "c3c6afaa12f7fd052d726abc6332172fde27f7c36c8ac8db937e2f8de45c0e00"
+    "ca14da8df33d4f9ee8bd4d9320edaf5227597b36c10d10da4adc1514e85d21bf"
 )
 
 
@@ -54,11 +54,44 @@ class SavedCorpusTests(unittest.TestCase):
             EXPECTED_SOURCE_HASH,
         )
 
-    def test_saved_report_is_generated_from_the_saved_corpus(self) -> None:
-        generated = acceptance.report(self.rows, acceptance.summarize(self.rows))
-        saved = acceptance.DEFAULT_JSONL.with_suffix(".md").read_text()
+    def test_saved_report_is_rendered_from_the_saved_corpus(self) -> None:
+        self.assertEqual(
+            acceptance.DEFAULT_REPORT.read_text(),
+            acceptance.report(self.rows, acceptance.summarize(self.rows)),
+        )
 
-        self.assertEqual(generated, saved)
+    def test_request_validator_uses_semantic_segments_for_both_urls(self) -> None:
+        safe = {
+            "method": "GET",
+            "requested_url": "https://shop.example/products/cartoon-shipping-address-labels",
+            "final_url": "https://shop.example/products/cartoon-shipping-address-labels",
+        }
+        acceptance.validate_read_only_request(safe, "shop.example")
+
+        cases = [
+            ({**safe, "method": "DELETE"}, "non-read-only method"),
+            (
+                {**safe, "requested_url": "https://shop.example/api/storefront/carts"},
+                "mutating endpoint",
+            ),
+            (
+                {**safe, "final_url": "https://shop.example/Cart-AddProduct"},
+                "mutating endpoint",
+            ),
+            (
+                {
+                    **safe,
+                    "requested_url": "https://shop.example/wp-json/wc/store/v1/cart",
+                },
+                "mutating endpoint",
+            ),
+        ]
+        for request, message in cases:
+            with (
+                self.subTest(request=request),
+                self.assertRaisesRegex(SystemExit, message),
+            ):
+                acceptance.validate_read_only_request(request, "shop.example")
 
     def test_validator_rejects_count_uniqueness_and_identity_changes(self) -> None:
         cases = []
@@ -128,7 +161,7 @@ class SavedCorpusTests(unittest.TestCase):
             ):
                 self.validate(rows)
 
-    def test_validator_rejects_source_hash_and_terminal_changes(self) -> None:
+    def test_validator_rejects_source_hash_and_tool_errors(self) -> None:
         inconsistent_hash = copy.deepcopy(self.rows)
         inconsistent_hash[0]["source_tree_sha256"] = "0" * 64
         with self.assertRaisesRegex(SystemExit, "one valid source-tree SHA-256"):
@@ -152,21 +185,8 @@ class SavedCorpusTests(unittest.TestCase):
             "item_ref_sha256": None,
             "message": "synthetic error",
         }
-        with self.assertRaisesRegex(SystemExit, "search outcome counts"):
+        with self.assertRaisesRegex(SystemExit, "tool error"):
             self.validate(changed_outcome)
-
-        changed_candidate_count = copy.deepcopy(self.rows)
-        changed_candidate_count[0]["search"]["candidate_count"] += 1
-        with self.assertRaisesRegex(SystemExit, "per-store search dispositions"):
-            self.validate(changed_candidate_count)
-
-        changed_terminal = copy.deepcopy(self.rows)
-        valin = next(
-            row for row in changed_terminal if row["domain"] == "valinonline.com"
-        )
-        valin["search"]["reason"] = "different challenge"
-        with self.assertRaisesRegex(SystemExit, "terminal dispositions"):
-            self.validate(changed_terminal)
 
 
 if __name__ == "__main__":

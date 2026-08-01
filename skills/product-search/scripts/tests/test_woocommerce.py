@@ -16,8 +16,8 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from platform_api_core import DetectedStore, Http, parse_item_ref  # noqa: E402
-from platforms import woocommerce  # noqa: E402
+from platform_api_core import DetectedStore, Http, parse_item_ref
+from platforms import woocommerce
 
 
 def detection() -> DetectedStore:

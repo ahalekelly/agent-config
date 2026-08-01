@@ -16,7 +16,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from platform_api_core import (  # noqa: E402
+from platform_api_core import (
     DetectedStore,
     Http,
     NonMagentoPlatform,
@@ -24,7 +24,7 @@ from platform_api_core import (  # noqa: E402
     ToolError,
     parse_item_ref,
 )
-from platforms import extra  # noqa: E402
+from platforms import extra
 
 FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
 
