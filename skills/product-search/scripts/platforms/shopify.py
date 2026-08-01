@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from email import policy
@@ -90,7 +89,7 @@ def detect(
             re.findall(
                 r"(?<![a-z0-9.-])([a-z0-9][a-z0-9-]*\.myshopify\.com)(?![a-z0-9.-])",
                 homepage.text,
-                re.I,
+                re.IGNORECASE,
             )
         )
     )
@@ -173,7 +172,8 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
             "input": {
                 "lines": [{"merchandiseId": variant_id, "quantity": 1}],
                 "buyerIdentity": {
-                    "deliveryAddressPreferences": [{"deliveryAddress": ADDRESS}]
+                    "countryCode": "US",
+                    "deliveryAddressPreferences": [{"deliveryAddress": ADDRESS}],
                 },
             }
         },
@@ -235,6 +235,8 @@ def _graphql(
 def _signed_post(
     http: Http, target: str, payload: dict[str, Any], accept: str
 ) -> httpx.Response:
+    api = urlsplit(target)
+    api_authority = (api.hostname, api.port or 443)
     for attempt in range(2):
         request = http.client.build_request(
             "POST",
@@ -252,14 +254,19 @@ def _signed_post(
             raise ToolError("Shopify GraphQL redirect has no Location header")
         target = urljoin(target, location)
         parts = urlsplit(target)
-        if (
-            parts.scheme != "https"
-            or not parts.hostname
-            or parts.username is not None
-            or parts.password is not None
-        ):
+        try:
+            redirect_authority = (parts.hostname, parts.port or 443)
+        except ValueError as error:
             raise ToolError(
-                "Shopify GraphQL redirect target must be absolute HTTPS without credentials"
+                "Shopify GraphQL redirect target has an invalid port"
+            ) from error
+        if parts.scheme != "https" or redirect_authority != api_authority:
+            raise ToolError(
+                "Shopify GraphQL redirect target must use the detected API authority"
+            )
+        if parts.username is not None or parts.password is not None:
+            raise ToolError(
+                "Shopify GraphQL redirect target must not contain credentials"
             )
     raise AssertionError("Shopify redirect loop must return or raise")
 
@@ -284,9 +291,10 @@ def _terminal_response(
 
 
 def _graphql_data(payload: dict[str, Any], context: str) -> dict[str, Any]:
-    errors = payload.get("errors")
-    if errors:
-        raise ToolError(f"{context} returned GraphQL errors: {_messages(errors)}")
+    if "errors" in payload:
+        raise ToolError(
+            f"{context} returned GraphQL errors: {_messages(payload['errors'])}"
+        )
     data = payload.get("data")
     if not isinstance(data, dict):
         raise ToolError(f"{context} response has no data object")
@@ -336,10 +344,9 @@ def _delivery_groups(response: httpx.Response) -> list[dict[str, Any]]:
     groups: list[dict[str, Any]] | None = None
     terminal_seen = len(payloads) == 1
     for payload in payloads:
-        errors = payload.get("errors")
-        if errors:
+        if "errors" in payload:
             raise ToolError(
-                f"Shopify rates returned GraphQL errors: {_messages(errors)}"
+                f"Shopify rates returned GraphQL errors: {_messages(payload['errors'])}"
             )
         if payload.get("hasNext") is False:
             terminal_seen = True
@@ -431,15 +438,11 @@ def _shipping_option(option: Any) -> dict[str, Any]:
     option_id = next(
         (
             value
-            for value in (option.get("handle"), option.get("code"), title)
+            for value in (option.get("handle"), option.get("code"))
             if isinstance(value, str) and value
         ),
-        None,
+        title,
     )
-    if option_id is None:
-        option_id = hashlib.sha256(
-            json.dumps(option, sort_keys=True).encode()
-        ).hexdigest()[:16]
     return shipping_option(
         option_id,
         title,
@@ -465,9 +468,17 @@ def _required_list(value: dict[str, Any], name: str, context: str) -> list[Any]:
 
 
 def _messages(errors: Any) -> str:
-    if not isinstance(errors, list):
-        return repr(errors)
-    return "; ".join(
-        str(error.get("message")) if isinstance(error, dict) else str(error)
-        for error in errors
-    )
+    if (
+        not isinstance(errors, list)
+        or not errors
+        or any(
+            not isinstance(error, dict)
+            or not isinstance(error.get("message"), str)
+            or not error["message"]
+            for error in errors
+        )
+    ):
+        raise ToolError(
+            "Shopify GraphQL errors must be a nonempty array of objects with nonempty messages"
+        )
+    return "; ".join(error["message"] for error in errors)

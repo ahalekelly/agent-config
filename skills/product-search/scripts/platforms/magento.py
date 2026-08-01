@@ -318,7 +318,7 @@ def search(http: Http, detection: Detection, query: str) -> dict[str, object]:
         errors.extend(detail_errors)
         if detail is None:
             continue
-        concrete, unsupported = _detail_items(detail, origin, candidate["sku"])
+        concrete, unsupported = _detail_items(detail, candidate["sku"])
         items.extend(concrete)
         omitted += unsupported
     if not items and errors:
@@ -386,6 +386,13 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
     added = json_object(add, "Magento add item")
     if added.get("sku") != sku:
         raise ToolError("Magento add item did not return the selected SKU")
+    added_quantity = added.get("qty")
+    if (
+        isinstance(added_quantity, bool)
+        or not isinstance(added_quantity, (int, float))
+        or Decimal(str(added_quantity)) != 1
+    ):
+        raise ToolError("Magento add item did not return the requested quantity 1")
 
     totals_response = http.request("GET", origin + cart_path + "/totals")
     denied = _denied(
@@ -442,7 +449,7 @@ def quote(http: Http, detection: Detection, reference: str) -> dict[str, object]
         no_quote_reason="empty_rate_list"
         if not raw_rates
         else "no_comparable_delivery_rate",
-        item={"sku": sku, "title": added.get("name"), "quantity": added.get("qty", 1)},
+        item={"sku": sku, "title": added.get("name"), "quantity": added_quantity},
         base_subtotal=money(base_subtotal_value, base_currency)
         if base_subtotal_value is not None
         else None,
@@ -523,7 +530,6 @@ def _products(envelope: dict[str, Any]) -> dict[str, Any] | None:
 
 def _detail_items(
     envelope: dict[str, Any],
-    origin: str,
     selected_sku: str,
 ) -> tuple[list[dict[str, Any]], int]:
     products = _products(envelope)
@@ -537,24 +543,19 @@ def _detail_items(
         raise ToolError("Magento exact parent SKU did not resolve exactly once")
     parent = matches[0]
     data = envelope.get("data")
-    config = (
-        data.get("storeConfig")
-        if isinstance(data, dict) and isinstance(data.get("storeConfig"), dict)
-        else {}
-    )
-    base_url = (
-        config.get("base_url")
-        if isinstance(config.get("base_url"), str)
-        else origin + "/"
-    )
-    suffix = (
-        config.get("product_url_suffix")
-        if isinstance(config.get("product_url_suffix"), str)
-        else ""
-    )
-    product_url = canonical_url(
-        urljoin(base_url, str(parent.get("url_key") or "") + suffix)
-    )
+    config = data.get("storeConfig") if isinstance(data, dict) else None
+    if not isinstance(config, dict):
+        raise ToolError("Magento GraphQL detail has no storeConfig")
+    base_url = config.get("base_url")
+    if not isinstance(base_url, str) or not base_url:
+        raise ToolError("Magento GraphQL detail has no storeConfig.base_url")
+    suffix = config.get("product_url_suffix")
+    if not isinstance(suffix, str):
+        raise ToolError("Magento GraphQL detail has no storeConfig.product_url_suffix")
+    url_key = parent.get("url_key")
+    if not isinstance(url_key, str) or not url_key:
+        raise ToolError("Magento GraphQL detail product has no product url_key")
+    product_url = canonical_url(urljoin(base_url, url_key + suffix))
     if parent.get("__typename") == "SimpleProduct":
         return [_graphql_item(parent, parent, product_url, [])], 0
     variants = parent.get("variants")
@@ -702,8 +703,8 @@ def _html_search(
 def _page_items(
     page: ProductPage, product_url: str
 ) -> tuple[list[dict[str, Any]], bool]:
-    items: list[dict[str, Any]] = []
-    parent_skus: set[str] = set()
+    standalone_items: list[dict[str, Any]] = []
+    variant_items: list[dict[str, Any]] = []
     for raw in page.json_ld:
         try:
             document = json.loads(raw)
@@ -717,24 +718,19 @@ def _page_items(
                 node.get("hasVariant"), list
             ):
                 parent = node.get("name")
-                parent_sku = node.get("productGroupID")
-                if isinstance(parent_sku, str):
-                    parent_skus.add(parent_sku)
                 for child in node["hasVariant"]:
                     if isinstance(child, dict):
                         normalized = _json_ld_item(child, parent, product_url)
                         if normalized:
-                            items.append(normalized)
+                            variant_items.append(normalized)
             if schema_type == "product":
                 normalized = _json_ld_item(node, None, product_url)
                 if normalized:
-                    items.append(normalized)
+                    standalone_items.append(normalized)
     configured = bool(page.required_fields)
-    items = [
-        item
-        for item in _unique_skus(items)
-        if not (configured and item["sku"] in parent_skus)
-    ]
+    items = _unique_skus(
+        variant_items if configured else variant_items + standalone_items
+    )
     if items:
         return items, configured
     if page.form_sku and page.itemprop_sku and page.form_sku != page.itemprop_sku:

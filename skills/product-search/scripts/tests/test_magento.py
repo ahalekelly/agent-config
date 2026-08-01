@@ -158,6 +158,48 @@ class MagentoDetectionTests(unittest.TestCase):
 
 
 class MagentoSearchTests(unittest.TestCase):
+    def test_configurable_page_does_not_emit_plain_product_json_ld(self) -> None:
+        page = magento.ProductPage()
+        page.feed(
+            """
+            <script type="application/ld+json">
+              {
+                "@type": "Product",
+                "name": "Configurable Bearing",
+                "sku": "BRG-PARENT",
+                "offers": {"price": 3.95, "priceCurrency": "USD"}
+              }
+            </script>
+            <form id="product_addtocart_form" data-product-sku="BRG-PARENT">
+              <select name="super_attribute[93]" required></select>
+            </form>
+            """
+        )
+
+        items, configurable = magento._page_items(
+            page, "https://magento.test/configurable-bearing.html"
+        )
+
+        self.assertTrue(configurable)
+        self.assertEqual(items, [])
+
+    def test_graphql_detail_requires_storefront_url_fields(self) -> None:
+        cases = [
+            ("base_url", "storeConfig.base_url"),
+            ("product_url_suffix", "storeConfig.product_url_suffix"),
+            ("url_key", "product url_key"),
+        ]
+        for field, message in cases:
+            with self.subTest(field=field):
+                detail = fixture_json("platform-magento-detail-partial.json")
+                if field == "url_key":
+                    detail["data"]["products"]["items"][0].pop(field)
+                else:
+                    detail["data"]["storeConfig"].pop(field)
+
+                with self.assertRaisesRegex(ToolError, message):
+                    magento._detail_items(detail, "BRG-PARENT")
+
     def test_narrow_search_then_exact_detail_preserves_partial_errors(self) -> None:
         calls: list[dict[str, Any]] = []
 
@@ -377,6 +419,38 @@ class MagentoQuoteTests(unittest.TestCase):
         )
         self.assertIn(("GET", f"/rest/V1/guest-carts/{token}/totals"), calls)
         self.assertNotIn(token, json.dumps(http.evidence))
+
+    def test_add_item_requires_the_requested_quantity(self) -> None:
+        regular_handler, _, _ = self.handler()
+
+        def invalid_handler(quantity: Any):
+            def handle(request: httpx.Request) -> httpx.Response:
+                if request.url.path.endswith("/items"):
+                    added = {
+                        "sku": "BRG-STEEL",
+                        "name": "Configurable Bearing - Steel",
+                        "price": 3.95,
+                    }
+                    if quantity is not None:
+                        added["qty"] = quantity
+                    return response(request, json_value=added)
+                return regular_handler(request)
+
+            return handle
+
+        invalid_quantities = [None, True, 2]
+        for quantity in invalid_quantities:
+            with self.subTest(quantity=quantity):
+                http = Http(httpx.MockTransport(invalid_handler(quantity)))
+                with (
+                    http.client,
+                    self.assertRaisesRegex(ToolError, "requested quantity"),
+                ):
+                    magento.quote(
+                        http,
+                        detection(),
+                        magento.item_ref("magento", {"sku": "BRG-STEEL"}),
+                    )
 
     def test_empty_rate_array_is_not_free_shipping(self) -> None:
         handler, _, _ = self.handler(fixture_json("platform-magento-empty.json"))

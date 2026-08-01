@@ -1,7 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "beautifulsoup4>=4.13,<5",
 #   "cryptography>=45,<47",
 #   "httpx>=0.28,<0.29",
 # ]

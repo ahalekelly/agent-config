@@ -37,6 +37,23 @@ def unsigned_send(client: httpx.Client, request: httpx.Request) -> httpx.Respons
     return client.send(request, follow_redirects=False)
 
 
+def redirect_transport(
+    location: str, requests: list[httpx.Request]
+) -> httpx.MockTransport:
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(307, headers={"Location": location}, request=request)
+
+    return httpx.MockTransport(handler)
+
+
+def json_transport(payload: object) -> httpx.MockTransport:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload, request=request)
+
+    return httpx.MockTransport(handler)
+
+
 class ShopifyTests(unittest.TestCase):
     def test_detection_discovers_bare_myshopify_backend_in_headless_source(
         self,
@@ -115,6 +132,59 @@ class ShopifyTests(unittest.TestCase):
         )
         self.assertEqual(signer.call_count, 1)
 
+    def test_graphql_error_shape_is_strictly_validated(self) -> None:
+        invalid_errors = (
+            None,
+            {"message": "Not an array"},
+            [],
+            ["Not an object"],
+            [{}],
+            [{"message": 7}],
+            [{"message": ""}],
+        )
+        for errors in invalid_errors:
+            with self.subTest(errors=errors):
+                http = Http(json_transport({"errors": errors}))
+                with (
+                    mock.patch.object(
+                        shopify, "send_signed", side_effect=unsigned_send
+                    ),
+                    self.assertRaisesRegex(
+                        shopify.ToolError,
+                        "GraphQL errors must be a nonempty array of objects with nonempty messages",
+                    ),
+                ):
+                    shopify.search(http, detection(), "bearing")
+
+    def test_graphql_error_messages_are_preserved(self) -> None:
+        http = Http(
+            json_transport(
+                {
+                    "errors": [
+                        {"message": "first", "extensions": {"code": "ONE"}},
+                        {"message": "second"},
+                    ]
+                }
+            )
+        )
+        with (
+            mock.patch.object(shopify, "send_signed", side_effect=unsigned_send),
+            self.assertRaisesRegex(
+                shopify.ToolError,
+                "Shopify product search returned GraphQL errors: first; second",
+            ),
+        ):
+            shopify.search(http, detection(), "bearing")
+
+    def test_deferred_graphql_error_shape_is_strictly_validated(self) -> None:
+        request = httpx.Request("POST", "https://backend.myshopify.com/graphql")
+        response = httpx.Response(200, json={"errors": []}, request=request)
+        with self.assertRaisesRegex(
+            shopify.ToolError,
+            "GraphQL errors must be a nonempty array of objects with nonempty messages",
+        ):
+            shopify._delivery_groups(response)
+
     def test_quote_parses_deferred_multipart_and_preserves_pickup(self) -> None:
         calls = 0
 
@@ -123,6 +193,15 @@ class ShopifyTests(unittest.TestCase):
             calls += 1
             body = json.loads(request.content)
             if "cartCreate" in body["query"]:
+                self.assertEqual(
+                    body["variables"]["input"]["buyerIdentity"],
+                    {
+                        "countryCode": "US",
+                        "deliveryAddressPreferences": [
+                            {"deliveryAddress": shopify.ADDRESS}
+                        ],
+                    },
+                )
                 return httpx.Response(
                     200,
                     json={
@@ -147,7 +226,7 @@ class ShopifyTests(unittest.TestCase):
                 b"--graphql\r\nContent-Type: application/json\r\n\r\n"
                 b'{"data":{"cart":{"id":"secret"}},"hasNext":true}\r\n'
                 b"--graphql\r\nContent-Type: application/json\r\n\r\n"
-                b'{"incremental":[{"path":["cart"],"data":{"deliveryGroups":{"nodes":[{"groupType":"ONE_TIME_PURCHASE","deliveryOptions":[{"handle":"ground","title":"Ground","code":"GROUND","description":null,"deliveryMethodType":"SHIPPING","estimatedCost":{"amount":"6.95","currencyCode":"USD"}},{"handle":"pickup","title":"Pickup","code":"PICKUP","description":null,"deliveryMethodType":"PICK_UP","estimatedCost":{"amount":"0.00","currencyCode":"USD"}}]}]}}}],"hasNext":false}\r\n'
+                b'{"incremental":[{"path":["cart"],"data":{"deliveryGroups":{"nodes":[{"groupType":"ONE_TIME_PURCHASE","deliveryOptions":[{"handle":"ground","title":"Ground","code":"GROUND","description":null,"deliveryMethodType":"SHIPPING","estimatedCost":{"amount":"6.95","currencyCode":"USD"}},{"handle":null,"title":"Pickup","code":null,"description":null,"deliveryMethodType":"PICK_UP","estimatedCost":{"amount":"0.00","currencyCode":"USD"}}]}]}}}],"hasNext":false}\r\n'
                 b"--graphql--\r\n"
             )
             return httpx.Response(
@@ -173,16 +252,20 @@ class ShopifyTests(unittest.TestCase):
             [option["disposition"] for option in result["shipping_options"]],
             ["delivery", "pickup"],
         )
+        self.assertEqual(
+            [option["id"] for option in result["shipping_options"]],
+            ["ground", "Pickup"],
+        )
 
     def test_signed_redirect_uses_a_fresh_request(self) -> None:
         seen: list[httpx.Request] = []
 
         def handler(request: httpx.Request) -> httpx.Response:
             seen.append(request)
-            if request.url.host == "backend.myshopify.com":
+            if request.url.path == "/api/2026-07/graphql.json":
                 return httpx.Response(
                     307,
-                    headers={"Location": "https://final.example/graphql"},
+                    headers={"Location": "/redirected/graphql"},
                     request=request,
                 )
             return httpx.Response(
@@ -202,12 +285,37 @@ class ShopifyTests(unittest.TestCase):
             result = shopify.search(http, detection(), "bearing")
         self.assertEqual(result["items"], [])
         self.assertEqual(
-            [request.url.host for request in seen],
-            ["backend.myshopify.com", "final.example"],
+            [str(request.url) for request in seen],
+            [
+                "https://backend.myshopify.com/api/2026-07/graphql.json",
+                "https://backend.myshopify.com/redirected/graphql",
+            ],
         )
         self.assertNotEqual(
             seen[0].headers["Signature-Agent"], seen[1].headers["Signature-Agent"]
         )
+
+    def test_signed_redirect_rejects_another_api_authority(self) -> None:
+        for location in (
+            "https://attacker.example/graphql",
+            "//attacker.example/graphql",
+            "https://backend.myshopify.com:444/graphql",
+        ):
+            with self.subTest(location=location):
+                requests: list[httpx.Request] = []
+                http = Http(redirect_transport(location, requests))
+                with (
+                    mock.patch.object(
+                        shopify, "send_signed", side_effect=unsigned_send
+                    ) as signer,
+                    self.assertRaisesRegex(
+                        shopify.ToolError,
+                        "redirect target must use the detected API authority",
+                    ),
+                ):
+                    shopify.search(http, detection(), "bearing")
+                self.assertEqual(len(requests), 1)
+                self.assertEqual(signer.call_count, 1)
 
     def test_empty_rate_list_is_not_free_shipping(self) -> None:
         responses = iter(

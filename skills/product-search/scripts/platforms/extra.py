@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from html.parser import HTMLParser
-from typing import Any, Literal, cast
+from typing import Any, ClassVar, Literal, cast
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -365,7 +365,7 @@ def _sfcc_search(http: Http, detection: Detection, query: str) -> dict[str, obje
 
 
 class SfccProducts(HTMLParser):
-    _VOID = {
+    _VOID: ClassVar[set[str]] = {
         "area",
         "base",
         "br",
@@ -381,7 +381,7 @@ class SfccProducts(HTMLParser):
         "track",
         "wbr",
     }
-    _NAME_CLASSES = {"pdp-link", "product-name", "name-link"}
+    _NAME_CLASSES: ClassVar[set[str]] = {"pdp-link", "product-name", "name-link"}
 
     def __init__(self, origin: str) -> None:
         super().__init__(convert_charrefs=True)
