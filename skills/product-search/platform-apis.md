@@ -183,7 +183,7 @@ request = client.build_request("POST", target_url, json=payload)
 response = send_signed(client, request)
 ```
 
-`send_signed` is the only public signing surface. It loads `/Users/akelly/.agents/web-bot-auth/private.pem`, verifies that the Ed25519 public JWK thumbprint equals `PtFPEn59EWaohh4V82GazSOYlIBm3LqPOhoLUu--1So`, signs the prepared HTTPS authority with a fresh 64-byte nonce and 60-second lifetime, and immediately sends with redirects disabled. It rejects credentials, non-HTTPS targets, preexisting signature headers, and replay of the mutated request. Follow at most one GraphQL redirect, require the validated API authority to remain unchanged, and build and sign a fresh request for that same-authority target. Never log generated signature headers.
+`send_signed` is the only public signing surface. It loads `/Users/akelly/.agents/web-bot-auth/private.pem`, verifies that the Ed25519 public JWK thumbprint equals `PtFPEn59EWaohh4V82GazSOYlIBm3LqPOhoLUu--1So`, signs the prepared HTTPS authority with a fresh 64-byte nonce and 60-second lifetime, and immediately sends with redirects disabled. It rejects credentials, non-HTTPS targets, preexisting signature headers, and replay of the mutated request. Follow at most one GraphQL redirect, require the validated API authority to remain unchanged, and build and sign a fresh request for that same-authority target. A redirect outside that boundary is a Shopify no-match during platform detection and a hard error during search or quote. Never log generated signature headers.
 
 The public directory at the `Signature-Agent` URL serves the expected key in a signed response, and the local signer and directory signature both verify against that key.
 
@@ -273,7 +273,7 @@ curl 'https://STORE/graphql' -H 'Content-Type: application/json' \
   --data-binary '{"query":"query($search:String!){products(search:$search,pageSize:10){total_count items{__typename name sku stock_status url_key}}}","variables":{"search":"bearing"}}'
 ```
 
-Query one exact parent SKU next for `storeConfig`, price range, and configurable children. Preserve usable partial `data` while recording GraphQL errors. If GraphQL is unavailable, validate same-origin `/catalogsearch/result/?q=…` links and extract exact simple SKUs from product JSON-LD or Magento page configuration. Add an in-stock simple SKU, never a configurable or bundle parent.
+Query one exact parent SKU next for `storeConfig.product_url_suffix`, price range, and configurable children. Resolve product URLs from the validated detected entry URL; `product_url_suffix:null` means no suffix, while a missing or non-string/non-null suffix is a schema error. Preserve usable partial `data` while recording GraphQL errors. If GraphQL is unavailable, use the canonical same-origin `/catalogsearch/result?q=…` route and extract exact simple SKUs from product JSON-LD or Magento page configuration. A failure on that route is terminal. Add an in-stock simple SKU, never a configurable or bundle parent.
 
 ### Guest cart and rates
 
@@ -314,7 +314,7 @@ Glacier Tanks is a browser-wall hybrid. Fingerprint Chromium establishes Cloudfl
 
 ### Product discovery
 
-Use `/search.php?search_query=…` and product-page `BCData` or add-to-cart form fields. The helper canonicalizes search links, ranks exact matches, hydrates at most three product pages, and returns an opaque reference containing the verified product ID and canonical URL. Quote reloads the page and requires the same identity. It returns `unsupported_product_configuration` when required options remain unresolved; it never guesses them. A page-emitted, origin-constrained `storefrontApiToken` can enable conditional structured search at `POST /graphql`; never persist it. Tokenless GraphQL returned 401 on 11/11 stores.
+Use `/search.php?search_query=…` and product-page `BCData` or add-to-cart form fields. The helper excludes `data-button-type=add-cart` anchors, canonicalizes real product links, ranks exact matches, hydrates at most three product pages, and returns an opaque reference containing the verified product ID and canonical URL. Quote-only pages remain in search results with stock in `available`, `purchasable:false`, and `price:null`; `probe` skips them and continues to the next candidate. Quote reloads the page and requires the same identity. It returns `unsupported_product_configuration` when required options remain unresolved; it never guesses them. A page-emitted, origin-constrained `storefrontApiToken` can enable conditional structured search at `POST /graphql`; never persist it. Tokenless GraphQL returned 401 on 11/11 stores.
 
 ### Storefront REST cart and consignment
 
@@ -392,7 +392,9 @@ The attempted internal checkout address update did not generalize. Use the suppo
 
 ## Salesforce Commerce Cloud
 
-Salesforce Commerce Cloud exposes conventions, not one universal anonymous API. Resolve a concrete variant, establish a session and CSRF token, then follow the storefront's exact SFRA forms. A standard flow is:
+Salesforce Commerce Cloud exposes conventions, not one universal anonymous API. For public HTML search, request `urljoin(detected_entry_url, "search")` with `?q=…`; this preserves locale roots such as `/it_IT/` and replaces entry pages such as `/us/home` with `/us/search`. Require the route and final response to stay on the detected origin. Plain 401/403 responses are gated browser cases, recognized challenges remain `bot_wall`, and a failed route is not retried through `/Search-Show`.
+
+For a destination quote, resolve a concrete variant, establish a session and CSRF token, then follow the storefront's exact SFRA forms. A standard flow is:
 
 ```text
 POST /on/demandware.store/Sites-<site>-Site/<locale>/Cart-AddProduct
@@ -465,7 +467,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 103/103 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 116/116 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 
