@@ -35,23 +35,24 @@ When no stocked part fits, custom fabrication is in scope as an option (e.g. CNC
 
 ## Using platform APIs
 
-Follow the homepage redirect and keep one cookie jar on the resolved origin. Use a current browser User-Agent. A challenge, intercepted 403, or TLS failure means unresolved access, not platform absence. For rate tests use Jordan Smith, Pacific Prototyping LLC, 747 Howard St, San Francisco, CA 94103, US, +1 415-555-0132. Stop after the quote: never create an account, enter payment, or place an order. Exact payloads and tested failure modes are in `platform-apis.md`.
+Run `scripts/platform_api.py detect`, then `search` and `quote` with the returned opaque `item_ref`; `probe` performs the complete flow. Follow redirects, keep one cookie jar per origin, and treat a challenge as unresolved access rather than platform absence. Use BrowserSwarm only at the explicit boundaries below. See `platform-apis.md` for copyable requests, exact schemas, redaction rules, and failure modes.
 
-- **Shopify:** Positive probe: signed `POST /api/2026-07/graphql.json` with `{shop{name}}` returns `data.shop`; sign through `scripts/web_bot_auth.py`. Search with Storefront GraphQL `products(query:)`, create a cart containing the chosen variant and `buyerIdentity.deliveryAddressPreferences`, then query `deliveryGroups(first:10,withCarrierRates:true)` inside `... @defer { ... }`. Parse every `multipart/mixed` part; rates normally arrive in an incremental part. If a headless/custom origin does not proxy the API, discover its single `*.myshopify.com` backend from source and retry there.
-- **WooCommerce:** Positive probe: `GET /wp-json/wc/store/v1/cart` returns JSON containing `totals`; retain its `Cart-Token` header. Search `/wp-json/wc/store/v1/products?search=...&per_page=20`, add an in-stock purchasable simple item through `/cart/add-item`, then send the address to `/cart/update-customer`. Read `shipping_rates`, taxes, currency, and `currency_minor_unit`; empty-cart shipping totals may be null, and a `rate_id` ending `_fallback` is a merchant fallback.
-- **Magento / Adobe Commerce:** Require a Magento page fingerprint, then `POST /rest/V1/guest-carts` with `{}`. A quoted token proves the guest cart is open; a Magento-shaped 401/403/404/405 plus page evidence proves gated or disabled. Obtain a concrete simple SKU from the sitemap, storefront search, or product-page JSON-LD because anonymous `/rest/V1/products` is normally gated. Add it at `/rest/V1/guest-carts/<token>/items`, then call `/estimate-shipping-methods` with the address. Preserve carrier/method codes and distinguish delivery from pickup.
-- **BigCommerce Stencil:** Positive fingerprints include `cdn11.bigcommerce.com/s-<hash>`, Stencil assets, and `x-bc-store-id`. Discover products through `/search.php`, `/xmlsitemap.php`, product-page `BCData`, or a page-exposed Storefront GraphQL token. Create the guest cart with `POST /api/storefront/carts`; retain its `SHOP_SESSION_TOKEN`, `SF-CSRF-TOKEN`, cart ID, and physical item ID. Post the address and item to `/api/storefront/checkouts/<cart-id>/consignments?include=consignments.availableShippingOptions` with the session cookie and `X-SF-CSRF-TOKEN` header. Tokenless GraphQL is gated; the generic cart and quote are not.
-- **Squarespace:** Require Squarespace headers/context and a store collection whose `?format=json` response contains `items`. Keep its `crumb` cookie, then `POST /api/commerce/shopping-cart/entries` with `X-CSRF-Token: <crumb>`, a unique `Add-To-Cart-Id`, and the exact `itemId`/`sku`. Read `shoppingCart.cartToken`; `PUT /api/3/commerce/cart/<token>/shipping/location` with the address and read `shippingOptionsStatus` plus `fulfillmentOptions`.
-- **Ecwid:** Detect `app.ecwid.com/script.js?<storeId>`, read its storefront `apiBaseUrl`, and obtain the page-issued `ecwid-storefront` token through `initial-data`. Use that token with `app.ecwid.com/api/v3/<storeId>/products` for public search. Guest checkout can expose a pre-address fallback rate, but destination address mutation crosses the storefront-runtime boundary; use browser-swarm and do not replay internal `/checkout/update`.
-- **Wix:** Require Pepyaka/Wix markers, obtain the visitor/app tokens from `/_api/v1/access-tokens`, and use the e-commerce app token with the catalog reader for public products. Generic cart catalog references do not resolve reliably, so cart and quote are browser-swarm/site-SDK cases; page-issued tokens are not merchant credentials and must not be persisted.
-- **Salesforce Commerce Cloud / Demandware:** Detect Demandware static/store routes, headers, and site identifiers. Use live storefront search and product pages. Where standard SFRA forms exist, add a concrete variant, open `Checkout-Begin`, then submit the guest-email and shipping forms with their exact actions, field names, shipment UUIDs, method ID, and CSRF token. Customized sites remain browser-swarm/controller cases.
-- **OpenCart:** Detect `/catalog/view/` assets and `index.php?route=checkout/cart/add`. Product and required-option discovery are page-specific; post the concrete `product_id`, quantity, and required `option[...]` values to the cart route. If the write is challenged after readable GETs, classify it as an endpoint-specific bot wall and move the quote to browser-swarm.
+| Platform | Positive probe | Product and quote path |
+| --- | --- | --- |
+| Shopify | signed tokenless Storefront GraphQL returns `data.shop` | helper; discover one `.myshopify.com` backend from source when a custom origin does not proxy |
+| WooCommerce | Store API cart returns `totals` and `Cart-Token` | helper; product search → add simple item → update customer → `shipping_rates` |
+| Magento | page fingerprint plus guest-cart response | helper; use an exact simple SKU; open guest cart → item → estimate methods; otherwise record gated |
+| BigCommerce | BigCommerce CDN/Stencil marker | helper; `/search.php`/`BCData` → Storefront REST cart → checkout consignment |
+| Squarespace | commerce collection `?format=json` returns items and a crumb | helper; exact item/SKU → cart entry → shipping location |
+| Wix / Ecwid | platform bootstrap and public catalog token | public search only; destination quote requires the supported storefront runtime in BrowserSwarm |
+| Salesforce Commerce Cloud | Demandware routes/headers/site ID | follow exact SFRA forms when standard; customized controllers require BrowserSwarm |
+| OpenCart | `/catalog/view/` assets and cart route | page-specific product/options; challenged writes require BrowserSwarm |
 
-For every platform, an empty rate list is **no quote**, never free shipping. A zero value is free only when an explicit delivery method says so; pickup, paid-later freight, and quote-later placeholders are not free. Record fallback-labelled rates, wall/gate status, the tested product, destination, taxes exposed by the cart, and the date.
+Quote only to Jordan Smith, Pacific Prototyping LLC, 747 Howard St, San Francisco, CA 94103, US, +1 415-555-0132. Never create an account, enter payment, or place an order. Empty rates mean **no quote**. Zero is free only when a named delivery method says so; exclude pickup, paid-later, and quote-later methods. Record fallback labels, walls/gates, the tested product, taxes, and date.
 
 ## Learned storefront cache
 
-This untiered cache is operational memory, not a vendor ranking. It is keyed by normalized domain: update a matching row when reverified and append a row for a new domain. Shipping is a snapshot for the tested item and SF destination, not a policy promise. `none` means no wall appeared in the tested workflow; an API gate or browser boundary is stated separately.
+This untiered cache is operational memory, not a vendor ranking. It is keyed by normalized domain: update a matching row when reverified and append a row for a new domain. The 2026-07-31 seed includes all 62 distinct entry domains in the acceptance corpus, plus resolved aliases and other preferred-vendor facts. Shipping is a snapshot for the tested item and SF destination, not a policy promise. `none` means no wall appeared in the tested workflow; an API gate or browser boundary is stated separately.
 
 | Domain | Platform | Bot wall | Shipping facts | Verified |
 |---|---|---|---|---|
@@ -92,7 +93,7 @@ This untiered cache is operational memory, not a vendor ranking. It is keyed by 
 | `carex.com` | Shopify | none | SF: 9.99 USD across 1 rate(s) | 2026-07-31 |
 | `saslocksmiths.com` | Shopify | none | SF: no quote (empty rates) | 2026-07-31 |
 | `sikahealth.com` | Shopify | none | SF: no quote (empty rates) | 2026-07-31 |
-| `manorsgolf.com` | Shopify | none | SF: 10 USD across 1 rate(s) | 2026-07-31 |
+| `manorsgolf.com` | Shopify | none | SF: International Economy 10.00 USD | 2026-07-31 |
 | `nour-hammour.com` | Shopify | none | SF: explicit FREE rate, 0 USD | 2026-07-31 |
 | `attitudeliving.com` | Shopify | none | SF: 12.99 USD across 1 rate(s) | 2026-07-31 |
 | `actisense.com` | WooCommerce | none | SF: no quote (empty rates) | 2026-07-31 |
@@ -103,23 +104,27 @@ This untiered cache is operational memory, not a vendor ranking. It is keyed by 
 | `rope-source.co.uk` | WooCommerce | none | SF: 80 GBP across 1 rate(s) | 2026-07-31 |
 | `protosupplies.com` | WooCommerce | none | SF: 6.95–16.95 USD across 3 rate(s) | 2026-07-31 |
 | `makerstore.cc` | WooCommerce | none | SF: 6.01–35.35 USD across 7 rate(s) | 2026-07-31 |
-| `rotarysolutions.com` | WooCommerce | none | SF: 0 USD across 1 rate(s) | 2026-07-31 |
+| `rotarysolutions.com` | WooCommerce | none | SF: named Free shipping, 0 USD | 2026-07-31 |
 | `tech7000.com` | WooCommerce | none | SF: 19.95 USD across 1 rate(s); merchant fallback rate present | 2026-07-31 |
 | `store.nrgwave.com` | WooCommerce | none | SF: no quote (empty rates) | 2026-07-31 |
-| `myolyn.com` | WooCommerce | none | SF: 0 USD across 1 rate(s) | 2026-07-31 |
+| `myolyn.com` | WooCommerce | none | SF: named USPS Flat Rate Envelope: FREE, 0 USD | 2026-07-31 |
 | `dillonprecision.com` | Magento (guest API open) | none | SF: 11.95–44.45 USD across 3 rate(s); exclude pickup/non-delivery methods | 2026-07-31 |
 | `killerinktattoo.co.uk` | Magento (guest API open) | none | SF: 4.12–29.97 GBP across 2 rate(s); exclude pickup/non-delivery methods | 2026-07-31 |
 | `tilebar.com` | Magento (guest API open) | none | SF: 1 USD across 1 rate(s); exclude pickup/non-delivery methods | 2026-07-31 |
 | `decksdirect.com` | Magento (guest API open) | none | SF: 9.99–126.85 USD across 3 rate(s); exclude pickup/non-delivery methods | 2026-07-31 |
-| `barrdisplay.com` | Magento (guest API open) | none | SF: 0–100.2 USD across 5 rate(s); exclude pickup/non-delivery methods | 2026-07-31 |
+| `barrdisplay.com` | Magento (guest API open) | none | SF: 17.97–100.20 USD across 4 delivery rates; pickup excluded | 2026-07-31 |
 | `scoutshop.org` | Magento (guest API open) | none | SF: 3.95–30.72 USD across 3 rate(s); exclude pickup/non-delivery methods | 2026-07-31 |
+| `blanks.ca` | Magento (guest API open) | none | SF: FedEx Ground 29.54 CAD lowest of 5 cross-border delivery rates | 2026-07-31 |
+| `signet.net.au` | Magento (guest API open) | none | SF: only Freight 0 AUD on an account-priced item; non-actionable, not free shipping | 2026-07-31 |
+| `atxfitness.com` | Magento (guest API open) | none | SF: named Free Shipping, 0 USD on a 2,999 USD machine | 2026-07-31 |
 | `thecpapshop.com` | Magento (guest API open) | none | SF: 4.5–203.33 USD across 8 rate(s); exclude pickup/non-delivery methods | 2026-07-31 |
 | `bulkreefsupply.com` | Magento (guest API gated) | none | quote not reached; guest cart gated | 2026-07-31 |
+| `aheadworks.com` | Magento (guest API gated) | Cloudflare | quote not reached; Magento footprint with plain 401 guest endpoint | 2026-07-31 |
 | `hi-line.com` | BigCommerce | none | SF: 9.95 USD across 1 rate(s) | 2026-07-31 |
 | `hydraulichosetogo.com` | BigCommerce | none | SF: 17.99 USD across 1 rate(s) | 2026-07-31 |
 | `intlairtool.com` | BigCommerce | none | SF: 23.5–36.22 USD across 2 rate(s) | 2026-07-31 |
-| `spwindustrial.com` | BigCommerce | none | SF: 0–54.26 USD across 3 rate(s) | 2026-07-31 |
-| `fabricwarehouse.com` | BigCommerce | none | SF: 0–17 USD across 7 rate(s); a $0 paid-later method is not free | 2026-07-31 |
+| `spwindustrial.com` | BigCommerce | none | SF: named Free Shipping, 0 USD; FedEx 27.05–54.26 USD | 2026-07-31 |
+| `fabricwarehouse.com` | BigCommerce | none | SF: 3.70–17.00 USD across 6 delivery rates; $0 PAID LATER excluded | 2026-07-31 |
 | `buckleguy.com` | BigCommerce | none | SF: 8.99–50.8 USD across 6 rate(s) | 2026-07-31 |
 | `debrovys.com` | BigCommerce | none | SF: 3460.48–3685.48 USD across 2 rate(s) | 2026-07-31 |
 | `tackledirect.com` | BigCommerce | none | SF: 4.99–161.01 USD across 4 rate(s) | 2026-07-31 |
@@ -130,6 +135,7 @@ This untiered cache is operational memory, not a vendor ranking. It is keyed by 
 | `izzywheels.com` | Wix | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
 | `bestiehugs.com` | Wix | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
 | `holzbuchstaben.ch` | Wix | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
+| `malcowallshop.com` | Wix | none | redirects to `holzbuchstaben.ch`; SF quote not reached; storefront runtime/controller required | 2026-07-31 |
 | `northboundcoffee.com` | Ecwid | none | USD 5.00 Flat Rate pre-address fallback; SF quote not verified | 2026-07-31 |
 | `cakesafe.com` | Ecwid | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
 | `wyliebeckert.com` | Ecwid | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |

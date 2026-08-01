@@ -1,3 +1,8 @@
+---
+created: 2026-07-31
+verified: 2026-07-31
+---
+
 # Storefront platform APIs
 
 Use these workflows after search identifies a store and live product data or a destination shipping quote is needed. Start with plain HTTP. Escalate to BrowserSwarm only at an explicit browser boundary.
@@ -178,11 +183,13 @@ request = client.build_request("POST", target_url, json=payload)
 response = send_signed(client, request)
 ```
 
-`send_signed` is the only public signing surface. It loads `/Users/akelly/.agents/web-bot-auth/private.pem`, verifies that the Ed25519 public JWK thumbprint equals `PtFPEn59EWaohh4V82GazSOYlIBm3LqPOhoLUu--1So`, signs the prepared HTTPS authority with a fresh 64-byte nonce and 60-second lifetime, and immediately sends with redirects disabled. It rejects credentials, non-HTTPS targets, preexisting signature headers, and replay of the mutated request. Build a fresh request and obtain a fresh signature for any validated HTTPS redirect target. Never log generated signature headers.
+`send_signed` is the only public signing surface. It loads `/Users/akelly/.agents/web-bot-auth/private.pem`, verifies that the Ed25519 public JWK thumbprint equals `PtFPEn59EWaohh4V82GazSOYlIBm3LqPOhoLUu--1So`, signs the prepared HTTPS authority with a fresh 64-byte nonce and 60-second lifetime, and immediately sends with redirects disabled. It rejects credentials, non-HTTPS targets, preexisting signature headers, and replay of the mutated request. Follow at most one GraphQL redirect, require the validated API authority to remain unchanged, and build and sign a fresh request for that same-authority target. Never log generated signature headers.
 
-Shopify documents a better rate tier for authenticated bots. Bounded signed/unsigned trials at 3, 25, 50, and 100 requests all returned HTTP 200 on both paths and exposed no crossover or tier header, so the better tier is provider-documented but not empirically observable in this corpus.
+The public directory at the `Signature-Agent` URL serves the expected key in a signed response, and the local signer and directory signature both verify against that key.
 
-On 2026-07-31 the public directory served the expected key but its response lacked the directory profile's required `Signature` and `Signature-Input`. Verify a signed directory response after deploying the directory Worker change before claiming that the identity path is operational end to end.
+[Shopify's Storefront API limits](https://shopify.dev/docs/api/usage/limits#storefront-api-rate-limits) and [Web Bot Auth announcement](https://shopify.dev/changelog/bots-and-agents-should-identify-themselves-via-web-bot-auth) state that signed traffic receives higher limits than unsigned bots and that the baseline signed tier does not require Cloudflare enrollment. Shopify publishes neither numeric thresholds nor a caller-visible recognition signal. Bounded signed/unsigned trials at 3, 25, 50, and 100 requests all returned HTTP 200 without a crossover or tier header, so this key's Shopify classification remains unconfirmed; [Shopify Partner Support](https://help.shopify.com/en/partners/help-support/getting-support) is the confirmation path.
+
+On 2026-07-31 the helper produced a request that [Cloudflare's crawltest](https://developers.cloudflare.com/bots/reference/bot-verification/web-bot-auth/#44-add-the-headers-to-your-bots-requests) parsed as Web Bot Auth but reported as an unknown key with HTTP 401; a malformed control returned HTTP 400. Cloudflare documents 401 for a correctly formatted request with an unknown key and also permits it for a known key whose message failed verification, while 400 means the message was not accepted as Web Bot Auth. Because Shopify does not require Cloudflare enrollment for its baseline signed tier, this result neither proves nor disproves Shopify recognition.
 
 ### Corpus result
 
@@ -199,7 +206,7 @@ Twelve of twelve stores completed product discovery, cart creation, and a rate r
 | Carex | Liquid/custom domain | Standard $9.99 |
 | SAS Locksmiths | Australia Liquid | empty |
 | Sika Marketplace | Liquid/custom domain | empty |
-| Manors Golf | Hydrogen/Oxygen | international economy £7.43 |
+| Manors Golf | Hydrogen/Oxygen | international economy $10.00 USD |
 | Nour Hammour | Hydrogen/Oxygen | named `FREE`, €0.00 |
 | ATTITUDE Living | Hydrogen/Oxygen, `.myshopify.com` API | Standard $12.99 |
 
@@ -288,9 +295,9 @@ Ten of 12 stores exposed open guest carts and all 10 returned at least one metho
 
 | Store | Result |
 | --- | --- |
-| SparkFun | 9 rates; USPS Ground Advantage $9.69 |
+| SparkFun | 9 rates; lowest delivery rate $9.32 |
 | DecksDirect | 3 rates; FedEx Ground $9.99 |
-| Barr Display | 5 rates; FedEx Ground $17.97; pickup excluded |
+| Barr Display | 5 methods total; 4 delivery rates at $17.97–$100.20; $0 pickup excluded |
 | Scout Shop | 3 rates; USPS Ground $3.95 |
 | Blanks.ca | 5 cross-border rates; FedEx Ground C$29.54 |
 | Signet Australia | ambiguous $0 account/freight rate |
@@ -326,12 +333,12 @@ curl -X POST 'https://STORE/api/storefront/checkouts/CART_ID/consignments?includ
   -H 'Cookie: SHOP_SESSION_TOKEN=…' \
   -H 'X-SF-CSRF-TOKEN: …' \
   -H 'Content-Type: application/json' \
-  --data-binary '[{"shippingAddress":{"firstName":"Jordan","lastName":"Smith","company":"Pacific Prototyping LLC","address1":"747 Howard St","address2":"","city":"San Francisco","stateOrProvince":"California","stateOrProvinceCode":"CA","countryCode":"US","postalCode":"94103","phone":"4155550132","email":"jordan.smith@example.invalid"},"lineItems":[{"itemId":"PHYSICAL_ITEM_ID","quantity":1}]}]'
+  --data-binary '[{"address":{"firstName":"Jordan","lastName":"Smith","company":"Pacific Prototyping LLC","address1":"747 Howard St","address2":"","city":"San Francisco","stateOrProvince":"California","stateOrProvinceCode":"CA","countryCode":"US","postalCode":"94103","phone":"4155550132","customFields":[],"shouldSaveAddress":false},"lineItems":[{"itemId":"PHYSICAL_ITEM_ID","quantity":1}]}]'
 ```
 
 The minimum tested request needs only the session cookie, content type, and CSRF header. Missing CSRF returned 403 HTML; missing session returned 401 `Checkout not found`. Read `consignments[].availableShippingOptions[]` and interpret zero methods by label. Do not silently fall back to another endpoint.
 
-The older product-form `/cart.php` plus `/remote/v1/shipping-quote` estimator is a separately labeled diagnostic. It succeeded on 10/11 stores but Valin challenged `/cart.php`; that does not justify a browser because Valin's primary REST path worked. Use BrowserSwarm only when the primary REST request itself is blocked or customized beyond the standard contract.
+The product-form `/cart.php` plus `/remote/v1/shipping-quote` estimator is a separately labeled diagnostic. It succeeded on 10/11 stores but Valin challenged `/cart.php`; that does not justify a browser because Valin's primary REST path worked. Use BrowserSwarm only when the primary REST request itself is blocked or customized beyond the standard contract.
 
 ### Corpus result
 
@@ -345,7 +352,7 @@ Storefront REST cart creation and exact-address consignment quoting returned non
 | goBILDA | USPS $7.86; flat $11.99; FedEx $130.85/$210.48 |
 | International Air Tool | ground $23.50; FedEx Ground $36.22 |
 | SPW Industrial | named Free Shipping $0; FedEx $27.05/$54.26 |
-| Fabric Warehouse | `PAID LATER` $0 excluded; valid shipping from $3.70 |
+| Fabric Warehouse | `PAID LATER` $0 excluded; six valid rates at $3.70–$17.00 |
 | Buckleguy | flat $8.99; carriers $18.85–$50.80 |
 | DeBrovys | freight $3,460.48; liftgate $3,685.48 |
 | TackleDirect | economy $4.99 through expedited $161.01 |
@@ -353,7 +360,7 @@ Storefront REST cart creation and exact-address consignment quoting returned non
 
 ## Squarespace
 
-Read collection JSON from a commerce collection URL with `?format=json`. Resolve an exact item ID and SKU, then load the product page in one cookie jar to obtain the crumb. Add the item with a unique request ID:
+Read collection JSON from a commerce collection URL with `?format=json` in one cookie jar. Resolve an exact item ID and SKU and retain the `crumb` cookie set by that collection JSON response. Add the item with a unique request ID:
 
 ```sh
 curl -X POST 'https://STORE/api/commerce/shopping-cart/entries' \
@@ -454,11 +461,11 @@ No approved Affiliate credentials were available, so transport, encoding, respon
 Run deterministic unit tests from the repository root:
 
 ```sh
-uv run --with 'beautifulsoup4>=4.13,<5' --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
+uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 91/91 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 103/103 on 2026-07-31. It covers the core contract, CLI, all storefront adapters, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 
@@ -472,7 +479,7 @@ uv run skills/product-search/scripts/platform_api.py quote https://dernord.com '
 
 Live network probes are deliberate, not part of unit tests. Corpus inputs must remain bounded, and any raw diagnostic wire evidence belongs in a temporary directory rather than the repository.
 
-The dated long-tail corpus comprised 12 Shopify, 12 WooCommerce, 12 Magento controls/open stores, and 11 BigCommerce stores, plus three each for Squarespace, Wix, Ecwid, and Salesforce Commerce Cloud and the three tracked bot-wall unknowns. The core outcomes were:
+The dated storefront corpus contained 59 stores: 12 Shopify, 12 WooCommerce, 12 Magento (10 open and 2 gated controls), 11 BigCommerce, and 3 each for Squarespace, Wix, Ecwid, and Salesforce Commerce Cloud. Tracked vendors inside those counts were DERNORD and Mettle Air (Shopify), SparkFun (Magento), and goBILDA and ServoCity (BigCommerce). Three additional tracked wall investigations covered Bolt Depot, Glacier Tanks, and StepperOnline, for 62 distinct store entry domains overall; Glacier Tanks used the Magento workflow, while Bolt Depot and StepperOnline used their detected custom/OpenCart flows. The core outcomes were:
 
 | Platform | Product result | Cart/address result | SF shipping result |
 | --- | --- | --- | --- |
@@ -492,7 +499,8 @@ Tests should assert schemas and semantics, not live prices: multipart terminatio
 - [Shopify carrier rates through `@defer`](https://shopify.dev/changelog/fetching-carrier-calculated-rates-through-defer-directive-in-storefront-graphql-api)
 - [Shopify Storefront API rate limits](https://shopify.dev/docs/api/usage/limits#storefront-api-rate-limits)
 - [Shopify Web Bot Auth announcement](https://shopify.dev/changelog/bots-and-agents-should-identify-themselves-via-web-bot-auth)
-- [Cloudflare Web Bot Auth directory profile](https://developers.cloudflare.com/bots/reference/bot-verification/web-bot-auth/)
+- [Shopify Partner Support](https://help.shopify.com/en/partners/help-support/getting-support)
+- [Cloudflare Web Bot Auth and crawltest semantics](https://developers.cloudflare.com/bots/reference/bot-verification/web-bot-auth/)
 - [Google Merchant API products overview](https://developers.google.com/merchant/api/guides/products/overview)
 - [SerpApi Google Shopping API](https://serpapi.com/google-shopping-api)
 - [DataForSEO Google Shopping overview](https://docs.dataforseo.com/v3/merchant-google-overview/)
