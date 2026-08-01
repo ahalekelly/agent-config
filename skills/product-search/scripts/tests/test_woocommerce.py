@@ -16,7 +16,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from platform_api_core import DetectedStore, Http, parse_item_ref
+from platform_api_core import DetectedStore, Http, ToolError, parse_item_ref
 from platforms import woocommerce
 
 
@@ -80,6 +80,67 @@ class WooCommerceTests(unittest.TestCase):
             parse_item_ref(result["items"][0]["item_ref"], "woocommerce"),
             {"minimum": 1, "product_id": 19251, "product_type": "simple"},
         )
+
+    def test_search_rejects_boolean_integer_fields(self) -> None:
+        product = {
+            "id": 19251,
+            "name": "Soil Moisture Sensor",
+            "type": "simple",
+            "sku": "MOD-160",
+            "is_in_stock": True,
+            "is_purchasable": True,
+            "permalink": "https://store.example/product/sensor/",
+            "prices": {
+                "price": "595",
+                "currency_code": "USD",
+                "currency_minor_unit": 2,
+            },
+            "add_to_cart": {"minimum": 1},
+        }
+        cases = [
+            ("id", True),
+            ("minimum", True),
+            ("currency_minor_unit", True),
+        ]
+        for field, value in cases:
+            with self.subTest(field=field):
+                invalid = json.loads(json.dumps(product))
+                if field == "minimum":
+                    invalid["add_to_cart"][field] = value
+                elif field == "currency_minor_unit":
+                    invalid["prices"][field] = value
+                else:
+                    invalid[field] = value
+                http = Http(
+                    httpx.MockTransport(
+                        lambda request, invalid=invalid: httpx.Response(
+                            200, json=[invalid], request=request
+                        )
+                    )
+                )
+                with http.client, self.assertRaises(ToolError):
+                    woocommerce.search(http, detection(), "sensor")
+
+    def test_quote_rejects_boolean_integer_reference_fields(self) -> None:
+        cases = [
+            {"product_id": True, "product_type": "simple", "minimum": 1},
+            {"product_id": 19251, "product_type": "simple", "minimum": True},
+        ]
+        for payload in cases:
+            with self.subTest(payload=payload):
+                reference = woocommerce.item_ref("woocommerce", payload)
+                http = Http(
+                    httpx.MockTransport(
+                        lambda request: self.fail("invalid reference must not run HTTP")
+                    )
+                )
+                with http.client, self.assertRaisesRegex(ToolError, "item_ref"):
+                    woocommerce.quote(http, detection(), reference)
+
+    def test_selected_cart_item_rejects_boolean_product_id(self) -> None:
+        cart = {"items": [{"id": True, "key": "wrong-item"}]}
+        with self.assertRaisesRegex(ToolError, "exact selected product"):
+            woocommerce._selected_item_key(cart, 1)
 
     def test_quote_keeps_tax_and_fallback_distinct_and_cleanup_nonfatal(self) -> None:
         seen: list[tuple[str, str]] = []

@@ -126,7 +126,7 @@ class StorefrontBotWall(_StorefrontState):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not self.system or not isinstance(self.status, int):
+        if not self.system or type(self.status) is not int:
             raise ToolError("Bot-wall detection requires its system and HTTP status")
 
 
@@ -354,8 +354,8 @@ def money(amount: Any, currency: Any) -> dict[str, str]:
 def minor_money(amount: Any, currency: Any, digits: Any) -> dict[str, str]:
     if not isinstance(amount, str) or not re.fullmatch(r"-?\d+", amount):
         raise ToolError("Minor-unit amount must be an integer string")
-    if not isinstance(digits, int):
-        raise ToolError("Currency minor-unit count must be an integer")
+    if type(digits) is not int or not 0 <= digits <= 4:
+        raise ToolError("Currency minor-unit count must be an integer from 0 to 4")
     value = Decimal(amount).scaleb(-digits)
     normalized = money(value, currency)
     normalized["amount"] = f"{value:.{digits}f}"
@@ -713,8 +713,9 @@ def _quote_facts(context: QuoteContext) -> dict[str, Any]:
     if isinstance(context, ShopifyQuote):
         return {}
     if isinstance(context, WooCommerceQuote):
-        if not isinstance(context.cart_totals, dict) or not isinstance(
-            context.cleanup_status, int
+        if (
+            not isinstance(context.cart_totals, dict)
+            or type(context.cleanup_status) is not int
         ):
             raise ToolError("WooCommerce quote context has invalid facts")
         return {
@@ -1135,13 +1136,18 @@ def validate_result(result: dict[str, Any]) -> None:
         if kind == "gated" and (
             result.get("browser_required") is not True
             or not isinstance(result.get("endpoint"), str)
-        ):
-            raise ToolError("Gated result requires endpoint and browser_required=true")
-        if kind == "bot_wall" and (
-            not isinstance(result.get("system"), str) or "browser_required" in result
+            or type(result.get("status")) is not int
         ):
             raise ToolError(
-                "Bot-wall result requires a system and no browser_required field"
+                "Gated result requires integer status, endpoint, and browser_required=true"
+            )
+        if kind == "bot_wall" and (
+            not isinstance(result.get("system"), str)
+            or type(result.get("status")) is not int
+            or "browser_required" in result
+        ):
+            raise ToolError(
+                "Bot-wall result requires integer status, system, and no browser_required field"
             )
         if kind == "unsupported_operation" and not isinstance(
             result.get("browser_required"), bool
@@ -1374,9 +1380,9 @@ def _valid_quote_facts(value: dict[str, Any], platform: Platform) -> bool:
     if platform == "shopify":
         return True
     if platform == "woocommerce":
-        return isinstance(value["cart_totals"], dict) and isinstance(
-            value["cleanup_status"], int
-        )
+        return isinstance(value["cart_totals"], dict) and type(
+            value["cleanup_status"]
+        ) is int
     if platform == "magento":
         return (
             isinstance(value["item"], dict)

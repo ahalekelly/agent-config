@@ -19,12 +19,14 @@ from platform_api_core import (
     ShopifyQuote,
     ShopifySearch,
     ShopifyShipping,
+    StorefrontBotWall,
     ToolError,
     UnknownStore,
     WooCommerceQuote,
     WooCommerceShipping,
     canonical_url,
     item_ref,
+    minor_money,
     money,
     parse_item_ref,
     public_detection,
@@ -82,6 +84,16 @@ class DetectionTests(unittest.TestCase):
         self.assertEqual(
             set(public_detection(detection)), {"kind", "origin", "evidence"}
         )
+
+    def test_bot_wall_status_rejects_json_boolean(self) -> None:
+        with self.assertRaisesRegex(ToolError, "HTTP status"):
+            StorefrontBotWall(
+                origin="https://shop.example",
+                entry_url="https://shop.example/",
+                evidence=("challenge",),
+                system="cloudflare",
+                status=True,
+            )
 
 
 class ItemReferenceTests(unittest.TestCase):
@@ -221,6 +233,54 @@ class ResultTests(unittest.TestCase):
                 [option],
                 {"amount": "NaN", "currency": "USD"},
             )
+
+    def test_minor_unit_digits_require_a_bounded_nonnegative_integer(self) -> None:
+        for digits in (True, -1, 5):
+            with (
+                self.subTest(digits=digits),
+                self.assertRaisesRegex(ToolError, "minor-unit count"),
+            ):
+                minor_money("123", "USD", digits)
+
+        self.assertEqual(
+            minor_money("12345", "CLF", 4),
+            {"amount": "1.2345", "currency": "CLF"},
+        )
+
+    def test_cleanup_status_rejects_json_boolean(self) -> None:
+        with self.assertRaisesRegex(ToolError, "invalid facts"):
+            quote_outcome(
+                WooCommerceQuote(cart_totals={}, cleanup_status=True),
+                [],
+                money("10", "USD"),
+            )
+
+    def test_terminal_status_rejects_json_boolean(self) -> None:
+        outcomes = [
+            {
+                "kind": "gated",
+                "operation": "search",
+                "platform": "woocommerce",
+                "reason": "refused",
+                "endpoint": "/products",
+                "status": True,
+                "browser_required": True,
+            },
+            {
+                "kind": "bot_wall",
+                "operation": "search",
+                "platform": "woocommerce",
+                "reason": "challenge response",
+                "system": "cloudflare",
+                "status": True,
+            },
+        ]
+        for outcome in outcomes:
+            with (
+                self.subTest(kind=outcome["kind"]),
+                self.assertRaisesRegex(ToolError, "status"),
+            ):
+                validate_result(outcome)
 
     def test_quote_not_attempted_schema_is_closed(self) -> None:
         result = quote_not_attempted("shopify", "valve", 2)

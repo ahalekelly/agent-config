@@ -312,7 +312,9 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
     matches = [
         item
         for item in physical
-        if isinstance(item, dict) and item.get("productId") == product_id
+        if isinstance(item, dict)
+        and type(item.get("productId")) is int
+        and item["productId"] == product_id
     ]
     if len(matches) != 1:
         raise ToolError(

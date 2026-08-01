@@ -228,6 +228,17 @@ class SquarespaceTests(unittest.TestCase):
         for secret in ("crumb-secret", "cart-token-fixture"):
             self.assertNotIn(secret, durable)
 
+    def test_fulfillment_pickup_marker_requires_boolean(self) -> None:
+        option = {
+            "key": "ground",
+            "name": "Ground",
+            "price": {"decimalValue": "12.00", "currencyCode": "USD"},
+            "isPickup": "false",
+        }
+
+        with self.assertRaisesRegex(ToolError, "isPickup"):
+            squarespace._shipping_option(option)
+
     def test_quote_rejects_cart_identity_mismatch(self) -> None:
         added = json.loads(fixture("platform-squarespace-add.json"))
         added["newlyAdded"]["chosenVariant"]["sku"] = "WRONG"

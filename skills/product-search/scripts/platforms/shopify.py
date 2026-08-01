@@ -444,13 +444,23 @@ def _shipping_option(option: Any) -> dict[str, Any]:
         else _shopify_money({"value": estimated}, "value", "Shopify delivery option")
     )
     method = option.get("deliveryMethodType")
-    disposition = (
-        "pickup"
-        if method in {"PICK_UP", "LOCAL"}
-        else "paid_later"
-        if amount is None
-        else "delivery"
-    )
+    if not isinstance(method, str) or method not in {
+        "LOCAL",
+        "NONE",
+        "PICK_UP",
+        "PICKUP_POINT",
+        "RETAIL",
+        "SHIPPING",
+    }:
+        raise ToolError("Shopify delivery option has invalid deliveryMethodType")
+    if method in {"PICK_UP", "PICKUP_POINT", "RETAIL"}:
+        disposition = "pickup"
+    elif method == "NONE":
+        disposition = "unavailable"
+    elif amount is None:
+        disposition = "paid_later"
+    else:
+        disposition = "delivery"
     option_id = next(
         (
             value

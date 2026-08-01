@@ -274,6 +274,41 @@ class ShopifyTests(unittest.TestCase):
             ["ground", "Pickup"],
         )
 
+    def test_delivery_method_type_must_be_a_known_enum_value(self) -> None:
+        option = {
+            "handle": "ground",
+            "title": "Ground",
+            "code": "GROUND",
+            "description": None,
+            "estimatedCost": {"amount": "6.95", "currencyCode": "USD"},
+        }
+
+        expected = {
+            "SHIPPING": "delivery",
+            "LOCAL": "delivery",
+            "PICK_UP": "pickup",
+            "PICKUP_POINT": "pickup",
+            "RETAIL": "pickup",
+            "NONE": "unavailable",
+        }
+        for method, disposition in expected.items():
+            with self.subTest(method=method):
+                option["deliveryMethodType"] = method
+                self.assertEqual(
+                    shopify._shipping_option(option)["disposition"], disposition
+                )
+
+        option["deliveryMethodType"] = "UNKNOWN"
+        with self.assertRaisesRegex(shopify.ToolError, "deliveryMethodType"):
+            shopify._shipping_option(option)
+
+        for method in ([], {}):
+            with self.subTest(method=method), self.assertRaisesRegex(
+                shopify.ToolError, "deliveryMethodType"
+            ):
+                option["deliveryMethodType"] = method
+                shopify._shipping_option(option)
+
     def test_signed_redirect_uses_a_fresh_request(self) -> None:
         seen: list[httpx.Request] = []
 

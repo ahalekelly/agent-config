@@ -423,7 +423,10 @@ def _shipping_option(value: Any) -> dict[str, Any]:
     if not isinstance(price, dict):
         raise ToolError("Squarespace fulfillment option omitted its price")
     amount = money(price.get("decimalValue"), price.get("currencyCode"))
-    disposition = "pickup" if value.get("isPickup") is True else "delivery"
+    is_pickup = value.get("isPickup")
+    if not isinstance(is_pickup, bool):
+        raise ToolError("Squarespace fulfillment option isPickup must be boolean")
+    disposition = "pickup" if is_pickup else "delivery"
     return shipping_option(SquarespaceShipping(), option_id, title, disposition, amount)
 
 

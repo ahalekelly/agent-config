@@ -316,6 +316,46 @@ class BigCommerceTests(unittest.TestCase):
         for secret in ("cart-secret", "item-secret", "session-secret", "csrf-secret"):
             self.assertNotIn(secret, durable)
 
+    def test_quote_rejects_boolean_cart_product_id(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/precision-bearing/":
+                return response(
+                    request,
+                    content=fixture("platform-bigcommerce-product.html").replace(
+                        b'value="123"', b'value="1"'
+                    ),
+                    headers={"Content-Type": "text/html"},
+                )
+            if request.url.path == "/api/storefront/carts":
+                return response(
+                    request,
+                    json_value={
+                        "id": "cart-secret",
+                        "currency": {"code": "USD"},
+                        "lineItems": {
+                            "physicalItems": [
+                                {
+                                    "id": "wrong-item",
+                                    "productId": True,
+                                    "isShippingRequired": True,
+                                }
+                            ]
+                        },
+                    },
+                )
+            raise AssertionError("consignment must not run")
+
+        reference = item_ref(
+            "bigcommerce",
+            {
+                "product_id": 1,
+                "product_url": "https://bigcommerce.test/precision-bearing/",
+            },
+        )
+        http = Http(httpx.MockTransport(handler))
+        with http.client, self.assertRaisesRegex(ToolError, "exactly the selected"):
+            bigcommerce.quote(http, detection(), reference)
+
     def test_configuration_and_stale_identity_fail_before_cart(self) -> None:
         def configurable(request: httpx.Request) -> httpx.Response:
             if request.url.path == "/configured/":

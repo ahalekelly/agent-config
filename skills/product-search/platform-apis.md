@@ -169,7 +169,7 @@ Send:
 Accept: multipart/mixed; deferSpec=20220824, application/json
 ```
 
-The response is normally MIME multipart even for static rates. Parse the boundary, require JSON parts, apply incremental patches by path, and require a terminal `hasNext:false`. Do not concatenate bodies or assume the first part contains the rates. An empty `deliveryOptions` array is `empty`.
+The response is normally MIME multipart even for static rates. Parse the boundary, require JSON parts, apply incremental patches by path, and require a terminal `hasNext:false`. Do not concatenate bodies or assume the first part contains the rates. An empty `deliveryOptions` array is `empty`. Require Shopify's documented `deliveryMethodType` enum: `PICK_UP`, `PICKUP_POINT`, and `RETAIL` are pickup; `NONE` is unavailable; `LOCAL` and `SHIPPING` are delivery when priced; an unpriced delivery option is paid later. An unknown value is a schema error.
 
 Shopify's cart total is pre-tax in this public path; `totalTaxAmount` is deprecated and null. Updating selected delivery options can fold shipping into `totalAmount`, but does not make the result tax-inclusive.
 
@@ -186,7 +186,7 @@ response = send_signed(client, request)
 
 `send_signed` is the only public signing surface. It loads `/Users/akelly/.agents/web-bot-auth/private.pem`, verifies that the Ed25519 public JWK thumbprint equals `PtFPEn59EWaohh4V82GazSOYlIBm3LqPOhoLUu--1So`, signs the prepared HTTPS authority with a fresh 64-byte nonce and 60-second lifetime, and immediately sends with redirects disabled. It rejects credentials, non-HTTPS targets, preexisting signature headers, and replay of the mutated request. Follow at most one GraphQL redirect, require the validated API authority to remain unchanged, and build and sign a fresh request for that same-authority target. A redirect outside that boundary is a Shopify no-match during platform detection and a hard error during search or quote. Never log generated signature headers.
 
-The public directory at the `Signature-Agent` URL serves the expected public JWK as JSON over HTTPS. Local helper tests verify that the directory key matches the private signing key and that outbound Web Bot Auth requests verify against it. The directory response is not itself signed; TLS authenticates the fixed directory authority, while the outbound requests carry the Web Bot Auth signatures.
+The public directory at the `Signature-Agent` URL serves the expected public JWK as JSON over HTTPS. The checked-in Worker returns that JSON without generating an HTTP Message Signature, while the deployed endpoint additionally returns `Signature` and `Signature-Input` headers. Local helper tests verify outbound Web Bot Auth signatures and require the configured private key's public JWK thumbprint to equal the configured `kid`; they do not fetch or verify the deployed directory response.
 
 [Shopify's Storefront API limits](https://shopify.dev/docs/api/usage/limits#storefront-api-rate-limits) and [Web Bot Auth announcement](https://shopify.dev/changelog/bots-and-agents-should-identify-themselves-via-web-bot-auth) state that signed traffic receives higher limits than unsigned bots and that the baseline signed tier does not require Cloudflare enrollment. Shopify publishes neither numeric thresholds nor a caller-visible recognition signal. Bounded signed/unsigned trials at 3, 25, 50, and 100 requests all returned HTTP 200 without a crossover or tier header, so this key's Shopify classification remains unconfirmed; [Shopify Partner Support](https://help.shopify.com/en/partners/help-support/getting-support) is the confirmation path.
 
@@ -244,7 +244,7 @@ curl -X POST 'https://STORE/wp-json/wc/store/v1/cart/update-customer' \
   --data-binary '{"shipping_address":{"first_name":"Jordan","last_name":"Smith","company":"Pacific Prototyping LLC","address_1":"747 Howard St","address_2":"","city":"San Francisco","state":"CA","postcode":"94103","country":"US","phone":"4155550132"}}'
 ```
 
-Read `shipping_rates[].shipping_rates[]`. Prices and taxes are integer strings in `currency_minor_unit`; convert with decimal arithmetic. Preserve cart `totals.total_tax` and per-rate taxes when present. A `rate_id` ending `_fallback` is `fallback`, not a verified carrier rate. Cleanup with `DELETE /cart/items/<key>` is useful but separate from quote success; one tested store returned 403 on cleanup after a successful quote.
+Read `shipping_rates[].shipping_rates[]`. Prices and taxes are integer strings in `currency_minor_unit`; require an integer from 0 through 4 and convert with decimal arithmetic. Preserve cart `totals.total_tax` and per-rate taxes when present. A `rate_id` ending `_fallback` is `fallback`, not a verified carrier rate. Cleanup with `DELETE /cart/items/<key>` is useful but separate from quote success; one tested store returned 403 on cleanup after a successful quote.
 
 ### Corpus result
 
@@ -391,7 +391,7 @@ curl -X PUT 'https://STORE/api/3/commerce/cart/CART_TOKEN/shipping/location' \
   --data-binary '{"line1":"747 Howard St","line2":"Pacific Prototyping LLC","city":"San Francisco","region":"CA","postalCode":"94103","country":"US"}'
 ```
 
-Interpret both `shippingOptionsStatus` and `fulfillmentOptions`. Three exact-address cases produced: Marie Burgos KITSUI chair, Standard $161.13 and Oversized/Heavy $562.13; Frankly Good Coffee subscription, `SHIPPING_NOT_REQUIRED`; Archive07 shirt, `POSTAL_CODE_NOT_APPLICABLE`.
+Interpret both `shippingOptionsStatus` and `fulfillmentOptions`. Require every fulfillment option's `isPickup` field to be boolean; a missing or differently typed value is a schema error. Three exact-address cases produced: Marie Burgos KITSUI chair, Standard $161.13 and Oversized/Heavy $562.13; Frankly Good Coffee subscription, `SHIPPING_NOT_REQUIRED`; Archive07 shirt, `POSTAL_CODE_NOT_APPLICABLE`.
 
 ## Wix
 
@@ -511,7 +511,7 @@ The fresh run records platform detection and one literal search query per store.
 | Expected platform | Stores | Positive candidates | Empty search | Terminal/not run | Tool errors |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Shopify | 12 | 12 | 0 | 0 | 0 |
-| WooCommerce | 12 | 11 | 0 | 1 | 0 |
+| WooCommerce | 12 | 12 | 0 | 0 | 0 |
 | Magento | 12 | 8 | 4 | 0 | 0 |
 | BigCommerce | 11 | 8 | 2 | 1 | 0 |
 | Squarespace | 3 | 3 | 0 | 0 | 0 |
@@ -526,7 +526,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 159 tests plus 109 subtests on 2026-08-01. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passed 169 tests plus 136 subtests on 2026-08-01. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 

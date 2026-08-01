@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parents[1]))
 import platform_search_acceptance as acceptance
 
 EXPECTED_SOURCE_HASH = (
-    "ca14da8df33d4f9ee8bd4d9320edaf5227597b36c10d10da4adc1514e85d21bf"
+    "3a60da0c9860338e4025da7c8960ef46a90759e1fd032d42b1d8e609c6e69c7e"
 )
 
 
@@ -39,7 +39,7 @@ class SavedCorpusTests(unittest.TestCase):
         self.assertEqual(summary["row_count"], 59)
         self.assertEqual(summary["unique_domain_count"], 59)
         self.assertEqual(
-            sum(group["successes"] for group in summary["groups"].values()), 47
+            sum(group["successes"] for group in summary["groups"].values()), 48
         )
         self.assertEqual(sum(group["empty"] for group in summary["groups"].values()), 9)
         self.assertEqual(
@@ -149,6 +149,40 @@ class SavedCorpusTests(unittest.TestCase):
             "https://shop.example/api/storefront/carts"
         )
         cases.append((mutation, "mutating endpoint"))
+
+        for field in ("status", "bytes", "elapsed_ms"):
+            boolean_number = copy.deepcopy(self.rows)
+            boolean_number[0]["http_evidence"][0][field] = True
+            cases.append((boolean_number, "invalid numeric fields"))
+
+        for field in ("bytes", "elapsed_ms"):
+            negative_metric = copy.deepcopy(self.rows)
+            negative_metric[0]["http_evidence"][0][field] = -1
+            cases.append((negative_metric, "invalid numeric fields"))
+
+        for field in ("candidate_count", "selected_index"):
+            boolean_search_number = copy.deepcopy(self.rows)
+            boolean_search_number[0]["search"][field] = True
+            cases.append((boolean_search_number, "invalid numeric fields"))
+
+        boolean_terminal_status = copy.deepcopy(self.rows)
+        terminal = next(
+            row
+            for row in boolean_terminal_status
+            if row["search"]["kind"] == "bot_wall"
+        )
+        terminal["search"]["status"] = True
+        cases.append((boolean_terminal_status, "invalid numeric fields"))
+
+        boolean_detection_status = copy.deepcopy(self.rows)
+        boolean_detection_status[0]["detection"] = {
+            "kind": "bot_wall",
+            "origin": "https://www.dernord.com",
+            "system": "cloudflare",
+            "status": True,
+            "evidence": ["challenge"],
+        }
+        cases.append((boolean_detection_status, "invalid numeric fields"))
 
         unjoined = copy.deepcopy(self.rows)
         unjoined[0]["shipping_cache_domain"] = "missing.example"

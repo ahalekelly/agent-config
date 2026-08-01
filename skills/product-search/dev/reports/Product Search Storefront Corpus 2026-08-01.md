@@ -4,14 +4,14 @@ This read-only acceptance rerun used one literal query (`a`) per store with no a
 
 Opaque product references were hashed in memory and discarded. The JSONL contains only public detection evidence, whitelisted product fields, sanitized HTTP request metadata, and learned-cache domain joins.
 
-Every row carries source-tree SHA-256 `ca14da8df33d4f9ee8bd4d9320edaf5227597b36c10d10da4adc1514e85d21bf`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 10:06:29–10:10:55 UTC (2026-08-01 local time).
+Every row carries source-tree SHA-256 `3a60da0c9860338e4025da7c8960ef46a90759e1fd032d42b1d8e609c6e69c7e`, computed from `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`. The observation window was 2026-08-01 10:36:40–10:40:58 UTC (2026-08-01 local time).
 
 ## Summary
 
 | Expected group | Total | Positive candidates | Empty | Tool errors | Terminal/not run | Detection mismatches |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Shopify | 12 | 12 | 0 | 0 | 0 | 0 |
-| WooCommerce | 12 | 11 | 0 | 0 | 1 | 1 |
+| WooCommerce | 12 | 12 | 0 | 0 | 0 | 0 |
 | Magento | 12 | 8 | 4 | 0 | 0 | 0 |
 | BigCommerce | 11 | 8 | 2 | 0 | 1 | 0 |
 | Squarespace | 3 | 3 | 0 | 0 | 0 | 0 |
@@ -44,7 +44,7 @@ Every row carries source-tree SHA-256 `ca14da8df33d4f9ee8bd4d9320edaf5227597b36c
 | ProtoSupplies (`protosupplies.com`) | WooCommerce | woocommerce | search / wc_store_api | 20 | Dupont 2.54mm Connector Housing 14-Pin (10-Pack) | CON-35 |
 | Maker Store USA (`makerstore.cc`) | WooCommerce | woocommerce | search / wc_store_api | 20 | FORTIS E5X MCS T4.1 &#8211; Ethernet 5-Axis Motion Control System | ELEC-FORTIS-E5X |
 | Rotary Solutions (`rotarysolutions.com`) | WooCommerce | woocommerce | search / wc_store_api | 20 | Pro Jack 4000 | RJ40BBK |
-| Tech7000 (`tech7000.com`) | WooCommerce | unknown | not_run / — | — | — | — |
+| Tech7000 (`tech7000.com`) | WooCommerce | woocommerce | search / wc_store_api | 9 | Tech7000 25HA3 SSTK 3″ x 3 1/2″ Wrenches | 25HA325 |
 | NRG Wave (`store.nrgwave.com`) | WooCommerce | woocommerce | search / wc_store_api | 4 | PHYTO PRO MAXX | — |
 | MYOLYN (`myolyn.com`) | WooCommerce | woocommerce | search / wc_store_api | 17 | MyoCycle V1 Stimulation Cable | AS-0017 |
 | SparkFun (`sparkfun.com`) | Magento | magento | search / magento_graphql | 10 | USB OTG Cable - Female A to Micro-A - 4&quot; | CAB-11604 |
@@ -71,8 +71,8 @@ Every row carries source-tree SHA-256 `ca14da8df33d4f9ee8bd4d9320edaf5227597b36c
 | TackleDirect (`tackledirect.com`) | BigCommerce | bigcommerce | search / html_search_and_product_pages | 0 | — | — |
 | Valin (`valinonline.com`) | BigCommerce | bigcommerce | bot_wall / html_search_and_product_pages | — | — | — |
 | Frankly Good Coffee (`franklygoodcoffee.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 12 | Cold Brew Blend | Flagship-003-WB |
-| Archive07 (`archive07.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 25 | Spacebot V04 - Enamel Pin | SQ7114658 |
-| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1103 | Aimi Bar & Counter Stool | SQ5653938 |
+| Archive07 (`archive07.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 25 | Spacebot V02 - Enamel Pin | SQ4446814 |
+| Marie Burgos Collection (`marieburgoscollection.com`) | Squarespace | squarespace | search / squarespace_storefront_search | 1039 | Aimi Bar & Counter Stool | SQ5653938 |
 | Izzy Wheels (`izzywheels.com`) | Wix | wix | search / catalog_reader | 10 | Amalfi Lemons | — |
 | Bestie Hugs (`bestiehugs.com`) | Wix | wix | search / catalog_reader | 0 | — | — |
 | Holzbuchstaben (`holzbuchstaben.ch`) | Wix | wix | search / catalog_reader | 2 | Modern \| Apricot Orange | — |
@@ -85,7 +85,6 @@ Every row carries source-tree SHA-256 `ca14da8df33d4f9ee8bd4d9320edaf5227597b36c
 
 ## Detection mismatches
 
-- `tech7000.com`: expected `woocommerce`, observed kind `unknown` / platform `None`; search `not_run`.
 - `wyliebeckert.com`: expected `ecwid`, observed kind `unknown` / platform `None`; search `not_run`.
 
 The JSONL is the authoritative per-request evidence. Empty results mean only that the fixed query returned zero candidates at observation time. Tool errors and terminal outcomes were not retried with another query.

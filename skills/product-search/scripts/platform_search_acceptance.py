@@ -589,6 +589,13 @@ def validate_rows(
             }[detection["kind"]]
             if set(detection) != allowed:
                 raise SystemExit(f"detection has unsafe keys: {row['domain']}")
+            if (
+                detection["kind"] == "bot_wall"
+                and type(detection["status"]) is not int
+            ):
+                raise SystemExit(
+                    f"detection has invalid numeric fields: {row['domain']}"
+                )
             if detection.get("platform") == "magento" and detection.get(
                 "search_source"
             ) not in {"graphql", "html"}:
@@ -618,6 +625,18 @@ def validate_rows(
         }.get(search["kind"])
         if allowed_search_keys is None or set(search) != allowed_search_keys:
             raise SystemExit(f"search outcome has unsafe keys: {row['domain']}")
+        candidate_count = search["candidate_count"]
+        selected_index = search["selected_index"]
+        if (
+            candidate_count is not None
+            and (type(candidate_count) is not int or candidate_count < 0)
+        ) or (
+            selected_index is not None
+            and (type(selected_index) is not int or selected_index < 0)
+        ):
+            raise SystemExit(f"search outcome has invalid numeric fields: {row['domain']}")
+        if "status" in search and type(search["status"]) is not int:
+            raise SystemExit(f"search outcome has invalid numeric fields: {row['domain']}")
         if (
             detection is not None
             and detection.get("platform") == "magento"
@@ -650,6 +669,16 @@ def validate_rows(
         for request in row["http_evidence"]:
             if set(request) != HTTP_KEYS:
                 raise SystemExit(f"HTTP evidence has unsafe keys: {row['domain']}")
+            if (
+                type(request["status"]) is not int
+                or type(request["bytes"]) is not int
+                or request["bytes"] < 0
+                or type(request["elapsed_ms"]) is not int
+                or request["elapsed_ms"] < 0
+            ):
+                raise SystemExit(
+                    f"HTTP evidence has invalid numeric fields: {row['domain']}"
+                )
             if re.fullmatch(r"[0-9a-f]{64}", request["sha256"]) is None:
                 raise SystemExit(f"HTTP evidence hash is invalid: {row['domain']}")
             validate_read_only_request(request, row["domain"])

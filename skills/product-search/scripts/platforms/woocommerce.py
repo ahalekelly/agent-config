@@ -96,7 +96,7 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
     product_id = selected.get("product_id")
     product_type = selected.get("product_type")
     if (
-        not isinstance(product_id, int)
+        type(product_id) is not int
         or product_id <= 0
         or not isinstance(product_type, str)
     ):
@@ -106,7 +106,7 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
             "woocommerce", ["variation"], "Product requires an exact variation"
         )
     quantity = selected.get("minimum")
-    if not isinstance(quantity, int) or quantity <= 0:
+    if type(quantity) is not int or quantity <= 0:
         raise ToolError("WooCommerce item_ref has no positive integer minimum quantity")
 
     base = _api_base(detection)
@@ -194,7 +194,7 @@ def _product_item(value: Any) -> dict[str, Any]:
         value.get("type"),
     )
     if (
-        not isinstance(product_id, int)
+        type(product_id) is not int
         or product_id <= 0
         or not isinstance(name, str)
         or not isinstance(product_type, str)
@@ -207,7 +207,7 @@ def _product_item(value: Any) -> dict[str, Any]:
     if not isinstance(add_to_cart, dict):
         raise ToolError("WooCommerce product has no add_to_cart object")
     minimum = add_to_cart.get("minimum")
-    if not isinstance(minimum, int) or minimum <= 0:
+    if type(minimum) is not int or minimum <= 0:
         raise ToolError(
             "WooCommerce product minimum quantity must be a positive integer"
         )
@@ -242,7 +242,9 @@ def _selected_item_key(cart: dict[str, Any], product_id: int) -> str:
     matches = [
         item
         for item in items
-        if isinstance(item, dict) and item.get("id") == product_id
+        if isinstance(item, dict)
+        and type(item.get("id")) is int
+        and item["id"] == product_id
     ]
     if (
         len(matches) != 1
