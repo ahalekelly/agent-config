@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import copy
 import io
 import json
 import os
@@ -16,7 +17,25 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import aliexpress_affiliate  # noqa: E402
+import aliexpress_affiliate
+
+FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
+
+
+def load_fixture(name: str) -> object:
+    return json.loads((FIXTURES / name).read_text())
+
+
+def product_response(product: object) -> dict[str, object]:
+    return {
+        "aliexpress_affiliate_product_query_response": {
+            "resp_result": {
+                "resp_code": 200,
+                "resp_msg": "success",
+                "result": {"products": {"product": [product]}},
+            }
+        }
+    }
 
 
 class AliExpressAffiliateTest(unittest.TestCase):
@@ -82,7 +101,7 @@ class AliExpressAffiliateTest(unittest.TestCase):
             [
                 {
                     "evidence_class": "lead",
-                    "product_id": 123456789,
+                    "product_id": "123456789",
                     "title": "M3 brass heat-set inserts",
                     "product_url": "https://aliexpress.example/item/123",
                     "seller_url": "https://aliexpress.example/store/456",
@@ -98,6 +117,59 @@ class AliExpressAffiliateTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_every_malformed_normalized_field(self) -> None:
+        fixture = load_fixture("aggregator-aliexpress-malformed.json")
+        self.assertIsInstance(fixture, dict)
+        for field, malformed in fixture["malformed"].items():
+            product = copy.deepcopy(fixture["product"])
+            product[field] = malformed
+            with (
+                self.subTest(field=field),
+                patch.object(
+                    aliexpress_affiliate.urllib.request,
+                    "urlopen",
+                    return_value=io.BytesIO(
+                        json.dumps(product_response(product)).encode()
+                    ),
+                ),
+                self.assertRaisesRegex(RuntimeError, field),
+            ):
+                aliexpress_affiliate.search("query", "app-key", "private-secret")
+
+    def test_requires_listed_price_and_currency_together(self) -> None:
+        fixture = load_fixture("aggregator-aliexpress-malformed.json")
+        self.assertIsInstance(fixture, dict)
+        for missing in ("sale_price", "sale_price_currency"):
+            product = copy.deepcopy(fixture["product"])
+            del product[missing]
+            with (
+                self.subTest(missing=missing),
+                patch.object(
+                    aliexpress_affiliate.urllib.request,
+                    "urlopen",
+                    return_value=io.BytesIO(
+                        json.dumps(product_response(product)).encode()
+                    ),
+                ),
+                self.assertRaisesRegex(RuntimeError, "provide sale_price"),
+            ):
+                aliexpress_affiliate.search("query", "app-key", "private-secret")
+
+    def test_rejects_non_usd_currency_for_a_usd_query(self) -> None:
+        fixture = load_fixture("aggregator-aliexpress-malformed.json")
+        self.assertIsInstance(fixture, dict)
+        product = copy.deepcopy(fixture["product"])
+        product["target_sale_price_currency"] = "EUR"
+        with (
+            patch.object(
+                aliexpress_affiliate.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps(product_response(product)).encode()),
+            ),
+            self.assertRaisesRegex(RuntimeError, "target_sale_price_currency"),
+        ):
+            aliexpress_affiliate.search("query", "app-key", "private-secret")
+
     def test_fails_loudly_on_invalid_credentials_without_echoing_them(self) -> None:
         payload = {
             "error_response": {
@@ -107,13 +179,15 @@ class AliExpressAffiliateTest(unittest.TestCase):
                 "sub_msg": "test-key private-test-secret",
             }
         }
-        with patch.object(
-            aliexpress_affiliate.urllib.request,
-            "urlopen",
-            return_value=io.BytesIO(json.dumps(payload).encode()),
+        with (
+            patch.object(
+                aliexpress_affiliate.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps(payload).encode()),
+            ),
+            self.assertRaisesRegex(RuntimeError, "Invalid app Key") as raised,
         ):
-            with self.assertRaisesRegex(RuntimeError, "Invalid app Key") as raised:
-                aliexpress_affiliate.search("query", "test-key", "private-test-secret")
+            aliexpress_affiliate.search("query", "test-key", "private-test-secret")
         self.assertNotIn("private-test-secret", str(raised.exception))
         self.assertNotIn("test-key", str(raised.exception))
         self.assertIn("[redacted]", str(raised.exception))
@@ -127,13 +201,15 @@ class AliExpressAffiliateTest(unittest.TestCase):
                 }
             }
         }
-        with patch.object(
-            aliexpress_affiliate.urllib.request,
-            "urlopen",
-            return_value=io.BytesIO(json.dumps(payload).encode()),
+        with (
+            patch.object(
+                aliexpress_affiliate.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps(payload).encode()),
+            ),
+            self.assertRaisesRegex(RuntimeError, "product query failed") as raised,
         ):
-            with self.assertRaisesRegex(RuntimeError, "product query failed") as raised:
-                aliexpress_affiliate.search("query", "app-key", "private-secret")
+            aliexpress_affiliate.search("query", "app-key", "private-secret")
         self.assertNotIn("app-key", str(raised.exception))
         self.assertNotIn("private-secret", str(raised.exception))
 
@@ -146,13 +222,15 @@ class AliExpressAffiliateTest(unittest.TestCase):
             io.BytesIO(b"bad app-key private-secret"),
         )
         self.addCleanup(error.close)
-        with patch.object(
-            aliexpress_affiliate.urllib.request,
-            "urlopen",
-            side_effect=error,
+        with (
+            patch.object(
+                aliexpress_affiliate.urllib.request,
+                "urlopen",
+                side_effect=error,
+            ),
+            self.assertRaisesRegex(RuntimeError, "AliExpress HTTP 401") as raised,
         ):
-            with self.assertRaisesRegex(RuntimeError, "AliExpress HTTP 401") as raised:
-                aliexpress_affiliate.search("query", "app-key", "private-secret")
+            aliexpress_affiliate.search("query", "app-key", "private-secret")
         self.assertNotIn("app-key", str(raised.exception))
         self.assertNotIn("private-secret", str(raised.exception))
 
@@ -170,12 +248,12 @@ class AliExpressAffiliateTest(unittest.TestCase):
         with (
             patch.dict(os.environ, {}, clear=True),
             patch.object(sys, "argv", ["aliexpress_affiliate.py", "query"]),
-        ):
-            with self.assertRaisesRegex(
+            self.assertRaisesRegex(
                 SystemExit,
                 "ALIEXPRESS_APP_KEY and ALIEXPRESS_APP_SECRET are required",
-            ):
-                aliexpress_affiliate.main()
+            ),
+        ):
+            aliexpress_affiliate.main()
 
 
 if __name__ == "__main__":

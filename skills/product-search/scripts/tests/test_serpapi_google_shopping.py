@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import copy
 import io
 import json
 import os
@@ -16,7 +17,13 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import serpapi_google_shopping  # noqa: E402
+import serpapi_google_shopping
+
+FIXTURES = Path(__file__).parents[2] / "tests" / "fixtures"
+
+
+def load_fixture(name: str) -> object:
+    return json.loads((FIXTURES / name).read_text())
 
 
 class SerpApiGoogleShoppingTest(unittest.TestCase):
@@ -137,23 +144,72 @@ class SerpApiGoogleShoppingTest(unittest.TestCase):
             "shopping_results": [],
             "inline_shopping_results": [],
         }
-        with patch.object(
-            serpapi_google_shopping.urllib.request,
-            "urlopen",
-            return_value=io.BytesIO(json.dumps(payload).encode()),
+        with (
+            patch.object(
+                serpapi_google_shopping.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps(payload).encode()),
+            ),
+            self.assertRaisesRegex(RuntimeError, "incompatible"),
         ):
-            with self.assertRaisesRegex(RuntimeError, "incompatible"):
+            serpapi_google_shopping.search("query", "test-key")
+
+    def test_rejects_every_malformed_normalized_field(self) -> None:
+        fixture = load_fixture("aggregator-serpapi-malformed.json")
+        self.assertIsInstance(fixture, dict)
+        for field, malformed in fixture["malformed"].items():
+            result_key = (
+                "inline_shopping_results" if field == "link" else "shopping_results"
+            )
+            item_key = "inline_result" if field == "link" else "shopping_result"
+            item = copy.deepcopy(fixture[item_key])
+            item[field] = malformed
+            payload = {
+                "search_metadata": {
+                    "status": "Success",
+                    "processed_at": "2026-07-31 12:00:00 UTC",
+                },
+                result_key: [item],
+            }
+            with (
+                self.subTest(field=field),
+                patch.object(
+                    serpapi_google_shopping.urllib.request,
+                    "urlopen",
+                    return_value=io.BytesIO(json.dumps(payload).encode()),
+                ),
+                self.assertRaisesRegex(RuntimeError, field),
+            ):
                 serpapi_google_shopping.search("query", "test-key")
+
+    def test_rejects_malformed_retrieval_timestamp(self) -> None:
+        payload = {
+            "search_metadata": {
+                "status": "Success",
+                "processed_at": "yesterday",
+            }
+        }
+        with (
+            patch.object(
+                serpapi_google_shopping.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps(payload).encode()),
+            ),
+            self.assertRaisesRegex(RuntimeError, "processed_at"),
+        ):
+            serpapi_google_shopping.search("query", "test-key")
 
     def test_fails_loudly_on_provider_error_without_echoing_key(self) -> None:
         payload = {"error": "Invalid API key private-test-key"}
-        with patch.object(
-            serpapi_google_shopping.urllib.request,
-            "urlopen",
-            return_value=io.BytesIO(json.dumps(payload).encode()),
+        with (
+            patch.object(
+                serpapi_google_shopping.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps(payload).encode()),
+            ),
+            self.assertRaisesRegex(RuntimeError, "Invalid API key") as raised,
         ):
-            with self.assertRaisesRegex(RuntimeError, "Invalid API key") as raised:
-                serpapi_google_shopping.search("query", "private-test-key")
+            serpapi_google_shopping.search("query", "private-test-key")
         self.assertNotIn("private-test-key", str(raised.exception))
         self.assertIn("[redacted]", str(raised.exception))
 
@@ -166,13 +222,15 @@ class SerpApiGoogleShoppingTest(unittest.TestCase):
             io.BytesIO(b"bad private-test-key"),
         )
         self.addCleanup(error.close)
-        with patch.object(
-            serpapi_google_shopping.urllib.request,
-            "urlopen",
-            side_effect=error,
+        with (
+            patch.object(
+                serpapi_google_shopping.urllib.request,
+                "urlopen",
+                side_effect=error,
+            ),
+            self.assertRaisesRegex(RuntimeError, "SerpApi HTTP 401") as raised,
         ):
-            with self.assertRaisesRegex(RuntimeError, "SerpApi HTTP 401") as raised:
-                serpapi_google_shopping.search("query", "private-test-key")
+            serpapi_google_shopping.search("query", "private-test-key")
         self.assertNotIn("private-test-key", str(raised.exception))
 
     def test_rejects_empty_inputs_before_transport(self) -> None:
@@ -185,9 +243,9 @@ class SerpApiGoogleShoppingTest(unittest.TestCase):
         with (
             patch.dict(os.environ, {}, clear=True),
             patch.object(sys, "argv", ["serpapi_google_shopping.py", "query"]),
+            self.assertRaisesRegex(SystemExit, "SERPAPI_API_KEY is required"),
         ):
-            with self.assertRaisesRegex(SystemExit, "SERPAPI_API_KEY is required"):
-                serpapi_google_shopping.main()
+            serpapi_google_shopping.main()
 
 
 if __name__ == "__main__":
