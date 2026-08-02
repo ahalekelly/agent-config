@@ -48,15 +48,15 @@ Never use `rm` to delete files or directories, use the `trash` command instead s
 
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
 
-macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
-
-A shared headless browser daemon serves Playwright MCP instances over CDP port 9377. It lives in the `browser-swarm` submodule — before attaching anything to it, read `~/.agents/browser-swarm/README.md` for the attach recipe and resource rules (2-tab cap, stop after fan-outs). The submodule is a public repo, so keep private notes about it in `~/.agents/browser-swarm-reports/` rather than inside it.
-
 Typescript and Rust are also nice languages.
 
-There are often multiple of you running on different tasks in the same project, don't interfere with the other one's work, don't try to infer what they're doing and finish it for them. Sometimes I will also edit files while you're working.
+macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
-If I give you additional instructions mid task, you should still complete the original task unless I said otherwise. If I ask a question mid task, answer my question first, then resume what you were doing.
+To interact with web pages, spawn `browser-swarm-1...5` subagents — up to 5 in parallel, one per type, up to 2 tabs each. They come pre-wired to a shared headless browser daemon (Playwright MCP over CDP port 9377).
+
+There are often multiple agents working on different tasks in the same project, don't interfere with the other agent's work. Sometimes I will also edit files while you're working.
+
+If I give you additional instructions mid task, still complete the original task unless I said otherwise. If I ask a question mid task, answer my question first, then resume what you were working on.
 
 If you find a bug in one place in the code, look for other places where that same class of bug could have occured. More generally, whenever you learn something surprising, like finding a bug, think about what that tells you about the state of the codebase and where it indicates there are areas for improvement, if they're small changes just do them, if they're big changes suggest them to me.
 
