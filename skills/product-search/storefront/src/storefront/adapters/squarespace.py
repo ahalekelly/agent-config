@@ -7,7 +7,8 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import httpx
-from platform_api_core import (
+from storefront.core import (
+    DEFAULT_DESTINATION,
     DetectedStore,
     Http,
     SquarespaceQuote,
@@ -16,6 +17,7 @@ from platform_api_core import (
     ToolError,
     bot_wall,
     canonical_url,
+    destination_for,
     gated,
     item_ref,
     json_object,
@@ -30,16 +32,6 @@ from platform_api_core import (
 
 PLATFORM = "squarespace"
 MAX_PRODUCT_PAGES = 20
-DUMMY_SF = {
-    "line1": "747 Howard St",
-    "line2": "Pacific Prototyping LLC",
-    "city": "San Francisco",
-    "region": "CA",
-    "postalCode": "94103",
-    "country": "US",
-}
-
-
 def detect(
     response: httpx.Response, origin: str, entry_url: str
 ) -> DetectedStore | None:
@@ -140,7 +132,62 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
     return search_result(SquarespaceSearch(discovery="storefront_search"), query, items)
 
 
-def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
+def quote_many(
+    http: Http,
+    detection: DetectedStore,
+    lines: list[dict[str, Any]],
+    destination: dict[str, str],
+) -> dict[str, object]:
+    selected = []
+    for line in lines:
+        reference = parse_item_ref(line["ref"], PLATFORM)
+        if set(reference) != {"collection_url", "item_id", "sku"}:
+            raise ToolError("Squarespace ref has unexpected fields")
+        selected.append((reference["collection_url"], reference["item_id"], reference["sku"], line["quantity"]))
+    http.client.cookies.clear()
+    first_collection = selected[0][0]
+    collection = http.request("GET", first_collection, params={"format": "json"}, follow_redirects=True)
+    if collection.status_code != 200:
+        raise ToolError(f"Squarespace collection returned HTTP {collection.status_code}")
+    crumb = _cookie(http, "crumb")
+    headers = {"X-CSRF-Token": crumb, "Add-To-Cart-Id": str(uuid.uuid4())}
+    cart_token = None
+    for _, item_id, sku, quantity in selected:
+        response = http.request(
+            "POST", detection.origin + "/api/commerce/shopping-cart/entries",
+            headers=headers,
+            json={"itemId": item_id, "sku": sku, "quantity": quantity, "additionalFields": None},
+        )
+        terminal = _terminal("quote", "/api/commerce/shopping-cart/entries", response, "anonymous cart mutation refused")
+        if terminal:
+            return terminal
+        added = json_object(response, "Squarespace cart add")
+        cart = added.get("shoppingCart")
+        if response.status_code != 200 or not isinstance(cart, dict) or not isinstance(cart.get("cartToken"), str):
+            raise ToolError("Squarespace cart add omitted its cart token")
+        cart_token = cart["cartToken"]
+    if cart_token is None:
+        raise AssertionError("quote_many requires lines")
+    shipping_response = http.request(
+        "PUT", detection.origin + f"/api/3/commerce/cart/{cart_token}/shipping/location",
+        headers=headers, json=destination_for(PLATFORM, destination),
+    )
+    if shipping_response.status_code != 200:
+        raise ToolError(f"Squarespace shipping location returned HTTP {shipping_response.status_code}")
+    result = json_object(shipping_response, "Squarespace shipping location")
+    status = result.get("shippingOptionsStatus")
+    if status not in {"APPLICABLE_SHIPPING_OPTIONS", "SHIPPING_NOT_REQUIRED", "POSTAL_CODE_NOT_APPLICABLE"}:
+        raise ToolError(f"Squarespace returned unknown shippingOptionsStatus {status!r}")
+    subtotal_value = result.get("subtotal")
+    raw_options = result.get("fulfillmentOptions")
+    if not isinstance(subtotal_value, dict) or not isinstance(raw_options, list):
+        raise ToolError("Squarespace shipping response omitted subtotal or options")
+    subtotal = money(subtotal_value.get("decimalValue"), subtotal_value.get("currencyCode"))
+    options = [_shipping_option(value) for value in raw_options]
+    return quote_outcome(SquarespaceQuote(shipping_options_status=status), options, subtotal, no_quote_reason="empty_rate_list")
+
+
+def quote(http: Http, detection: DetectedStore, reference: object) -> dict[str, object]:
     selected = parse_item_ref(reference, PLATFORM)
     if set(selected) != {"collection_url", "item_id", "sku"}:
         raise ToolError("Squarespace item_ref has unexpected fields")
@@ -258,7 +305,7 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
         "PUT",
         detection.origin + f"/api/3/commerce/cart/{cart_token}/shipping/location",
         headers=headers,
-        json=DUMMY_SF,
+        json=destination_for(PLATFORM, DEFAULT_DESTINATION),
     )
     terminal = _terminal(
         "quote",
@@ -367,6 +414,7 @@ def _payload_items(
             regular = (
                 variant.get("priceMoney") if on_sale else None
             )
+            assets = product.get("assets", [])
             items.append(
                 {
                     "item_ref": item_ref(
@@ -379,6 +427,8 @@ def _payload_items(
                     ),
                     "item_id": product_id,
                     "title": title,
+                    "description": product.get("excerpt") or product.get("body") or "",
+                    "image_urls": [asset["assetUrl"] for asset in assets if isinstance(asset, dict) and isinstance(asset.get("assetUrl"), str)],
                     "variant": ", ".join(
                         f"{name}: {value}" for name, value in (attributes or {}).items()
                     )

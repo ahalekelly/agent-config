@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Any
 
 import httpx
-from platform_api_core import (
+from storefront.core import (
     DetectedStore,
     Http,
     StorefrontBotWall,
@@ -13,6 +13,7 @@ from platform_api_core import (
     WooCommerceSearch,
     WooCommerceShipping,
     bot_wall,
+    destination_for,
     gated,
     item_ref,
     json_list,
@@ -27,20 +28,6 @@ from platform_api_core import (
 )
 
 API_PATH = "/wp-json/wc/store/v1"
-ADDRESS = {
-    "first_name": "Jordan",
-    "last_name": "Smith",
-    "company": "Pacific Prototyping LLC",
-    "address_1": "747 Howard St",
-    "address_2": "",
-    "city": "San Francisco",
-    "state": "CA",
-    "postcode": "94103",
-    "country": "US",
-    "phone": "4155550132",
-}
-
-
 def detect(
     http: Http, origin: str, entry_url: str
 ) -> DetectedStore | StorefrontBotWall | None:
@@ -86,53 +73,51 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
     )
 
 
-def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
-    selected = parse_item_ref(reference, "woocommerce")
-    product_id = selected.get("product_id")
-    product_type = selected.get("product_type")
-    if (
-        type(product_id) is not int
-        or product_id <= 0
-        or not isinstance(product_type, str)
-    ):
-        raise ToolError("WooCommerce item_ref has no valid product identity")
-    if product_type not in {"simple", "variation"}:
-        return unsupported_configuration(
-            "woocommerce", ["variation"], "Product requires an exact variation"
-        )
-    quantity = selected.get("minimum")
-    if type(quantity) is not int or quantity <= 0:
-        raise ToolError("WooCommerce item_ref has no positive integer minimum quantity")
+def quote(http: Http, detection: DetectedStore, reference: object) -> dict[str, object]:
+    from storefront.core import DEFAULT_DESTINATION
+
+    return quote_many(http, detection, [{"ref": reference, "quantity": 1}], DEFAULT_DESTINATION)
+
+
+def quote_many(
+    http: Http,
+    detection: DetectedStore,
+    lines: list[dict[str, Any]],
+    destination: dict[str, str],
+) -> dict[str, object]:
+    selected_lines = []
+    for line in lines:
+        selected = parse_item_ref(line["ref"], "woocommerce")
+        product_id = selected.get("product_id")
+        product_type = selected.get("product_type")
+        minimum = selected.get("minimum")
+        if type(product_id) is not int or product_id <= 0 or product_type not in {"simple", "variation"}:
+            return unsupported_configuration("woocommerce", ["variation"], "Product requires an exact variation")
+        if type(minimum) is not int or line["quantity"] < minimum:
+            raise ToolError(f"WooCommerce product {product_id} requires quantity {minimum}")
+        selected_lines.append((product_id, line["quantity"]))
 
     base = _api_base(detection)
     cart_response = http.request("GET", f"{base}/cart")
     terminal = _terminal_response("quote", cart_response)
     if terminal is not None:
         return terminal
-    cart = json_object(cart_response, "WooCommerce cart")
-    _cart_totals(cart, "WooCommerce cart")
+    _cart_totals(json_object(cart_response, "WooCommerce cart"), "WooCommerce cart")
     token = cart_response.headers.get("Cart-Token")
     if not token:
         raise ToolError("WooCommerce cart response has no Cart-Token")
     headers = {"Cart-Token": token}
-
-    add_response = http.request(
-        "POST",
-        f"{base}/cart/add-item",
-        headers=headers,
-        json={"id": product_id, "quantity": quantity},
-    )
-    terminal = _terminal_response("quote", add_response)
-    if terminal is not None:
-        return terminal
-    added_cart = json_object(add_response, "WooCommerce add item")
-    item_key = _selected_item_key(added_cart, product_id)
+    item_keys = []
+    for product_id, quantity in selected_lines:
+        response = http.request("POST", f"{base}/cart/add-item", headers=headers, json={"id": product_id, "quantity": quantity})
+        terminal = _terminal_response("quote", response)
+        if terminal is not None:
+            return terminal
+        item_keys.append(_selected_item_key(json_object(response, "WooCommerce add item"), product_id))
 
     update_response = http.request(
-        "POST",
-        f"{base}/cart/update-customer",
-        headers=headers,
-        json={"shipping_address": ADDRESS},
+        "POST", f"{base}/cart/update-customer", headers=headers,
+        json={"shipping_address": destination_for("woocommerce", destination)},
     )
     terminal = _terminal_response("quote", update_response)
     if terminal is not None:
@@ -140,14 +125,12 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
     updated_cart = json_object(update_response, "WooCommerce customer update")
     subtotal, totals = _cart_totals(updated_cart, "WooCommerce customer update")
     options = _shipping_options(updated_cart, subtotal["currency"])
-
-    cleanup_response = http.request(
-        "DELETE", f"{base}/cart/items/{item_key}", headers=headers
-    )
+    cleanup_statuses = [
+        http.request("DELETE", f"{base}/cart/items/{item_key}", headers=headers).status_code
+        for item_key in item_keys
+    ]
     return quote_outcome(
-        WooCommerceQuote(
-            cart_totals=totals, cleanup_status=cleanup_response.status_code
-        ),
+        WooCommerceQuote(cart_totals=totals, cleanup_status=max(cleanup_statuses)),
         options,
         subtotal,
     )
@@ -206,8 +189,11 @@ def _product_item(value: Any) -> dict[str, Any]:
         raise ToolError(
             "WooCommerce product minimum quantity must be a positive integer"
         )
+    images = value.get("images", [])
     return {
         "name": name,
+        "description": value.get("short_description") or value.get("description"),
+        "image_urls": [image["src"] for image in images if isinstance(image, dict) and isinstance(image.get("src"), str)],
         "sku": value.get("sku"),
         "type": product_type,
         "available": value.get("is_in_stock"),

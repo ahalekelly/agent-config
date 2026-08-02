@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Literal, cast
 from urllib.parse import urljoin, urlsplit
 
 import httpx
-from platform_api_core import (
+from storefront.core import (
     DetectedStore,
     EcwidSearch,
     Http,
@@ -191,9 +191,13 @@ def _wix_item(detection: DetectedStore, value: Any) -> dict[str, Any]:
     )
     current = money(price.get("discountedPrice"), price.get("currency"))
     regular = money(price.get("price"), price.get("currency"))
+    media = value.get("media")
+    media_items = media.get("items", []) if isinstance(media, dict) else []
     item = {
         "id": product_id,
         "name": name,
+        "description": value.get("description", ""),
+        "image_urls": [entry["image"]["url"] for entry in media_items if isinstance(entry, dict) and isinstance(entry.get("image"), dict) and isinstance(entry["image"].get("url"), str)],
         "sku": sku,
         "available": stock["inStock"],
         "price": current,
@@ -324,9 +328,12 @@ def _ecwid_item(store_id: str, currency: str, value: Any) -> dict[str, Any]:
     if not isinstance(product_url, str) or not product_url:
         raise ToolError("Ecwid product requires a public URL")
     options = _named_values(value.get("options"), "name", "Ecwid product options")
+    gallery = value.get("galleryImages", [])
     item = {
         "id": product_id,
         "name": name,
+        "description": value.get("description", ""),
+        "image_urls": [entry["url"] for entry in gallery if isinstance(entry, dict) and isinstance(entry.get("url"), str)],
         "sku": sku,
         "available": value["enabled"] and value["inStock"],
         "price": money(value.get("price"), currency),

@@ -9,15 +9,17 @@ from urllib.parse import quote as url_quote
 from urllib.parse import unquote, urljoin
 
 import httpx
-from platform_api_core import (
+from storefront.core import (
     BigCommerceQuote,
     BigCommerceSearch,
     BigCommerceShipping,
+    DEFAULT_DESTINATION,
     DetectedStore,
     Http,
     ToolError,
     bot_wall,
     canonical_url,
+    destination_for,
     gated,
     item_ref,
     json_object,
@@ -33,23 +35,6 @@ from platform_api_core import (
 
 PLATFORM = "bigcommerce"
 MAX_PRODUCT_PAGES = 3
-DUMMY_SF = {
-    "firstName": "Jordan",
-    "lastName": "Smith",
-    "company": "Pacific Prototyping LLC",
-    "address1": "747 Howard St",
-    "address2": "",
-    "city": "San Francisco",
-    "stateOrProvince": "California",
-    "stateOrProvinceCode": "CA",
-    "countryCode": "US",
-    "postalCode": "94103",
-    "phone": "4155550132",
-    "customFields": [],
-    "shouldSaveAddress": False,
-}
-
-
 def detect(
     response: httpx.Response, origin: str, entry_url: str
 ) -> DetectedStore | None:
@@ -227,7 +212,68 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
     return search_result(BigCommerceSearch(), query, items)
 
 
-def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, object]:
+def quote_many(
+    http: Http,
+    detection: DetectedStore,
+    lines: list[dict[str, Any]],
+    destination: dict[str, str],
+) -> dict[str, object]:
+    selected = []
+    for line in lines:
+        reference = parse_item_ref(line["ref"], PLATFORM)
+        product_id = reference.get("product_id")
+        if type(product_id) is not int or product_id <= 0:
+            raise ToolError("BigCommerce ref has an invalid product ID")
+        selected.append((product_id, line["quantity"]))
+    http.client.cookies.clear()
+    created = http.request(
+        "POST", detection.origin + "/api/storefront/carts",
+        json={"lineItems": [{"quantity": quantity, "productId": product_id, "optionSelections": []} for product_id, quantity in selected]},
+    )
+    terminal = _terminal("quote", "/api/storefront/carts", created, "anonymous Storefront cart API refused")
+    if terminal:
+        return terminal
+    if created.status_code != 200:
+        raise ToolError(f"BigCommerce Storefront cart creation returned HTTP {created.status_code}")
+    cart = json_object(created, "BigCommerce Storefront cart")
+    cart_id = cart.get("id")
+    currency = cart.get("currency")
+    currency_code = currency.get("code") if isinstance(currency, dict) else None
+    line_items = cart.get("lineItems")
+    physical = line_items.get("physicalItems") if isinstance(line_items, dict) else None
+    if not isinstance(cart_id, str) or not isinstance(currency_code, str) or not isinstance(physical, list):
+        raise ToolError("BigCommerce cart omitted identity, currency, or physical items")
+    consign_items = []
+    for product_id, quantity in selected:
+        matches = [value for value in physical if isinstance(value, dict) and value.get("productId") == product_id]
+        if len(matches) != 1 or not isinstance(matches[0].get("id"), str):
+            raise ToolError("BigCommerce cart did not contain each selected product exactly once")
+        consign_items.append({"itemId": matches[0]["id"], "quantity": quantity})
+    response = http.request(
+        "POST", detection.origin + f"/api/storefront/checkouts/{url_quote(cart_id, safe='')}/consignments",
+        params={"include": "consignments.availableShippingOptions"},
+        headers={"Cookie": f"SHOP_SESSION_TOKEN={_cookie(http, 'SHOP_SESSION_TOKEN')}", "X-SF-CSRF-TOKEN": _cookie(http, "SF-CSRF-TOKEN")},
+        json=[{"address": destination_for(PLATFORM, destination), "lineItems": consign_items}],
+    )
+    terminal = _terminal("quote", "/api/storefront/checkouts/[redacted]/consignments", response, "anonymous Storefront consignment API refused")
+    if terminal:
+        return terminal
+    if response.status_code != 200:
+        raise ToolError(f"BigCommerce Storefront consignment returned HTTP {response.status_code}")
+    checkout = json_object(response, "BigCommerce shipping quote")
+    consignments = checkout.get("consignments")
+    if not isinstance(consignments, list):
+        raise ToolError("BigCommerce checkout omitted consignments")
+    options = []
+    for consignment in consignments:
+        raw = consignment.get("availableShippingOptions") if isinstance(consignment, dict) else None
+        if not isinstance(raw, list):
+            raise ToolError("BigCommerce consignment omitted shipping options")
+        options.extend(_shipping_option(value, currency_code) for value in raw)
+    return quote_outcome(BigCommerceQuote(selected_sku=None), options, money(cart.get("baseAmount"), currency_code))
+
+
+def quote(http: Http, detection: DetectedStore, reference: object) -> dict[str, object]:
     selected = parse_item_ref(reference, PLATFORM)
     if set(selected) != {"product_id", "product_url"}:
         raise ToolError("BigCommerce item_ref has unexpected fields")
@@ -342,7 +388,7 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
         + f"/api/storefront/checkouts/{url_quote(cart_id, safe='')}/consignments",
         params={"include": "consignments.availableShippingOptions"},
         headers={"Cookie": f"SHOP_SESSION_TOKEN={session}", "X-SF-CSRF-TOKEN": csrf},
-        json=[{"address": DUMMY_SF, "lineItems": [{"itemId": item_id, "quantity": 1}]}],
+        json=[{"address": destination_for(PLATFORM, DEFAULT_DESTINATION), "lineItems": [{"itemId": item_id, "quantity": 1}]}],
     )
     terminal = _terminal(
         "quote",

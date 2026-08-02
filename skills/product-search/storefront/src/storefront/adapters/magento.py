@@ -9,7 +9,8 @@ from urllib.parse import quote as url_quote
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
-from platform_api_core import (
+from storefront.core import (
+    DEFAULT_DESTINATION,
     Http,
     MagentoDetectedStore,
     MagentoQuote,
@@ -18,6 +19,7 @@ from platform_api_core import (
     ToolError,
     bot_wall,
     canonical_url,
+    destination_for,
     gated,
     item_ref,
     json_list,
@@ -46,6 +48,9 @@ query ProductDetail($sku: String!) {
   products(search: $sku, pageSize: 20) {
     items {
       __typename name sku stock_status url_key
+      description { html }
+      short_description { html }
+      media_gallery { url }
       price_range {
         minimum_price {
           final_price { value currency }
@@ -70,20 +75,6 @@ query ProductDetail($sku: String!) {
   }
 }
 """
-
-DUMMY_SF = {
-    "firstname": "Jordan",
-    "lastname": "Smith",
-    "company": "Pacific Prototyping LLC",
-    "street": ["747 Howard St"],
-    "city": "San Francisco",
-    "region": "California",
-    "region_code": "CA",
-    "region_id": 12,
-    "postcode": "94103",
-    "country_id": "US",
-    "telephone": "4155550132",
-}
 
 MAX_SEARCH_RESULTS = 10
 
@@ -395,8 +386,73 @@ def _graphql_search(
     )
 
 
+def quote_many(
+    http: Http,
+    detection: MagentoDetectedStore,
+    lines: list[dict[str, Any]],
+    destination: dict[str, str],
+) -> dict[str, object]:
+    origin = _magento_origin(detection)
+    selected = []
+    for line in lines:
+        reference = parse_item_ref(line["ref"], "magento")
+        sku = reference.get("sku")
+        if not isinstance(sku, str) or not sku or any(character in sku for character in "\r\n"):
+            raise ToolError("Magento ref requires one nonempty simple SKU")
+        selected.append((sku, line["quantity"]))
+    create = http.request("POST", origin + "/rest/V1/guest-carts", headers={"Content-Type": "application/json"}, content=b"{}")
+    denied = _denied("quote", "/rest/V1/guest-carts", create, "guest cart API refused")
+    if denied:
+        return denied
+    if create.status_code not in {200, 201}:
+        raise ToolError(f"Magento guest cart returned HTTP {create.status_code}")
+    token = create.json()
+    if not isinstance(token, str) or not 16 <= len(token) <= 128:
+        raise ToolError("Magento guest cart did not return a masked-ID string")
+    cart_path = "/rest/V1/guest-carts/" + quote_path(token)
+    added_items = []
+    for sku, quantity in selected:
+        response = http.request(
+            "POST", origin + cart_path + "/items",
+            headers={"Content-Type": "application/json"},
+            json={"cartItem": {"sku": sku, "qty": quantity, "quote_id": token}},
+        )
+        denied = _denied("quote", "/rest/V1/guest-carts/[redacted]/items", response, "guest cart item API refused")
+        if denied:
+            return denied
+        if response.status_code not in {200, 201}:
+            raise ToolError(f"Magento rejected SKU {sku!r} with HTTP {response.status_code}")
+        added = json_object(response, "Magento add item")
+        if added.get("sku") != sku or Decimal(str(added.get("qty"))) != quantity:
+            raise ToolError("Magento add item did not return the selected SKU and quantity")
+        added_items.append({"sku": sku, "title": added.get("name"), "quantity": quantity})
+    totals_response = http.request("GET", origin + cart_path + "/totals")
+    if totals_response.status_code != 200:
+        raise ToolError(f"Magento guest cart totals returned HTTP {totals_response.status_code}")
+    totals = json_object(totals_response, "Magento guest cart totals")
+    quote_currency = totals.get("quote_currency_code")
+    base_currency = totals.get("base_currency_code")
+    if not isinstance(quote_currency, str) or not isinstance(base_currency, str) or totals.get("subtotal") is None:
+        raise ToolError("Magento guest cart totals omitted subtotal or currency")
+    subtotal = money(totals["subtotal"], quote_currency)
+    rates_response = http.request(
+        "POST", origin + cart_path + "/estimate-shipping-methods",
+        headers={"Content-Type": "application/json"},
+        json={"address": destination_for("magento", destination)},
+    )
+    if rates_response.status_code != 200:
+        raise ToolError(f"Magento shipping estimate returned HTTP {rates_response.status_code}")
+    raw_rates = json_list(rates_response, "Magento shipping estimate")
+    options = [_rate_option(rate, quote_currency, base_currency) for rate in raw_rates]
+    return quote_outcome(
+        MagentoQuote(item={"lines": added_items}, base_subtotal=money(totals["base_subtotal"], base_currency) if totals.get("base_subtotal") is not None else None, subtotal_incl_tax=money(totals["subtotal_incl_tax"], quote_currency) if totals.get("subtotal_incl_tax") is not None else None),
+        options, subtotal,
+        no_quote_reason="empty_rate_list" if not raw_rates else "no_comparable_delivery_rate",
+    )
+
+
 def quote(
-    http: Http, detection: MagentoDetectedStore, reference: str
+    http: Http, detection: MagentoDetectedStore, reference: object
 ) -> dict[str, object]:
     origin = _magento_origin(detection)
     selected = parse_item_ref(reference, "magento")
@@ -490,7 +546,7 @@ def quote(
         "POST",
         origin + cart_path + "/estimate-shipping-methods",
         headers={"Content-Type": "application/json"},
-        json={"address": DUMMY_SF},
+        json={"address": destination_for("magento", DEFAULT_DESTINATION)},
     )
     denied = _denied(
         "quote",
@@ -705,9 +761,13 @@ def _graphql_item(
         for value in attributes
         if isinstance(value, dict) and value.get("label")
     ]
+    description_value = parent.get("short_description") or parent.get("description")
+    media = parent.get("media_gallery", [])
     return {
         "item_ref": item_ref("magento", {"sku": sku}),
         "title": parent.get("name") or product.get("name"),
+        "description": description_value.get("html", "") if isinstance(description_value, dict) else "",
+        "image_urls": [value["url"] for value in media if isinstance(value, dict) and isinstance(value.get("url"), str)],
         "variant": ", ".join(labels)
         or (product.get("name") if product is not parent else None),
         "sku": sku,
@@ -909,9 +969,13 @@ def _json_ld_item(
         ),
         None,
     )
+    raw_images = product.get("image", [])
+    images = raw_images if isinstance(raw_images, list) else [raw_images]
     return {
         "item_ref": item_ref("magento", {"sku": sku}),
         "title": parent_name or product.get("name"),
+        "description": product.get("description", ""),
+        "image_urls": [value for value in images if isinstance(value, str)],
         "variant": product.get("name") if parent_name else None,
         "sku": sku,
         "barcode": barcode,
