@@ -13,3 +13,8 @@ node_modules/
 .cc-writes/
 .agents/
 .playwright-mcp/
+
+# Python runtime caches for the product-search helpers.
+.pytest_cache/
+.ruff_cache/
+skills/product-search/scripts/**/__pycache__/

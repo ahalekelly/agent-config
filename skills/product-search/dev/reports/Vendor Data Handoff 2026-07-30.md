@@ -21,7 +21,7 @@ So the browser is now the residue path, not the main one.
 |---|---|
 | `product-search/SKILL.md` | source ladder, platform storefront API technique, pricing pass |
 | `product-search/vendors.md` | per-vendor cached facts incl. Amazon's access situation |
-| `product-search/dev/MEMORY.md` | benchmark data, agentic-commerce landscape, leads |
+| `product-search/dev/reports/Vendor Data Access.md` | benchmark data, agentic-commerce landscape, leads |
 
 ## Next steps, in order
 
@@ -37,4 +37,4 @@ Drop the ACP/UCP thread unless wanted for its own sake — neither protocol is a
 
 - **Org monthly spend limit reached** — killed the ACP agent; further delegation fails until it resets. Items 1–3 above are shell work that doesn't need agents.
 - **Eight unpushed commits** on `~/.agents` main, five from this session. Uncommitted changes to `settings.json`, `statusline.sh` and the `pi-for-claude` submodule are not from this session.
-- Unverified leads carried in `dev/MEMORY.md`: Magento, storefront search providers shipping public Algolia/Searchspring keys, the free-API-key list.
+- Unverified leads carried in `dev/reports/Vendor Data Access.md`: Magento, storefront search providers shipping public Algolia/Searchspring keys, the free-API-key list.
