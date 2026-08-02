@@ -29,7 +29,7 @@ The destination defaults to 747 Howard St, San Francisco, CA 94103, US. Override
 Amazon's undocumented All Offers Display endpoint provides useful primary-source data for a known US ASIN without an API credential. It does not search Amazon. Discover the product first, then pass its exact ASIN or US `/dp/` URL to the bounded helper:
 
 ```sh
-AMAZON_PRODUCT=/Users/akelly/.agents/skills/product-search/scripts/amazon_product.py
+AMAZON_PRODUCT=scripts/amazon_product.py
 
 uv run "$AMAZON_PRODUCT" B0CZP3CDSZ
 uv run "$AMAZON_PRODUCT" 'https://www.amazon.com/dp/B0CZP3CDSZ'
