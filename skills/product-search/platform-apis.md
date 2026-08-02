@@ -20,7 +20,7 @@ uv run --project storefront storefront images r1.1.1 1:3
 
 `search`, `product`, and `quote` are batch commands. They group work by canonical store, run up to five stores concurrently, keep one session per store, consult the vendor registry before detection, and preserve input order. `--redetect` refreshes registry facts. `--debug` adds detection and request evidence omitted from token-lean default output.
 
-Search emits product-level handles, never variant refs. Product detail emits strict readable refs per variant. Handles are seven-day conveniences tied to a monotonic run ID; refs are durable exact identities and are reverified against the live store.
+Search emits product-level handles, never variant refs. Product detail emits strict readable refs per variant. Handles are seven-day conveniences tied to a monotonic run ID; refs are durable exact identities and are reverified against the live store. Product URLs containing queries or fragments are rejected rather than dropping possible identity components; use a durable ref instead.
 
 The destination defaults to 747 Howard St, San Francisco, CA 94103, US. Override it persistently with `config set-destination` or per quote with `--destination`. Create only anonymous carts needed for rates. Never submit an order, create an account, enter payment, or repeatedly mutate a challenged endpoint. Empty rates mean no quote, never free shipping. Exclude pickup, deferred freight, paid-later, and quote-later methods from delivered-price comparisons.
 
@@ -49,7 +49,7 @@ Homepage redirects establish the canonical storefront origin. The registry recor
 
 | Platform | Positive evidence | Product path | Quote path |
 | --- | --- | --- | --- |
-| Shopify | tokenless Storefront GraphQL returns `data.shop`; source may identify one `.myshopify.com` API origin | product-by-handle / exact variant GraphQL | one `cartCreate`, deferred delivery groups |
+| Shopify | tokenless Storefront GraphQL returns `data.shop`; source may identify one `.myshopify.com` API origin | product-by-handle Ajax JSON / exact variant GraphQL | one `cartCreate`, deferred delivery groups |
 | WooCommerce | bounded Store API products request returns an array | products by search, slug, or ID; variations endpoint for variable products | one cart token, repeated add-item, one customer update, cleanup every line |
 | Magento | GraphQL capability response; Magento page markers select HTML search when GraphQL is unavailable | stable detection-selected GraphQL or HTML strategy | one REST guest cart, repeated items, one estimate call |
 | BigCommerce | BigCommerce CDN/Stencil signals | search page plus product-page `BCData` | one Storefront REST cart and checkout consignment |
@@ -62,7 +62,7 @@ A readable marker can classify a platform but cannot prove its cart API works. A
 
 ## Shopify
 
-Catalog and cart traffic uses `POST /api/2026-07/graphql.json`. Search requests product descriptions, images, variants, selected options, exact IDs, availability, and money. Product detail resolves `/products/<handle>` through the same GraphQL path.
+Catalog and cart traffic uses `POST /api/2026-07/graphql.json`. Search requests product descriptions, images, variants, selected options, exact IDs, availability, and money. Product URLs resolve through `/products/<handle>.js`; exact variant refs resolve through GraphQL. A failed exact live lookup is an error rather than a cached or search-derived product response.
 
 Quote sends every selected variant in one `cartCreate(input.lines)` call and places the destination in `buyerIdentity.deliveryAddressPreferences`. Carrier-calculated rates use `deliveryGroups(first:10,withCarrierRates:true)` under `@defer`. The response can be MIME multipart: parse every JSON part, apply incremental patches, and require terminal `hasNext:false`. `PICK_UP`, `PICKUP_POINT`, and `RETAIL` are pickup; `NONE` is unavailable; priced `LOCAL`/`SHIPPING` options are delivery.
 
@@ -74,9 +74,9 @@ Dated behavior: on 2026-07-31, 12/12 stores completed discovery, cart creation, 
 
 Detection and search use `/wp-json/wc/store/v1/products`. URL detail resolves by `slug`; exact refs resolve by product ID. Variable products require exact variations rather than guessing options.
 
-Quote first gets `/cart` and its `Cart-Token`, repeats `/cart/add-item` for every line, rejects quantities below each product minimum, updates the customer once, reads nested `shipping_rates`, then deletes every added cart item. Store API amounts are integer strings scaled by `currency_minor_unit`. A rate ID ending in `_fallback` is not a verified carrier rate.
+Quote first gets `/cart` and its `Cart-Token`, repeats `/cart/add-item` for every line, verifies the returned cart contains each selected product/variation, rejects quantities below each product minimum, updates the customer once, reads nested `shipping_rates`, then deletes every added cart item. Cleanup runs after any successful add, including later add or parse failures, and every delete must succeed before a quote is emitted. Store API amounts are integer strings scaled by `currency_minor_unit`. A rate ID ending in `_fallback` is not a verified carrier rate.
 
-Dated behavior: on 2026-07-31, 12/12 stores completed the cart/address flow; seven returned rates, five were empty, and one rate was explicitly fallback. One store returned 403 during cleanup after a successful quote, so cleanup status is separate from quote validity.
+Dated behavior: on 2026-07-31, 12/12 stores completed the cart/address flow; seven returned rates, five were empty, and one rate was explicitly fallback.
 
 ## Magento / Adobe Commerce
 
@@ -100,7 +100,7 @@ Dated behavior: on 2026-07-31, 11/11 stores returned nonempty primary Storefront
 
 Product and collection data comes from `?format=json`. Variant `onSale` and `unlimited` default false when absent; `qtyInStock` defaults to zero. Exact item ID and SKU form the ref.
 
-Quote reads a collection to establish the `crumb`, posts every line to `/api/commerce/shopping-cart/entries` in one session, then sends one `PUT /api/3/commerce/cart/<token>/shipping/location`. Interpret both `shippingOptionsStatus` and `fulfillmentOptions`; `SHIPPING_NOT_REQUIRED` and `POSTAL_CODE_NOT_APPLICABLE` are not parcel quotes.
+Quote reads a collection to establish the `crumb`, posts every line to `/api/commerce/shopping-cart/entries` in one session, and verifies each response contains the requested item ID and SKU. All adds must preserve one cart token. It then sends one `PUT /api/3/commerce/cart/<token>/shipping/location`. Interpret both `shippingOptionsStatus` and `fulfillmentOptions`; `SHIPPING_NOT_REQUIRED` and `POSTAL_CODE_NOT_APPLICABLE` are not parcel quotes.
 
 Dated behavior: three exact-address tests produced one priced delivery result, one shipping-not-required result, and one postal-code-not-applicable result.
 
@@ -122,11 +122,11 @@ OpenCart options are page-specific. StepperOnline accepted a known product only 
 | `https://www.amazon.com` | SerpApi `amazon` organic results | listings only; no anonymous Amazon cart API |
 | `https://www.ebay.com` | Browse `item_summary/search`, `getItem`, and `getItemByLegacyId`; lazy OAuth client credentials; encoded contextual-location header | shipping appears in detail; checkout is restricted-tier |
 
-Shopify Global Catalog is the only marketplace source allowed to seed merchant origins into `vendors.json`, because its merchant identity is first-party platform data. AliExpress and SerpApi results never seed the registry.
+Shopify Global Catalog models each merchant offer under that offer's seller storefront and API domains, preserves variant and checkout handoff links, and supports mixed merchant currencies without forcing product-level USD. It is the only marketplace source allowed to seed merchant origins into `vendors.json`, because its merchant identity is first-party platform data. AliExpress and SerpApi results never seed the registry.
 
 ## Data hygiene and failures
 
-Default output contains no request evidence, cookies, bearer material, cart IDs, masked IDs, signature headers, image URLs, or search refs. `--debug` restores sanitized detection and request summaries, never secrets.
+Default output contains no request evidence, cookies, bearer material, cart IDs, masked IDs, signature headers, image URLs, or search refs. `--debug` restores sanitized detection and request summaries for search, product, and quote, never secrets. `config show` reports credential presence without returning credential values or private-key paths.
 
 Errors are compact: `status`, `platform`, `stage`, `reason`, and `http_status` when known. Missing marketplace setup is an error only for the requested pseudo-store. Transport/schema/invariant failures are loud; there are no fallback APIs or guessed buyer choices.
 
