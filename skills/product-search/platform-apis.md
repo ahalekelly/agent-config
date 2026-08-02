@@ -116,11 +116,11 @@ OpenCart options are page-specific. StepperOnline accepted a known product only 
 
 | Origin | Contract | Interpretation |
 | --- | --- | --- |
-| `https://shop.app` | Shopify `/api/ucp/mcp`, JSON-RPC `tools/call` using `search_catalog` and `get_product`; every call carries the configured UCP agent profile | first-party Shopify catalog facts; quote a concrete merchant offer |
+| `https://shop.app` | Shopify `https://catalog.shopify.com/api/ucp/mcp`, JSON-RPC `tools/call` using `search_catalog` and `get_product`; every call carries the configured UCP agent profile in `arguments.meta.ucp-agent.profile` | first-party Shopify catalog facts; quote a concrete merchant offer |
 | `https://www.aliexpress.com` | Affiliate Product Query with TOP HMAC-MD5 signing | affiliate-promotable leads; no exact cart quote |
 | `https://shopping.google.com` | SerpApi `google_shopping` | unverified cross-merchant leads |
 | `https://www.amazon.com` | SerpApi `amazon` organic results | listings only; no anonymous Amazon cart API |
-| `https://www.ebay.com` | Browse `item_summary/search` and `getItem`, lazy OAuth client credentials, contextual-location header | shipping appears in detail; checkout is restricted-tier |
+| `https://www.ebay.com` | Browse `item_summary/search`, `getItem`, and `getItemByLegacyId`; lazy OAuth client credentials; encoded contextual-location header | shipping appears in detail; checkout is restricted-tier |
 
 Shopify Global Catalog is the only marketplace source allowed to seed merchant origins into `vendors.json`, because its merchant identity is first-party platform data. AliExpress and SerpApi results never seed the registry.
 

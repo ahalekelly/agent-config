@@ -134,8 +134,8 @@ All follow the §2 adapter convention, are built into the dispatch table under t
 
 Shopify's Global Catalog MCP server (https://shopify.dev/docs/agents/catalog/global-catalog) searches products across all Shopify merchants. Integrate it as the `https://shop.app` pseudo-platform using the current UCP contract.
 
-- Transport: send plain httpx JSON-RPC `tools/call` requests to `/api/ucp/mcp`; do not add an MCP SDK dependency. Use `search_catalog` for discovery and `get_product` for detail, with all tool arguments wrapped in `catalog`.
-- Identity: every request includes `meta.ucp-agent.profile`, configured as `shopify_global: {"profile_url": ...}` in settings. Missing configuration produces a structured setup-instruction api_error. The current UCP contract does not use the retired Global Catalog client-credentials JWT flow.
+- Transport: send plain httpx JSON-RPC `tools/call` requests to `https://catalog.shopify.com/api/ucp/mcp`; do not add an MCP SDK dependency. Use `search_catalog` for discovery and `get_product` for detail, with tool inputs wrapped in `arguments.catalog`.
+- Identity: every request includes `arguments.meta.ucp-agent.profile`, configured as `shopify_global: {"profile_url": ...}` in settings. Missing configuration produces a structured setup-instruction api_error. The current UCP contract does not use the retired Global Catalog client-credentials JWT flow.
 - `search` with store `https://shop.app`: map query + `--limit` to `search_catalog`; pass destination fields through `filters.ships_to`. Results follow the §5 item shape and the run cache stores the universal product ID.
 - Every result's merchant storefront origin is upserted into `vendors.json` as `{"platform": "shopify", ...}` with evidence `global_catalog_result` — first-party platform facts, the one exception to the leads-don't-upsert rule (§4).
 - `product` on a shop.app item maps its universal product ID to `get_product`. `quote` against shop.app returns a structured api_error directing the caller to quote a specific merchant store from the result.
