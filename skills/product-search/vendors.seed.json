@@ -33,7 +33,7 @@
     "platform": "shopify"
   },
   "https://alcott.eu": {
-    "api_origin": "https://alcott.eu",
+    "api_origin": "https://www.alcott.eu",
     "detected_at": "2026-07-31",
     "evidence": [
       "learned_cache"
@@ -393,7 +393,7 @@
     "platform": "woocommerce"
   },
   "https://malcowallshop.com": {
-    "api_origin": "https://malcowallshop.com",
+    "api_origin": "https://holzbuchstaben.ch",
     "detected_at": "2026-07-31",
     "evidence": [
       "learned_cache"
@@ -433,7 +433,7 @@
     "platform": "custom"
   },
   "https://mettleair.com": {
-    "api_origin": "https://mettleair.com",
+    "api_origin": "https://mettleairstore.com",
     "detected_at": "2026-07-31",
     "evidence": [
       "learned_cache"
