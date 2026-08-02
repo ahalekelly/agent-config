@@ -132,13 +132,13 @@ All follow the §2 adapter convention, are built into the dispatch table under t
 
 ## 9. Shopify Global Catalog: cross-merchant discovery
 
-Shopify's Global Catalog MCP server (https://shopify.dev/docs/agents/catalog/global-catalog and /catalog/mcp) searches products across ALL Shopify merchants. Integrate as the `https://shop.app` pseudo-platform.
+Shopify's Global Catalog MCP server (https://shopify.dev/docs/agents/catalog/global-catalog) searches products across all Shopify merchants. Integrate it as the `https://shop.app` pseudo-platform using the current UCP contract.
 
-- Transport: the server speaks MCP over streamable HTTP (JSON-RPC). Do NOT add an MCP SDK dependency — implement the two calls we need (`tools/call` for `search_global_products` and `get_global_product_details`) as plain httpx JSON-RPC POSTs in an adapter following the §2 convention. Read the linked docs for exact endpoint, request, and response shapes; encode them in mock fixtures.
-- Auth: client-credentials JWT from the Shopify Dev Dashboard, ~60-minute TTL. Credentials in settings `shopify_global: {"client_id": ..., "client_secret": ...}`; mint lazily per invocation, reuse in memory, no on-disk token cache. Missing credentials → structured setup-instruction api_error.
-- `search` with store `https://shop.app`: map query + `--limit` to `search_global_products`; pass the destination country as the ship-to filter where supported. Results follow the §5 item shape; the run cache stores the universal product id.
+- Transport: send plain httpx JSON-RPC `tools/call` requests to `/api/ucp/mcp`; do not add an MCP SDK dependency. Use `search_catalog` for discovery and `get_product` for detail, with all tool arguments wrapped in `catalog`.
+- Identity: every request includes `meta.ucp-agent.profile`, configured as `shopify_global: {"profile_url": ...}` in settings. Missing configuration produces a structured setup-instruction api_error. The current UCP contract does not use the retired Global Catalog client-credentials JWT flow.
+- `search` with store `https://shop.app`: map query + `--limit` to `search_catalog`; pass destination fields through `filters.ships_to`. Results follow the §5 item shape and the run cache stores the universal product ID.
 - Every result's merchant storefront origin is upserted into `vendors.json` as `{"platform": "shopify", ...}` with evidence `global_catalog_result` — first-party platform facts, the one exception to the leads-don't-upsert rule (§4).
-- `product` on a shop.app item (handle or ref carrying the universal product id) maps to `get_global_product_details` (full option matrix across merchants). `quote` against shop.app → structured api_error directing the caller to quote against a specific merchant store from the result.
+- `product` on a shop.app item maps its universal product ID to `get_product`. `quote` against shop.app returns a structured api_error directing the caller to quote a specific merchant store from the result.
 
 ## 10. Token-lean output rules
 
