@@ -534,7 +534,7 @@ uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passed 169 tests plus 136 subtests on 2026-08-01. It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passes 209 non-acceptance tests and 23 saved acceptance tests (232/232 total). It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 
