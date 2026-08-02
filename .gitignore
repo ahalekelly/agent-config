@@ -17,4 +17,4 @@ node_modules/
 # Python runtime caches for the product-search helpers.
 .pytest_cache/
 .ruff_cache/
-skills/product-search/scripts/**/__pycache__/
+skills/product-search/**/__pycache__/
