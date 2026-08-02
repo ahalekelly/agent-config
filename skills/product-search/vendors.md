@@ -11,7 +11,7 @@ Platform labels are a scan aid; operational platform, wall, shipping, and verifi
 | Digi-Key | electronics | preferred | fast, reliable stock data | listings reliable | custom | MCP for stock, price, and parametrics; credentials are expired and all calls return 401 |
 | McMaster-Carr | mechanical/industrial | preferred | same-day ship, authoritative specs + CAD | listings authoritative | custom | MCP available |
 | Bolt Depot | fasteners | preferred | cheap hardware | listings reliable | custom | — |
-| Amazon | consumer goods, generic parts | preferred | free 1–2 day shipping, low prices | verify specs elsewhere — listings unreliable, commingled inventory | custom | A GPT leaf fetch returns the title, usually a product-photo URL, sometimes the description, and listing-dependent buy-box prices. Image CDN URLs can be resized by replacing their suffix (`._SL1500_`, `._SX679_`, and `._SS75_` resolve). Stock and seller need a browser or API. PA-API retired in May 2026; the Creators API requires 10 qualifying affiliate sales per rolling 30 days. Structured alternatives include ScraperAPI (about 200 free lookups monthly), Apify, Bright Data, or Keepa with the `BWB03/keepa-adapter` MCP (about €19 monthly; near-real-time, not live). |
+| Amazon | consumer goods, generic parts | preferred | free 1–2 day shipping, low prices | verify specs elsewhere — listings unreliable, commingled inventory | custom | For a known ASIN, `scripts/amazon_product.py` returns the current title, image, rating, and offer-panel prices, sellers, shippers, and anonymous-default delivery promises. It is not keyword search or a destination quote. A GPT leaf remains useful for listing descriptions. PA-API retired in May 2026; Creators API is affiliate-gated, while the Business Product Search API requires business onboarding and authorization. |
 | Automation Direct | industrial automation, pneumatics, sensors | preferred | very good pricing | listings reliable | custom | — |
 | eBay | used/surplus, cheap goods | preferred | another cheap-stuff channel alongside Amazon/AliExpress | verify everything | custom | — |
 | DERNORD | tri-clamp/sanitary fittings | preferred | preferred tri-clamp brand; sold via Amazon | Amazon listing caveats apply | Shopify | Amazon remains the practical channel for small fittings |
@@ -37,7 +37,7 @@ Platform labels are a scan aid; operational platform, wall, shipping, and verifi
 
 ## Using platform APIs
 
-Run `scripts/platform_api.py detect`, then `search` and `quote` with the returned opaque `item_ref`; `probe` searches and quotes the first eligible candidate. If none qualifies, it records `quote_not_attempted` with `reason:no_quotable_product` without creating a cart. Follow redirects, keep one cookie jar per origin, and treat a challenge as unresolved access rather than platform absence. Use BrowserSwarm only at the explicit boundaries below. See `platform-apis.md` for copyable requests, exact schemas, redaction rules, and failure modes.
+For generic storefront platforms, run `scripts/platform_api.py detect`, then `search` and `quote` with the returned opaque `item_ref`; `probe` searches and quotes the first eligible candidate. If none qualifies, it records `quote_not_attempted` with `reason:no_quotable_product` without creating a cart. Amazon's known-ASIN path uses `scripts/amazon_product.py` instead. Follow redirects in generic storefront detection, keep one cookie jar per origin, and treat a challenge as unresolved access rather than platform absence. Use BrowserSwarm only at the explicit boundaries below. See `platform-apis.md` for copyable requests, exact schemas, redaction rules, and failure modes.
 
 | Platform | Positive probe | Product and quote path |
 | --- | --- | --- |
@@ -49,6 +49,7 @@ Run `scripts/platform_api.py detect`, then `search` and `quote` with the returne
 | Wix / Ecwid | platform bootstrap and public catalog token | public search only; destination quote requires the supported storefront runtime in BrowserSwarm |
 | Salesforce Commerce Cloud | Demandware routes/headers/site ID | follow exact SFRA forms when standard; customized controllers require BrowserSwarm |
 | OpenCart | `/catalog/view/` assets and cart route | page-specific product/options; challenged writes require BrowserSwarm |
+| Amazon | exact ASIN and All Offers Display `#aod-container` | `scripts/amazon_product.py`; offer hydration only, no keyword search or destination quote |
 
 Quote only to Jordan Smith, Pacific Prototyping LLC, 747 Howard St, San Francisco, CA 94103, US, +1 415-555-0132. Never create an account, enter payment, or place an order. Empty rates mean **no quote**. Zero is free only when a named delivery method says so; exclude pickup, paid-later, and quote-later methods. Record fallback labels, walls/gates, the tested product, taxes, and date.
 
@@ -61,7 +62,7 @@ This untiered cache is operational memory, not a vendor ranking. It is keyed by 
 | `digikey.com` | custom | Cloudflare | no free shipping; $4.99 USPS Ground Advantage / $8.49 FedEx-UPS Ground / $13.99 Priority or 2-day / $26.99 overnight PM | platform 2026-07-31; shipping 2026-07 |
 | `mcmaster.com` | custom | none | rates shown before ordering; per-shipment weight pricing; typically about $10 for small items | platform 2026-07-31; shipping 2026-07 |
 | `boltdepot.com` | custom | Cloudflare; fingerprint Chromium works | SF: Economy $8.40 lowest of six delivery rates; pickup excluded; no published flat rate or free threshold | 2026-07-31 |
-| `amazon.com` | custom | robots.txt disallows declared AI agents including ClaudeBot, Claude-User, GPTBot, OAI-SearchBot, and ChatGPT-User; `/dp/` has no technical wall and serves declared bot user agents; search exposes titles without body text, plain WebFetch is unusable, and a GPT leaf fetch can reach listings | free shipping at $35 for non-Prime; Prime free | platform 2026-07-31; wall/shipping 2026-07 |
+| `amazon.com` | custom | robots.txt disallows named AI crawlers; direct `/dp/` returned an interstitial and search returned HTTP 202/503 in the 2026-08-01 plain/fingerprint probes; a bounded anonymous All Offers Display request worked for known ASINs | known-ASIN helper exposes offer-panel prices, sellers, shippers, and default-location delivery promises; it is not an SF quote; free shipping at $35 for non-Prime, Prime free | platform 2026-07-31; AOD/wall 2026-08-01; shipping 2026-07 |
 | `automationdirect.com` | custom | none | free 2-day shipping over $49; $10 flat under | platform 2026-07-31; shipping 2026-07 |
 | `ebay.com` | custom | partial bot-check; homepage/help challenged, search works | seller-set shipping | platform 2026-07-31; shipping 2026-07 |
 | `dernord.com` | Shopify | none | SF: flat "FeDex" rate $55 on a $10.59 fitting | 2026-07-31 |

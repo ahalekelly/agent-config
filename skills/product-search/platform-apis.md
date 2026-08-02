@@ -71,6 +71,25 @@ The corpus command appends one JSONL record per store/query, resumes by skipping
 
 Magento quote currency comes from guest-cart `totals.quote_currency_code`; rate amounts and subtotal use that currency, while base amounts use `base_currency_code`. Missing currencies are schema errors. BigCommerce search hydrates at most three exact-ranked product pages and encodes the verified product ID plus canonical same-origin URL in its opaque `item_ref`; `quote` reloads that page, requires the same ID, and refuses required product configuration instead of guessing options.
 
+## Amazon ASIN hydration
+
+Amazon's undocumented All Offers Display endpoint provides useful primary-source data for a known US ASIN without an API credential. It does not search Amazon. Discover the product first, then pass its exact ASIN or US `/dp/` URL to the bounded helper:
+
+```sh
+AMAZON_PRODUCT=/Users/akelly/.agents/skills/product-search/scripts/amazon_product.py
+
+uv run "$AMAZON_PRODUCT" B0CZP3CDSZ
+uv run "$AMAZON_PRODUCT" 'https://www.amazon.com/dp/B0CZP3CDSZ'
+```
+
+The helper creates one anonymous session with `GET /`, then performs one read-only request to `GET /gp/product/ajax/aodAjaxMain/ref=auto_load_aod?asin=ASIN&pc=dp`. A successful result contains the title, product image, rating state, and an explicit offer state. Available offers contain condition, USD price, seller, shipper, and structured delivery promises. The `reported_other_offer_count` can exceed the offers embedded in the response; `other_offers_complete` makes that truncation explicit.
+
+`delivery_scope:anonymous_default_location` means Amazon selected the location. Those promises are neither an SF quote nor evidence for the user's destination. An offer is current offer-panel evidence, not an inventory count. A response without reviews is `unrated`; no buyable offer is `no_offers`; no featured offer alongside marketplace offers is an available offer set with `featured.status:unavailable`.
+
+HTTP 404 is `aod_unavailable` because some valid products use a different offers interface. It is not evidence that the ASIN does not exist. Other non-200 responses and unexpected HTML are terminal errors: do not retry, rotate proxies, or add a challenge bypass. The helper discards cookies, add-to-cart values, CSRF tokens, and offer tokens and never mutates a cart.
+
+This is unstable storefront plumbing, not a supported contract. Amazon's robots policy disallows its named AI crawler user agents, so use the helper only when Amazon is explicitly within the task's scope and keep each lookup bounded. For a supported production integration, prefer the official Amazon Business Product Search API when the required business onboarding, catalog role, customer identity, and access token are available.
+
 ## Detection and dispatch
 
 Always follow the homepage redirect and probe the resolved storefront origin. An apex domain may only return 301, and a brand domain may redirect to a different commerce host.
@@ -530,11 +549,12 @@ Fifty-eight stores completed search. Wylie Beckert was the only not-run search a
 Run deterministic unit tests from the repository root:
 
 ```sh
-uv run --with 'cryptography>=45,<47' --with 'httpx>=0.28,<0.29' \
+uv run --with 'beautifulsoup4>=4.14,<5' --with 'cryptography>=45,<47' \
+  --with 'httpx>=0.28,<0.29' \
   python -m unittest discover -s skills/product-search/scripts/tests -p 'test_*.py'
 ```
 
-The deterministic suite passes 209 non-acceptance tests and 23 saved acceptance tests (232/232 total). It covers the core contract, CLI, all storefront adapters, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
+The deterministic suite passes 218 non-acceptance tests and 23 saved acceptance tests (241/241 total). It covers the core contract, CLI, all storefront adapters, Amazon ASIN hydration, the offline search-corpus validator, Shopify signer, SerpApi client, and AliExpress client. Aggregation tests use mocked provider responses; neither client produced a credentialed live catalog result.
 
 The final live acceptance used the production helper end to end: signed Shopify discovery/search/cart/multipart quote on ATTITUDE returned Standard $12.99; WooCommerce on ProtoSupplies returned $6.95–$16.95; Magento on SparkFun returned nine rates at $9.32–$58.96; BigCommerce on goBILDA hydrated three pages and returned four rates at $7.86–$210.48; direct-product Squarespace on Marie Burgos returned $161.13 and $562.13. These are dated evidence, not price assertions for future tests.
 
@@ -575,3 +595,6 @@ Tests should assert schemas and semantics, not live prices: multipart terminatio
 - [DataForSEO Google Shopping overview](https://docs.dataforseo.com/v3/merchant-google-overview/)
 - [AliExpress Affiliate Product Query](https://developer.alibaba.com/docs/api.htm?apiId=45803)
 - [Alibaba TOP request signing](https://developer.alibaba.com/docs/doc.htm?articleId=101617&docType=1&treeId=1)
+- [Amazon Business Product Search API overview](https://docs.business.amazon.com/docs/product-search-api-overview)
+- [Amazon Business Product Search request requirements](https://docs.business.amazon.com/docs/initiating-a-search)
+- [Amazon robots policy](https://www.amazon.com/robots.txt)

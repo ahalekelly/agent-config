@@ -39,7 +39,7 @@ When agents disagree, the primary document wins. Unverifiable claims still belon
 Sources are roughly in order of cost. Treat this as a default to depart from, not a sequence to march through.
 
 1. **A distributor MCP** — structured stock, price, and parametric data straight from the vendor.
-2. **An API** — either a working vendor API recorded in `vendors.md`, or a public storefront API. The generic platform workflows cover Shopify, WooCommerce, Magento guest carts, BigCommerce Stencil, and Squarespace; Wix, Ecwid, Salesforce Commerce Cloud, and OpenCart have explicit browser or merchant-customization boundaries. Use `vendors.md` for dispatch and `platform-apis.md` for the exact contracts.
+2. **An API** — either a working vendor API recorded in `vendors.md`, or a public storefront API. The generic platform workflows cover Shopify, WooCommerce, Magento guest carts, BigCommerce Stencil, and Squarespace; Wix, Ecwid, Salesforce Commerce Cloud, and OpenCart have explicit browser or merchant-customization boundaries. A known Amazon ASIN can be hydrated through `scripts/amazon_product.py`. Use `vendors.md` for dispatch and `platform-apis.md` for the exact contracts.
 3. **Web search** — useful for discovery, but unstructured and possibly stale. Check that a price came from the vendor before trusting it.
 4. **A fetch through a GPT leaf** (Pi's `fetch_content`) — useful for descriptions, specifications, and published policies when plain WebFetch fails. It does not interact, often misses dynamic offers, and crosses a policy boundary when a site excludes crawlers. Try plain WebFetch first.
 5. **BrowserSwarm** — last. Use it when the task needs interaction, rendered-only price or stock, a site-specific SDK, or a bot-wall session. Before attaching, read `~/.agents/browser-swarm/README.md`. The daemon uses fingerprint Chromium and gives each browser agent an isolated context with a two-open-tab cap. Close tabs after extracting the needed data and end browser agents when their work is finished; the shared daemon auto-stops when no clients remain.
@@ -50,6 +50,7 @@ Choose per task; none are mandatory:
 - **Datasheets and certificates** — primary sources for specifications and certifications.
 - **Distributor MCPs** (Digi-Key, McMaster) via a subagent — structured engineering-part data; the same subagent can follow returned datasheet URLs.
 - **Platform storefront APIs** — detect the platform, obtain exact product data, and request the merchant's destination rates before opening a browser. Empty rate lists are no quote, never free shipping. See `vendors.md` and `platform-apis.md`.
+- **Amazon ASIN hydration** — after discovery yields an exact ASIN, use `scripts/amazon_product.py` for the current title, image, rating, offer prices, sellers, shippers, and anonymous-default delivery promises. The undocumented read-only endpoint is not keyword search or an SF shipping quote. Treat `aod_unavailable` as endpoint unavailability, not proof that the product does not exist, and stop on blocks instead of retrying.
 - **Part-number scheme decoding** — decode manufacturer suffixes and option tables early.
 - **Supply-chain breadth** — production ranking includes distributor count, lifecycle status, lead-time history, and price breaks.
 - **Manufacturer RFQ leads** — when nothing stocked complies, identify manufacturers that can build it and report the lead-time caveat.
@@ -65,7 +66,7 @@ Use this pass only when comparing vendors. If shipping may exceed roughly 20% of
 
 1. Search comprehensively for vendors, then give each plausible vendor to a separate Terra or Sonnet subagent.
 2. Check published free- or flat-shipping rules first.
-3. Detect the storefront and use the concise recipe in `vendors.md`; open `platform-apis.md` for exact requests, failure modes, safe evidence, and test findings. Prefer `scripts/platform_api.py` where its platform adapter applies.
+3. Detect the storefront and use the concise recipe in `vendors.md`; open `platform-apis.md` for exact requests, failure modes, safe evidence, and test findings. Prefer `scripts/platform_api.py` where its platform adapter applies, or `scripts/amazon_product.py` for a known Amazon ASIN.
 4. Use BrowserSwarm only for the residue explicitly marked as a browser boundary. Keep it invisible, follow its README resource rules, and never place an order, create an account, or enter payment details. Use the dummy ship-to recorded in `vendors.md`.
 5. Cache the dated platform, bot-wall, and shipping facts learned for an unknown domain in the untiered table in `vendors.md`. Do not turn learned domains into preferred vendors or change tiers.
 
