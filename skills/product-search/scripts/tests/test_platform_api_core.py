@@ -32,6 +32,7 @@ from platform_api_core import (
     public_detection,
     quote_not_attempted,
     quote_outcome,
+    redact_url,
     search_result,
     shipping_option,
     unsupported_configuration,
@@ -62,6 +63,17 @@ class UrlTests(unittest.TestCase):
     def test_canonical_url_rejects_credentials(self) -> None:
         with self.assertRaisesRegex(ToolError, "without credentials"):
             canonical_url("https://user:secret@example.com/product")
+
+    def test_redact_url_removes_camel_case_secret_query_values(self) -> None:
+        redacted = redact_url(
+            "https://store.example/products"
+            "?accessToken=one&storefrontAccessToken=two&apiKey=three&keyword=valve"
+        )
+
+        self.assertNotIn("one", redacted)
+        self.assertNotIn("two", redacted)
+        self.assertNotIn("three", redacted)
+        self.assertIn("keyword=valve", redacted)
 
 
 class DetectionTests(unittest.TestCase):
@@ -104,6 +116,84 @@ class ItemReferenceTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ToolError, "does not belong"):
             parse_item_ref(reference, "woocommerce")
+
+    def test_reference_rejects_extra_keys_at_the_parser_seam(self) -> None:
+        cases = (
+            (
+                "shopify",
+                {"variant_id": "gid://shopify/ProductVariant/1", "cart_id": "forged"},
+            ),
+            (
+                "woocommerce",
+                {
+                    "product_id": 1,
+                    "product_type": "simple",
+                    "minimum": 1,
+                    "cart_token": "forged",
+                },
+            ),
+        )
+        for platform, payload in cases:
+            with self.subTest(platform=platform), self.assertRaisesRegex(
+                ToolError, "invalid payload"
+            ):
+                parse_item_ref(item_ref(platform, payload), platform)
+
+    def test_all_platform_reference_schemas_round_trip(self) -> None:
+        cases = {
+            "shopify": {"variant_id": "gid://shopify/ProductVariant/1"},
+            "woocommerce": {
+                "product_id": 1,
+                "product_type": "simple",
+                "minimum": 1,
+            },
+            "magento": {"sku": "SKU-1"},
+            "bigcommerce": {
+                "product_id": 1,
+                "product_url": "https://store.example/product",
+            },
+            "squarespace": {
+                "collection_url": "https://store.example/shop",
+                "item_id": "item-1",
+                "sku": "SKU-1",
+            },
+            "wix": {"product_id": "product-1"},
+            "ecwid": {"product_id": 1, "store_id": "12345"},
+            "sfcc": {"pid": "product-1"},
+        }
+        for platform, payload in cases.items():
+            with self.subTest(platform=platform):
+                self.assertEqual(
+                    parse_item_ref(item_ref(platform, payload), platform), payload
+                )
+
+    def test_all_platform_reference_schemas_reject_invalid_values(self) -> None:
+        cases = {
+            "shopify": {"variant_id": ""},
+            "woocommerce": {
+                "product_id": 1,
+                "product_type": "simple",
+                "minimum": True,
+            },
+            "magento": {"sku": ""},
+            "bigcommerce": {
+                "product_id": True,
+                "product_url": "https://store.example/product",
+            },
+            "squarespace": {
+                "collection_url": "https://store.example/shop",
+                "item_id": "item-1",
+                "sku": None,
+            },
+            "wix": {"product_id": ""},
+            "ecwid": {"product_id": 1, "store_id": ""},
+            "sfcc": {"pid": ""},
+        }
+        for platform, payload in cases.items():
+            with self.subTest(platform=platform), self.assertRaisesRegex(
+                ToolError, "invalid payload"
+            ):
+                parse_item_ref(item_ref(platform, payload), platform)
 
 
 class ResultTests(unittest.TestCase):

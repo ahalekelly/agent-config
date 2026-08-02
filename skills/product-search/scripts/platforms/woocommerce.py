@@ -44,10 +44,8 @@ ADDRESS = {
 def detect(
     http: Http, origin: str, entry_url: str
 ) -> DetectedStore | StorefrontBotWall | None:
-    response = http.request(
-        "GET",
-        origin + API_PATH + "/products",
-        params={"search": "__codex_platform_probe__", "per_page": "1"},
+    response = http.get(
+        http.woo_products(origin, "__codex_platform_probe__", 1)
     )
     system = wall_system(response)
     if system is not None:
@@ -78,10 +76,7 @@ def detect(
 
 
 def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
-    base = _api_base(detection)
-    response = http.request(
-        "GET", f"{base}/products", params={"search": query, "per_page": "20"}
-    )
+    response = http.get(http.woo_products(detection.origin, query, 20))
     terminal = _terminal_response("search", response)
     if terminal is not None:
         return terminal

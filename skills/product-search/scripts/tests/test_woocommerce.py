@@ -137,6 +137,28 @@ class WooCommerceTests(unittest.TestCase):
                 with http.client, self.assertRaisesRegex(ToolError, "item_ref"):
                     woocommerce.quote(http, detection(), reference)
 
+    def test_quote_rejects_extra_reference_key_before_http(self) -> None:
+        reference = woocommerce.item_ref(
+            "woocommerce",
+            {
+                "product_id": 19251,
+                "product_type": "simple",
+                "minimum": 1,
+                "extra": "forged",
+            },
+        )
+        http_called = False
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal http_called
+            http_called = True
+            return httpx.Response(500, request=request)
+
+        http = Http(httpx.MockTransport(handler))
+        with http.client, self.assertRaisesRegex(ToolError, "item_ref"):
+            woocommerce.quote(http, detection(), reference)
+        self.assertFalse(http_called)
+
     def test_selected_cart_item_rejects_boolean_product_id(self) -> None:
         cart = {"items": [{"id": True, "key": "wrong-item"}]}
         with self.assertRaisesRegex(ToolError, "exact selected product"):

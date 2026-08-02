@@ -943,7 +943,7 @@ class MagentoQuoteTests(unittest.TestCase):
         )
         with (
             http.client,
-            self.assertRaisesRegex(ToolError, "exactly one nonempty simple SKU"),
+            self.assertRaisesRegex(ToolError, "invalid payload"),
         ):
             magento.quote(
                 http,

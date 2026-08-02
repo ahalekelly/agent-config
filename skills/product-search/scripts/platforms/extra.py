@@ -117,7 +117,7 @@ def quote(http: Http, detection: DetectedStore, reference: str) -> dict[str, obj
 
 def _wix_search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     origin = _api_origin(detection, "wix")
-    token_response = http.request("GET", origin + "/_api/v1/access-tokens")
+    token_response = http.get(http.wix_bootstrap(origin))
     terminal = _wall(token_response, "wix")
     if terminal is not None:
         return terminal
@@ -211,14 +211,14 @@ def _ecwid_search(
     http: Http, detection: DetectedStore, query: str
 ) -> dict[str, object]:
     _api_origin(detection, "ecwid")
-    homepage = http.request("GET", detection.entry_url)
+    homepage = http.get(http.detected_entry(detection.entry_url))
     terminal = _wall(homepage, "ecwid")
     if terminal is not None:
         return terminal
     _require_ok(homepage, "Ecwid storefront page")
     store_id = _ecwid_store_id(homepage.text)
 
-    script_response = http.request("GET", f"https://app.ecwid.com/script.js?{store_id}")
+    script_response = http.get(http.ecwid_script(homepage, store_id))
     terminal = _wall(script_response, "ecwid")
     if terminal is not None:
         return terminal
@@ -235,10 +235,8 @@ def _ecwid_search(
     initial = json_object(initial_response, "Ecwid initial data")
     token, currency = _ecwid_public_profile(initial)
 
-    products_response = http.request(
-        "GET",
-        f"https://app.ecwid.com/api/v3/{store_id}/products",
-        params={"token": token, "keyword": query, "limit": 10},
+    products_response = http.get(
+        http.ecwid_products(initial_response, store_id, token, query)
     )
     terminal = _wall(products_response, "ecwid")
     if terminal is not None:
@@ -347,7 +345,9 @@ def _sfcc_search(http: Http, detection: DetectedStore, query: str) -> dict[str, 
     route = canonical_url(urljoin(detection.entry_url, "search"))
     if url_origin(route) != detection.origin:
         raise ToolError("SFCC search route must stay on the detected storefront")
-    response = http.request("GET", route, params={"q": query}, follow_redirects=True)
+    response = http.get(
+        http.sfcc_search(detection.origin, detection.entry_url, query)
+    )
     final_url = canonical_url(str(response.url))
     if url_origin(final_url) != detection.origin:
         raise ToolError("SFCC search redirected outside the detected storefront")

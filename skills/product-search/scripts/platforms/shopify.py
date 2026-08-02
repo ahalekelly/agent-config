@@ -284,6 +284,10 @@ def _signed_post(
             raise SignedRedirectBoundary(
                 "Shopify GraphQL redirect target must not contain credentials"
             )
+        if parts.path != API_PATH or parts.query or parts.fragment:
+            raise SignedRedirectBoundary(
+                "Shopify GraphQL redirect target must be the Storefront API path"
+            )
     raise AssertionError("Shopify redirect loop must return or raise")
 
 

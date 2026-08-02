@@ -217,6 +217,11 @@ class EcwidTests(unittest.TestCase):
             raise AssertionError(request.url)
 
         http = Http(httpx.MockTransport(handler))
+        http.get(
+            http.storefront_entry(
+                "https://shop.example/", ["https://shop.example"]
+            )
+        )
         result = extra.search(
             http, detected("ecwid", "https://app.ecwid.com"), "coffee"
         )
@@ -247,9 +252,15 @@ class EcwidTests(unittest.TestCase):
                 request=request,
             )
 
+        http = Http(httpx.MockTransport(handler))
+        http.get(
+            http.storefront_entry(
+                "https://shop.example/", ["https://shop.example"]
+            )
+        )
         with self.assertRaisesRegex(ToolError, "untrusted storefront API base URL"):
             extra.search(
-                Http(httpx.MockTransport(handler)),
+                http,
                 detected("ecwid", "https://app.ecwid.com"),
                 "cake",
             )
@@ -368,7 +379,10 @@ class SfccTests(unittest.TestCase):
                 check(status, headers, content, expected_kind)
 
     def test_search_rejects_off_origin_redirect(self) -> None:
+        requests: list[httpx.Request] = []
+
         def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
             if request.url.host == "shop.example":
                 return httpx.Response(
                     302,
@@ -382,8 +396,9 @@ class SfccTests(unittest.TestCase):
                 request=request,
             )
 
-        with self.assertRaisesRegex(ToolError, "outside the detected storefront"):
+        with self.assertRaisesRegex(ToolError, "same storefront origin"):
             extra.search(Http(httpx.MockTransport(handler)), detected("sfcc"), "towel")
+        self.assertEqual(len(requests), 1)
 
 
 class QuoteBoundaryTests(unittest.TestCase):

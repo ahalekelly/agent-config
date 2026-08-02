@@ -146,9 +146,46 @@ class SquarespaceTests(unittest.TestCase):
         )
         self.assertFalse(any("other.example" in url for url in requested))
 
+    def test_variant_flags_use_documented_missing_defaults(self) -> None:
+        payload = json.loads(fixture("platform-squarespace-product.json"))
+        variant = payload["item"]["variants"][0]
+        variant.pop("onSale")
+        variant.pop("unlimited")
+        variant.pop("qtyInStock")
+
+        items = squarespace._payload_items(payload, "KITSUI", detection().origin)
+
+        self.assertEqual(items[0]["price"], {"amount": "1427.00", "currency": "USD"})
+        self.assertFalse(items[0]["available"])
+
+    def test_variant_rejects_non_boolean_sale_marker(self) -> None:
+        for value in (None, "false", 0, 1):
+            with self.subTest(value=value):
+                payload = json.loads(fixture("platform-squarespace-product.json"))
+                payload["item"]["variants"][0]["onSale"] = value
+
+                with self.assertRaisesRegex(ToolError, "onSale"):
+                    squarespace._payload_items(payload, "SQ3115437", detection().origin)
+
+    def test_availability_rejects_non_boolean_unlimited_marker(self) -> None:
+        for value in (None, "false", 0, 1):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ToolError, "unlimited"
+            ):
+                squarespace._available({"unlimited": value, "qtyInStock": 1})
+
+    def test_availability_rejects_non_integer_stock_quantity(self) -> None:
+        for value in (None, "1", 1.0, True):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ToolError, "qtyInStock"
+            ):
+                squarespace._available({"unlimited": False, "qtyInStock": value})
+
     def test_explicit_collection_entry_skips_storefront_search(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             self.assertEqual(request.url.path, "/chairs-and-stools")
+            if "format" not in request.url.params:
+                return response(request, content=b"storefront")
             self.assertEqual(request.url.params["format"], "json")
             return response(
                 request, content=fixture("platform-squarespace-collection.json")
@@ -156,6 +193,12 @@ class SquarespaceTests(unittest.TestCase):
 
         http = Http(httpx.MockTransport(handler))
         with http.client:
+            http.get(
+                http.storefront_entry(
+                    "https://squarespace.test/chairs-and-stools",
+                    ["https://squarespace.test"],
+                )
+            )
             result = squarespace.search(
                 http,
                 detection("https://squarespace.test/chairs-and-stools"),

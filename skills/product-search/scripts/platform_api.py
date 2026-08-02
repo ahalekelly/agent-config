@@ -14,6 +14,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, assert_never
+from urllib.parse import urlsplit, urlunsplit
 
 from platform_api_core import (
     DetectedStore,
@@ -47,21 +48,26 @@ ADAPTERS = {
 }
 
 
-def detect_store(http: Http, store: str) -> StorefrontDetection:
+def detect_store(
+    http: Http, store: str, entry_origins: list[str]
+) -> StorefrontDetection:
     requested = normalize_store_url(store)
-    homepage = http.request("GET", requested, follow_redirects=True)
+    homepage = http.get(http.storefront_entry(requested, entry_origins))
     entry_url = canonical_url(str(homepage.url))
     origin = url_origin(entry_url)
     detections: list[PositiveDetection] = []
     walls: list[StorefrontBotWall] = []
 
-    _collect(detections, walls, woocommerce.detect(http, origin, entry_url))
-    _collect(detections, walls, shopify.detect(http, origin, entry_url, homepage))
     _collect(detections, walls, bigcommerce.detect(homepage, origin, entry_url))
     _collect(detections, walls, squarespace.detect(homepage, origin, entry_url))
     _collect(detections, walls, extra.detect(homepage, origin, entry_url))
     if not detections and not walls:
-        _collect(detections, walls, magento.detect(http, origin, entry_url, homepage))
+        _collect(detections, walls, woocommerce.detect(http, origin, entry_url))
+        _collect(detections, walls, shopify.detect(http, origin, entry_url, homepage))
+        if not detections and not walls:
+            _collect(
+                detections, walls, magento.detect(http, origin, entry_url, homepage)
+            )
 
     platforms = {detection.platform for detection in detections}
     if len(platforms) > 1:
@@ -134,7 +140,7 @@ def detect_store(http: Http, store: str) -> StorefrontDetection:
 
 
 def execute(command: str, store: str, value: str | None, http: Http) -> dict[str, Any]:
-    detection = detect_store(http, store)
+    detection = detect_store(http, store, cli_entry_origins(store))
     record: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "observed_at": _now(),
@@ -275,6 +281,17 @@ def _candidate(item: Any) -> str | None:
     ):
         return None
     return reference
+
+
+def cli_entry_origins(store: str) -> list[str]:
+    origin = url_origin(normalize_store_url(store))
+    parts = urlsplit(origin)
+    host = parts.hostname
+    if host is None:
+        raise AssertionError("normalized store origin has no host")
+    alias = host.removeprefix("www.") if host.startswith("www.") else f"www.{host}"
+    alias_origin = urlunsplit(("https", alias, "", "", ""))
+    return [origin] if alias_origin == origin else [origin, alias_origin]
 
 
 def _corpus_jobs(path: Path) -> list[dict[str, str]]:

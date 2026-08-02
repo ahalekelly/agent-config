@@ -8,10 +8,32 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
+from html import unescape
 from typing import Any, Literal, assert_never
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
 import httpx
+from read_only_http import (
+    ReadGet,
+    ReadOnlyOperation,
+    ReadOnlyPolicyError,
+    _BigCommerceSearch,
+    _DiscoveredProductPage,
+    _EcwidProducts,
+    _EcwidScript,
+    _MagentoHtmlSearch,
+    _SfccSearch,
+    _SquarespaceProductJson,
+    _SquarespaceSearch,
+    _StorefrontEntry,
+    _StorefrontEntryReplay,
+    _WixBootstrap,
+    _WooProducts,
+    authorize_read_get,
+    authorize_read_only_request,
+    authorize_redirect,
+    mint_read_get,
+)
 
 Platform = Literal[
     "shopify",
@@ -51,11 +73,12 @@ TERMINAL_KINDS = {
     "unsupported_product_configuration",
 }
 SECRET_QUERY_NAMES = {
-    "access_token",
-    "api_key",
-    "authenticity_token",
+    "accesstoken",
+    "apikey",
+    "authenticitytoken",
     "key",
-    "sf_authenticity_token",
+    "sfauthenticitytoken",
+    "storefrontaccesstoken",
     "token",
 }
 
@@ -173,6 +196,7 @@ def public_detection(detection: StorefrontDetection) -> dict[str, Any]:
 
 class Http:
     def __init__(self, transport: httpx.BaseTransport | None = None) -> None:
+        self._read_owner = object()
         self.client = httpx.Client(
             transport=transport,
             timeout=httpx.Timeout(45, connect=10),
@@ -194,10 +218,209 @@ class Http:
         self, method: str, url: str, *, follow_redirects: bool = False, **kwargs: Any
     ) -> httpx.Response:
         request = self.client.build_request(method, url, **kwargs)
-        return self._send(
+        response = self._send(
             request,
             lambda: self.client.send(request, follow_redirects=follow_redirects),
         )
+        operation = request.extensions.get("read_only_operation")
+        operation_kind = (
+            operation.operation_kind
+            if isinstance(operation, ReadOnlyOperation)
+            else "plain_http"
+        )
+        body_sha256 = (
+            operation.body_sha256
+            if isinstance(operation, ReadOnlyOperation)
+            else hashlib.sha256(request.read()).hexdigest()
+        )
+        self._remember_response(request, response, operation_kind, body_sha256)
+        return response
+
+    def storefront_entry(self, url: str, entry_origins: list[str]) -> ReadGet:
+        normalized_url = normalize_store_url(url)
+        if (
+            not isinstance(entry_origins, list)
+            or not entry_origins
+            or any(not isinstance(origin, str) for origin in entry_origins)
+            or len(entry_origins) != len(set(entry_origins))
+        ):
+            raise ToolError("Storefront entry origins must be a unique nonempty list")
+        normalized_origins = frozenset(url_origin(origin) for origin in entry_origins)
+        if any(origin != url_origin(origin) for origin in entry_origins):
+            raise ToolError("Storefront entry origins must be exact HTTPS origins")
+        if url_origin(normalized_url) not in normalized_origins:
+            raise ToolError("Storefront entry origins must contain the input origin")
+        return mint_read_get(
+            self._read_owner, _StorefrontEntry(normalized_url, normalized_origins)
+        )
+
+    def storefront_entry_replay(self, response: httpx.Response) -> ReadGet:
+        source_request, source_response = self._source(response)
+        return mint_read_get(
+            self._read_owner,
+            _StorefrontEntryReplay(
+                canonical_url(str(response.url)), source_request, source_response
+            ),
+        )
+
+    def detected_entry(self, entry_url: str) -> ReadGet:
+        return self.storefront_entry_replay(
+            self._prior_response(entry_url, "storefront_entry")
+        )
+
+    def woo_products(self, origin: str, query: str, limit: Literal[1, 20]) -> ReadGet:
+        return mint_read_get(self._read_owner, _WooProducts(origin, query, limit))
+
+    def bigcommerce_search(self, origin: str, query: str) -> ReadGet:
+        return mint_read_get(self._read_owner, _BigCommerceSearch(origin, query))
+
+    def magento_html_search(self, origin: str, entry_url: str, query: str) -> ReadGet:
+        return mint_read_get(
+            self._read_owner, _MagentoHtmlSearch(origin, entry_url, query)
+        )
+
+    def squarespace_search(self, origin: str, query: str) -> ReadGet:
+        return mint_read_get(self._read_owner, _SquarespaceSearch(origin, query))
+
+    def wix_bootstrap(self, origin: str) -> ReadGet:
+        return mint_read_get(self._read_owner, _WixBootstrap(origin))
+
+    def sfcc_search(self, origin: str, entry_url: str, query: str) -> ReadGet:
+        return mint_read_get(self._read_owner, _SfccSearch(origin, entry_url, query))
+
+    def discovered_product_page(
+        self, response: httpx.Response, raw_reference: str, origin: str
+    ) -> ReadGet:
+        source_request, source_response = self._source(response, raw_reference)
+        page = canonical_url(urljoin(str(response.url), raw_reference))
+        return mint_read_get(
+            self._read_owner,
+            _DiscoveredProductPage(origin, page, source_request, source_response),
+        )
+
+    def squarespace_product_json(
+        self, response: httpx.Response, raw_reference: str, origin: str
+    ) -> ReadGet:
+        source_request, source_response = self._source(response, raw_reference)
+        page = canonical_url(urljoin(str(response.url), raw_reference))
+        return mint_read_get(
+            self._read_owner,
+            _SquarespaceProductJson(origin, page, source_request, source_response),
+        )
+
+    def squarespace_entry_json(self, entry_url: str) -> ReadGet:
+        response = self._prior_response(entry_url, "storefront_entry")
+        source_request, source_response = self._source(response)
+        return mint_read_get(
+            self._read_owner,
+            _SquarespaceProductJson(
+                url_origin(entry_url), entry_url, source_request, source_response
+            ),
+        )
+
+    def ecwid_script(self, response: httpx.Response, store_id: str) -> ReadGet:
+        source_request, source_response = self._source(response, store_id)
+        if not store_id.isdecimal():
+            raise ToolError("Ecwid store ID must be a positive decimal")
+        return mint_read_get(
+            self._read_owner,
+            _EcwidScript(int(store_id), source_request, source_response),
+        )
+
+    def ecwid_products(
+        self,
+        response: httpx.Response,
+        store_id: str,
+        token: str,
+        query: str,
+    ) -> ReadGet:
+        source_request, source_response = self._source(response, token)
+        if not store_id.isdecimal():
+            raise ToolError("Ecwid store ID must be a positive decimal")
+        return mint_read_get(
+            self._read_owner,
+            _EcwidProducts(
+                int(store_id), token, query, source_request, source_response
+            ),
+        )
+
+    def get(self, read: ReadGet) -> httpx.Response:
+        try:
+            authorized = authorize_read_get(read, self._read_owner)
+        except ReadOnlyPolicyError as error:
+            raise ToolError(str(error)) from error
+        seen_urls: set[str] = set()
+        for _hop in range(6):
+            if authorized.url in seen_urls:
+                raise ToolError("ReadGet redirect loop detected")
+            seen_urls.add(authorized.url)
+            request = self.client.build_request("GET", authorized.url)
+            request.extensions["read_get_owner"] = self._read_owner
+            request.extensions["read_only_operation"] = authorized.operation
+            response = self._send(
+                request, lambda request=request: self.client.send(request)
+            )
+            self._remember_response(
+                request,
+                response,
+                authorized.operation.operation_kind,
+                authorized.operation.body_sha256,
+            )
+            if response.status_code not in {301, 302, 303, 307, 308}:
+                return response
+            if authorized.redirect_policy == "none":
+                return response
+            location = response.headers.get("location")
+            if not location:
+                raise ToolError("ReadGet redirect has no Location header")
+            try:
+                authorized = authorize_redirect(
+                    authorized,
+                    location,
+                    response.extensions["read_get_request_sha256"],
+                    response.extensions["read_get_response_sha256"],
+                )
+            except ReadOnlyPolicyError as error:
+                raise ToolError(str(error)) from error
+        raise ToolError("ReadGet redirect chain exceeded five hops")
+
+    def _remember_response(
+        self,
+        request: httpx.Request,
+        response: httpx.Response,
+        operation_kind: str,
+        body_sha256: str,
+    ) -> None:
+        response.extensions["read_get_owner"] = self._read_owner
+        response.extensions["read_get_request_sha256"] = _request_sha256(
+            request, operation_kind, body_sha256
+        )
+        response.extensions["read_get_response_sha256"] = hashlib.sha256(
+            response.content
+        ).hexdigest()
+        response.extensions["read_get_operation_kind"] = operation_kind
+
+    def _source(
+        self, response: httpx.Response, raw_reference: str | None = None
+    ) -> tuple[str, str]:
+        if response.extensions.get("read_get_owner") is not self._read_owner:
+            raise ToolError("ReadGet source response belongs to another Http instance")
+        if raw_reference is not None and raw_reference not in unescape(response.text):
+            raise ToolError("ReadGet reference was absent from its source response")
+        request_sha256 = response.extensions.get("read_get_request_sha256")
+        response_sha256 = response.extensions.get("read_get_response_sha256")
+        if not isinstance(request_sha256, str) or not isinstance(response_sha256, str):
+            raise ToolError("ReadGet source response has no provenance")
+        return request_sha256, response_sha256
+
+    def _prior_response(self, url: str, operation_kind: str) -> httpx.Response:
+        for response in reversed(getattr(self, "_read_responses", [])):
+            if (
+                canonical_url(str(response.url)) == canonical_url(url)
+                and response.extensions.get("read_get_operation_kind") == operation_kind
+            ):
+                return response
+        raise ToolError("ReadGet has no matching earlier storefront entry")
 
     def send_signed(
         self,
@@ -226,6 +449,56 @@ class Http:
                 "content_type": response.headers.get("content-type", ""),
                 "bytes": len(response.content),
                 "sha256": hashlib.sha256(response.content).hexdigest(),
+            }
+        )
+        if not hasattr(self, "_read_responses"):
+            self._read_responses: list[httpx.Response] = []
+        self._read_responses.append(response)
+        return response
+
+
+class ReadOnlyHttp(Http):
+    def __init__(self, transport: httpx.BaseTransport | None = None) -> None:
+        super().__init__(transport)
+        self.client.event_hooks["request"].append(self._authorize)
+
+    def _authorize(self, request: httpx.Request) -> None:
+        if (
+            request.method == "GET"
+            and request.extensions.get("read_get_owner") is self._read_owner
+            and isinstance(
+                request.extensions.get("read_only_operation"), ReadOnlyOperation
+            )
+        ):
+            return
+        try:
+            operation = authorize_read_only_request(request)
+        except ReadOnlyPolicyError as error:
+            raise ToolError(str(error)) from error
+        request.extensions["read_only_operation"] = operation
+
+    def send_signed(
+        self,
+        request: httpx.Request,
+        sender: Callable[[httpx.Client, httpx.Request], httpx.Response],
+    ) -> httpx.Response:
+        self._authorize(request)
+        return super().send_signed(request, sender)
+
+    def _send(
+        self, request: httpx.Request, send: Callable[[], httpx.Response]
+    ) -> httpx.Response:
+        response = super()._send(request, send)
+        operation = request.extensions["read_only_operation"]
+        if not isinstance(operation, ReadOnlyOperation):
+            raise ToolError("Read-only HTTP request was not authorized before transport")
+        self.evidence[-1].update(
+            {
+                "operation_kind": operation.operation_kind,
+                "body_sha256": operation.body_sha256,
+                "document_sha256": operation.document_sha256,
+                "source_request_sha256": operation.source_request_sha256,
+                "source_response_sha256": operation.source_response_sha256,
             }
         )
         return response
@@ -285,13 +558,40 @@ def redact_url(value: str) -> str:
     path = re.sub(r"(/commerce/cart/)[^/]+", r"\1[redacted]", path)
     path = re.sub(r"(/checkouts?/)[^/]+", r"\1[redacted]", path)
     path = re.sub(r"(/wc/store/v1/cart/items/)[^/]+", r"\1[redacted]", path)
-    query = urlencode(
-        [
-            (name, "[redacted]" if name.lower() in SECRET_QUERY_NAMES else item)
-            for name, item in parse_qsl(parts.query)
-        ]
-    )
+    if (
+        parts.hostname == "app.ecwid.com"
+        and parts.path == "/script.js"
+        and re.fullmatch(r"[1-9][0-9]*", parts.query)
+    ):
+        query = parts.query
+    else:
+        query = urlencode(
+            [
+                (
+                    name,
+                    "[redacted]"
+                    if re.sub(r"[^a-z0-9]", "", name.casefold())
+                    in SECRET_QUERY_NAMES
+                    else item,
+                )
+                for name, item in parse_qsl(parts.query)
+            ]
+        )
     return urlunsplit((parts.scheme, parts.netloc, path, query, ""))
+
+
+def _request_sha256(
+    request: httpx.Request, operation_kind: str, body_sha256: str
+) -> str:
+    value = "\0".join(
+        (
+            request.method,
+            redact_url(str(request.url)),
+            operation_kind,
+            body_sha256,
+        )
+    )
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
 def item_ref(platform: Platform, value: dict[str, Any]) -> str:
@@ -311,9 +611,14 @@ def parse_item_ref(reference: str, platform: Platform) -> dict[str, Any]:
         )
     except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ToolError("Malformed item_ref") from error
-    if not isinstance(value, dict) or value.pop("platform", None) != platform:
+    if not isinstance(value, dict) or value.get("platform") != platform:
         raise ToolError(f"item_ref does not belong to {platform}")
-    return value
+    payload = {key: item for key, item in value.items() if key != "platform"}
+    if set(payload) != ITEM_REF_KEYS[platform] or not _valid_item_ref_payload(
+        payload, platform
+    ):
+        raise ToolError(f"{platform} item_ref has an invalid payload")
+    return payload
 
 
 def json_object(response: httpx.Response, context: str) -> dict[str, Any]:

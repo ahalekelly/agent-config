@@ -128,6 +128,40 @@ class BigCommerceTests(unittest.TestCase):
         self.assertEqual(len(result["items"]), 1)
         self.assertEqual(product_calls, ["https://bigcommerce.test/precision-bearing/"])
 
+    def test_search_ignores_login_cta_with_generic_card_styling(self) -> None:
+        product_calls: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/search.php":
+                return response(
+                    request,
+                    content=b"""
+                    <a href="/login.php" class="button card-figcaption-button">
+                      Sign in to buy
+                    </a>
+                    <a href="/precision-bearing/" data-product-id="123"
+                       data-sku="BRG-1" title="Precision Bearing">
+                      Precision Bearing
+                    </a>
+                    """,
+                    headers={"Content-Type": "text/html"},
+                )
+            product_calls.append(str(request.url))
+            if request.url.path != "/precision-bearing/":
+                raise AssertionError(request.url)
+            return response(
+                request,
+                content=fixture("platform-bigcommerce-product.html"),
+                headers={"Content-Type": "text/html"},
+            )
+
+        result = bigcommerce.search(
+            Http(httpx.MockTransport(handler)), detection(), "bearing"
+        )
+
+        self.assertEqual(len(result["items"]), 1)
+        self.assertEqual(product_calls, ["https://bigcommerce.test/precision-bearing/"])
+
     def test_search_hydrates_three_exact_ranked_query_free_products(self) -> None:
         product_page = fixture("platform-bigcommerce-product.html")
         product_calls: list[str] = []
@@ -228,6 +262,32 @@ class BigCommerceTests(unittest.TestCase):
         self.assertFalse(quote_only["purchasable"])
         self.assertIsNone(quote_only["price"])
         self.assertEqual(result["items"][1]["sku"], "BRG-1")
+
+    def test_shipping_option_defaults_missing_pickup_marker_to_false(self) -> None:
+        option = {
+            "id": "ground",
+            "type": "flat",
+            "description": "Ground",
+            "cost": 10,
+        }
+
+        result = bigcommerce._shipping_option(option, "USD")
+
+        self.assertEqual(result["disposition"], "delivery")
+
+    def test_shipping_option_rejects_non_boolean_pickup_marker(self) -> None:
+        option = {
+            "id": "ground",
+            "type": "flat",
+            "description": "Ground",
+            "cost": 10,
+        }
+
+        for value in (None, "false", 0, 1):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ToolError, "isPickup"
+            ):
+                bigcommerce._shipping_option({**option, "isPickup": value}, "USD")
 
     def test_quote_uses_clean_rest_cart_and_preserves_option_semantics(self) -> None:
         checkout = json.loads(fixture("platform-bigcommerce-shipping.json"))

@@ -74,7 +74,7 @@ class SearchParser(HTMLParser):
 
 def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
     if urlsplit(detection.entry_url).path not in {"", "/"}:
-        response = http.request("GET", detection.entry_url, params={"format": "json"})
+        response = http.get(http.squarespace_entry_json(detection.entry_url))
         terminal = _terminal(
             "search", detection.entry_url, response, "public commerce page refused"
         )
@@ -91,7 +91,7 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
             SquarespaceSearch(discovery="explicit_entry_url"), query, items
         )
 
-    response = http.request("GET", detection.origin + "/search", params={"q": query})
+    response = http.get(http.squarespace_search(detection.origin, query))
     terminal = _terminal(
         "search", "/search", response, "public storefront search refused"
     )
@@ -101,20 +101,24 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
         raise ToolError(f"Squarespace search returned HTTP {response.status_code}")
     parser = SearchParser()
     parser.feed(response.text)
-    candidates: list[str] = []
+    candidates: list[tuple[str, str]] = []
+    candidate_urls: set[str] = set()
     for value in parser.urls:
         try:
             candidate = canonical_url(urljoin(str(response.url), value))
         except ToolError:
             continue
-        if url_origin(candidate) == detection.origin and candidate not in candidates:
-            candidates.append(candidate)
+        if url_origin(candidate) == detection.origin and candidate not in candidate_urls:
+            candidate_urls.add(candidate)
+            candidates.append((candidate, value))
 
     items: list[dict[str, Any]] = []
     identities: set[tuple[str, str]] = set()
-    for candidate in candidates[:MAX_PRODUCT_PAGES]:
-        page = http.request(
-            "GET", candidate, params={"format": "json"}, follow_redirects=True
+    for candidate, raw_reference in candidates[:MAX_PRODUCT_PAGES]:
+        page = http.get(
+            http.squarespace_product_json(
+                response, raw_reference, detection.origin
+            )
         )
         terminal = _terminal("search", candidate, page, "public product data refused")
         if terminal:
@@ -344,6 +348,9 @@ def _payload_items(
         for variant in variants:
             if not isinstance(variant, dict) or not isinstance(variant.get("sku"), str):
                 raise ToolError("Squarespace variant omitted its SKU")
+            on_sale = variant.get("onSale", False)
+            if type(on_sale) is not bool:
+                raise ToolError("Squarespace variant onSale must be boolean")
             attributes = variant.get("attributes")
             if attributes is not None and not isinstance(attributes, dict):
                 raise ToolError("Squarespace variant attributes must be an object")
@@ -352,13 +359,13 @@ def _payload_items(
                 continue
             price = (
                 variant.get("salePriceMoney")
-                if variant.get("onSale") is True
+                if on_sale
                 else variant.get("priceMoney")
             )
             if not isinstance(price, dict):
                 raise ToolError("Squarespace variant omitted its price")
             regular = (
-                variant.get("priceMoney") if variant.get("onSale") is True else None
+                variant.get("priceMoney") if on_sale else None
             )
             items.append(
                 {
@@ -405,8 +412,13 @@ def _is_product_collection(payload: dict[str, Any]) -> bool:
 
 
 def _available(variant: dict[str, Any]) -> bool:
-    quantity = variant.get("qtyInStock")
-    return variant.get("unlimited") is True or (type(quantity) is int and quantity > 0)
+    unlimited = variant.get("unlimited", False)
+    if type(unlimited) is not bool:
+        raise ToolError("Squarespace variant unlimited must be boolean")
+    quantity = variant.get("qtyInStock", 0)
+    if type(quantity) is not int:
+        raise ToolError("Squarespace variant qtyInStock must be an integer")
+    return unlimited or quantity > 0
 
 
 def _entry_sku(entry: dict[str, Any]) -> Any:

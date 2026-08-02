@@ -97,6 +97,33 @@ class ShopifyTests(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    def test_detection_rejects_non_api_redirect_before_a_second_send(self) -> None:
+        homepage_request = httpx.Request("GET", "https://store.example/")
+        homepage = httpx.Response(200, text="<html></html>", request=homepage_request)
+        locations = (
+            "/not-shopify",
+            "/api/2026-07/graphql.json?redirected=true",
+            "https://user:secret@store.example/api/2026-07/graphql.json",
+            "http://store.example/api/2026-07/graphql.json",
+        )
+        for location in locations:
+            with self.subTest(location=location):
+                requests: list[httpx.Request] = []
+                http = Http(redirect_transport(location, requests))
+                with mock.patch.object(
+                    shopify, "send_signed", side_effect=unsigned_send
+                ) as signer:
+                    result = shopify.detect(
+                        http,
+                        "https://store.example",
+                        "https://store.example/",
+                        homepage,
+                    )
+
+                self.assertIsNone(result)
+                self.assertEqual(len(requests), 1)
+                self.assertEqual(signer.call_count, 1)
+
     def test_search_flattens_exact_variants(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             self.assertEqual(request.url.host, "backend.myshopify.com")
@@ -314,10 +341,10 @@ class ShopifyTests(unittest.TestCase):
 
         def handler(request: httpx.Request) -> httpx.Response:
             seen.append(request)
-            if request.url.path == "/api/2026-07/graphql.json":
+            if len(seen) == 1:
                 return httpx.Response(
                     307,
-                    headers={"Location": "/redirected/graphql"},
+                    headers={"Location": "/api/2026-07/graphql.json"},
                     request=request,
                 )
             return httpx.Response(
@@ -340,7 +367,7 @@ class ShopifyTests(unittest.TestCase):
             [str(request.url) for request in seen],
             [
                 "https://backend.myshopify.com/api/2026-07/graphql.json",
-                "https://backend.myshopify.com/redirected/graphql",
+                "https://backend.myshopify.com/api/2026-07/graphql.json",
             ],
         )
         self.assertNotEqual(
@@ -387,6 +414,25 @@ class ShopifyTests(unittest.TestCase):
             self.assertRaises(shopify.SignedRedirectBoundary),
         ):
             shopify.quote(http, detection(), reference)
+
+    def test_quote_rejects_item_ref_with_extra_key_before_transport(self) -> None:
+        reference = shopify.item_ref(
+            "shopify",
+            {
+                "variant_id": "gid://shopify/ProductVariant/7",
+                "forged": "value",
+            },
+        )
+
+        def unexpected_request(request: httpx.Request) -> httpx.Response:
+            self.fail(f"quote reached transport: {request.url}")
+
+        with self.assertRaisesRegex(
+            shopify.ToolError, "shopify item_ref has an invalid payload"
+        ):
+            shopify.quote(
+                Http(httpx.MockTransport(unexpected_request)), detection(), reference
+            )
 
     def test_empty_rate_list_is_not_free_shipping(self) -> None:
         responses = iter(

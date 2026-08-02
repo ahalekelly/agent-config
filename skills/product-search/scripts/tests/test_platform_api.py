@@ -80,6 +80,76 @@ class FakeAdapter:
 
 
 class DetectionTests(unittest.TestCase):
+    def test_woo_probe_redirect_is_not_followed_and_magento_detection_continues(
+        self,
+    ) -> None:
+        paths: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
+            if request.method == "GET" and request.url.path == "/":
+                return httpx.Response(
+                    200,
+                    text='<script type="text/x-magento-init">{}</script>',
+                    request=request,
+                )
+            if request.url.path == "/wp-json/wc/store/v1/products":
+                return httpx.Response(
+                    301, headers={"Location": "/"}, request=request
+                )
+            if request.url.path == "/api/2026-07/graphql.json":
+                return httpx.Response(404, request=request)
+            if request.url.path == "/graphql":
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": {
+                            "storeConfig": {"base_url": "https://store.example/"},
+                            "products": {"total_count": 0},
+                        }
+                    },
+                    request=request,
+                )
+            raise AssertionError(request.url)
+
+        def unsigned_send(
+            client: httpx.Client, request: httpx.Request
+        ) -> httpx.Response:
+            return client.send(request, follow_redirects=False)
+
+        with mock.patch.object(
+            platform_api.shopify, "send_signed", side_effect=unsigned_send
+        ):
+            result = platform_api.detect_store(
+                Http(httpx.MockTransport(handler)),
+                "store.example",
+                ["https://store.example"],
+            )
+
+        self.assertEqual(result.platform, "magento")
+        self.assertEqual(paths.count("/"), 1)
+
+    def test_passive_ecwid_detection_skips_active_platform_probes(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET" and request.url.path == "/":
+                return httpx.Response(
+                    200,
+                    text='<script src="https://app.ecwid.com/script.js?12345"></script>',
+                    request=request,
+                )
+            if request.url.path == "/wp-json/wc/store/v1/products":
+                raise AssertionError("WooCommerce probe must not run")
+            raise AssertionError(f"Unrelated active probe: {request.method} {request.url}")
+
+        result = platform_api.detect_store(
+            Http(httpx.MockTransport(handler)),
+            "store.example",
+            ["https://store.example"],
+        )
+
+        self.assertEqual(result.platform, "ecwid")
+        self.assertEqual(result.api_origin, "https://app.ecwid.com")
+
     def test_positive_non_magento_detection_skips_magento_capability_probe(
         self,
     ) -> None:
@@ -112,7 +182,9 @@ class DetectionTests(unittest.TestCase):
         with mock.patch.object(
             platform_api.shopify, "send_signed", side_effect=unsigned_send
         ):
-            result = platform_api.detect_store(http, "store.example")
+            result = platform_api.detect_store(
+                http, "store.example", ["https://store.example"]
+            )
 
         self.assertEqual(result.platform, "shopify")
         self.assertNotIn("/graphql", paths)
@@ -159,7 +231,9 @@ class DetectionTests(unittest.TestCase):
         with mock.patch.object(
             platform_api.shopify, "send_signed", side_effect=unsigned_send
         ):
-            result = platform_api.detect_store(http, "store.example")
+            result = platform_api.detect_store(
+                http, "store.example", ["https://store.example"]
+            )
 
         self.assertEqual(result.platform, "magento")
         self.assertEqual(result.search_source, "graphql")
@@ -171,21 +245,22 @@ class DetectionTests(unittest.TestCase):
 
         http = Http(httpx.MockTransport(home))
         with (
-            mock.patch.object(platform_api.woocommerce, "detect", return_value=None),
-            mock.patch.object(
-                platform_api.shopify, "detect", return_value=detected("shopify")
-            ),
-            mock.patch.object(platform_api.magento, "detect", return_value=None),
             mock.patch.object(
                 platform_api.bigcommerce, "detect", return_value=detected("bigcommerce")
             ),
-            mock.patch.object(platform_api.squarespace, "detect", return_value=None),
+            mock.patch.object(
+                platform_api.squarespace,
+                "detect",
+                return_value=detected("squarespace"),
+            ),
             mock.patch.object(platform_api.extra, "detect", return_value=None),
             self.assertRaisesRegex(
                 ToolError, "Conflicting positive storefront detections"
             ),
         ):
-            platform_api.detect_store(http, "store.example")
+            platform_api.detect_store(
+                http, "store.example", ["https://store.example"]
+            )
 
     def test_unknown_detection_is_explicit(self) -> None:
         def home(request: httpx.Request) -> httpx.Response:
@@ -200,7 +275,9 @@ class DetectionTests(unittest.TestCase):
             mock.patch.object(platform_api.squarespace, "detect", return_value=None),
             mock.patch.object(platform_api.extra, "detect", return_value=None),
         ):
-            result = platform_api.detect_store(http, "store.example")
+            result = platform_api.detect_store(
+                http, "store.example", ["https://store.example"]
+            )
         self.assertEqual(result.kind, "unknown")
         self.assertIn("No positive platform signal", result.evidence[0])
 

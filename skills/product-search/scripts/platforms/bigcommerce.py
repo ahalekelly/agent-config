@@ -105,18 +105,18 @@ class SearchParser(HTMLParser):
             return
         if (values.get("data-button-type") or "").casefold() == "add-cart":
             return
-        marker = " ".join(
+        product_metadata = " ".join(
             str(values.get(name, ""))
-            for name in (
-                "class",
-                "data-event-type",
-                "data-card-type",
-                "data-pid",
-                "data-product-id",
-            )
-        ).lower()
-        if "searchid=" not in href.lower() and not any(
-            value in marker for value in ("product", "card")
+            for name in ("data-event-type", "data-card-type")
+        ).casefold()
+        product_identity = any(
+            values.get(name)
+            for name in ("data-pid", "data-product-id", "data-sku", "data-custom-sku")
+        )
+        if (
+            "searchid=" not in href.casefold()
+            and "product" not in product_metadata
+            and not product_identity
         ):
             return
         self._link = (
@@ -181,9 +181,7 @@ class ProductParser(HTMLParser):
 
 
 def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object]:
-    response = http.request(
-        "GET", detection.origin + "/search.php", params={"search_query": query}
-    )
+    response = http.get(http.bigcommerce_search(detection.origin, query))
     terminal = _terminal(
         "search", "/search.php", response, "public HTML search refused"
     )
@@ -194,7 +192,7 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
 
     parser = SearchParser()
     parser.feed(response.text)
-    ranked: dict[str, tuple[int, int]] = {}
+    ranked: dict[str, tuple[int, int, str]] = {}
     for index, link in enumerate(parser.links):
         try:
             url = canonical_url(urljoin(str(response.url), link.href))
@@ -204,11 +202,15 @@ def search(http: Http, detection: DetectedStore, query: str) -> dict[str, object
             continue
         rank = _rank(query, link)
         if url not in ranked or rank < ranked[url][0]:
-            ranked[url] = (rank, index)
+            ranked[url] = (rank, index, link.href)
 
     items: list[dict[str, Any]] = []
-    for url, _ in sorted(ranked.items(), key=lambda item: item[1])[:MAX_PRODUCT_PAGES]:
-        page = http.request("GET", url, follow_redirects=True)
+    for url, (_, _, raw_href) in sorted(
+        ranked.items(), key=lambda item: item[1]
+    )[:MAX_PRODUCT_PAGES]:
+        page = http.get(
+            http.discovered_product_page(response, raw_href, detection.origin)
+        )
         terminal = _terminal("search", url, page, "public product page refused")
         if terminal:
             return terminal
@@ -504,9 +506,12 @@ def _shipping_option(value: Any, currency: str) -> dict[str, Any]:
     if amount_value is None:
         amount_value = value.get("cost")
     amount = money(amount_value, currency) if amount_value is not None else None
+    is_pickup = value.get("isPickup", False)
+    if type(is_pickup) is not bool:
+        raise ToolError("BigCommerce shipping option isPickup must be boolean")
     if "paid later" in lowered or "quote later" in lowered:
         disposition = "paid_later"
-    elif value.get("isPickup") is True or "pickup" in lowered or "pick up" in lowered:
+    elif is_pickup or "pickup" in lowered or "pick up" in lowered:
         disposition = "pickup"
     elif "fallback" in lowered:
         disposition = "fallback"

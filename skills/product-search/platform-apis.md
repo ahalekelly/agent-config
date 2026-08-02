@@ -82,7 +82,7 @@ Always follow the homepage redirect and probe the resolved storefront origin. An
 | Magento / Adobe Commerce | one read-only GraphQL capability query plus independent page markers when GraphQL is unavailable | detection-selected GraphQL or canonical same-origin HTML search | guest-cart REST when open |
 | BigCommerce Stencil | `cdn*.bigcommerce.com/s-<hash>`, Stencil assets, or `x-bc-store-id` | sitemap/search/product form; conditional page token GraphQL | Storefront REST cart plus checkout consignment |
 | Squarespace | Squarespace server/static assets and commerce collection JSON | `?format=json` collection data | anonymous cart entry plus shipping-location update |
-| Wix | Wix/Pepyaka headers or Wix static assets | anonymous e-commerce app token plus Catalog Reader | Wix storefront SDK/runtime |
+| Wix | Wix/Pepyaka headers or Wix static assets | site-local storefront-runtime token bootstrap plus Catalog Reader | Wix storefront SDK/runtime |
 | Ecwid | `app.ecwid.com/script.js?<store-id>` or storefront API bootstrap | public storefront token plus V3 products | supported Ecwid cart runtime |
 | Salesforce Commerce Cloud | `/on/demandware.` assets or Demandware response headers | site-specific search/product forms | standard SFRA guest checkout forms when unmodified |
 | OpenCart | `/catalog/view/` assets and `index.php?route=checkout/cart/add` | page/search routes | site-specific form; options and walls vary |
@@ -351,7 +351,7 @@ curl -X POST 'https://STORE/api/storefront/checkouts/CART_ID/consignments?includ
   --data-binary '[{"address":{"firstName":"Jordan","lastName":"Smith","company":"Pacific Prototyping LLC","address1":"747 Howard St","address2":"","city":"San Francisco","stateOrProvince":"California","stateOrProvinceCode":"CA","countryCode":"US","postalCode":"94103","phone":"4155550132","customFields":[],"shouldSaveAddress":false},"lineItems":[{"itemId":"PHYSICAL_ITEM_ID","quantity":1}]}]'
 ```
 
-The minimum tested request needs only the session cookie, content type, and CSRF header. Missing CSRF returned 403 HTML; missing session returned 401 `Checkout not found`. Read `consignments[].availableShippingOptions[]` and interpret zero methods by label. Do not silently fall back to another endpoint.
+The minimum tested request needs only the session cookie, content type, and CSRF header. Missing CSRF returned 403 HTML; missing session returned 401 `Checkout not found`. Read `consignments[].availableShippingOptions[]` and interpret zero methods by label. The `isPickup` marker defaults to `false` when omitted and must be an exact JSON boolean when present; pickup labels are also classified as pickup. Do not silently fall back to another endpoint.
 
 The product-form `/cart.php` plus `/remote/v1/shipping-quote` estimator is a separately labeled diagnostic. It succeeded on 10/11 stores but Valin challenged `/cart.php`; that does not justify a browser because Valin's primary REST path worked. Use BrowserSwarm only when the primary REST request itself is blocked or customized beyond the standard contract.
 
@@ -375,7 +375,7 @@ Storefront REST cart creation and exact-address consignment quoting returned non
 
 ## Squarespace
 
-Read collection JSON from a commerce collection URL with `?format=json` in one cookie jar. Resolve an exact item ID and SKU and retain the `crumb` cookie set by that collection JSON response. Add the item with a unique request ID:
+Read collection JSON from a commerce collection URL with `?format=json` in one cookie jar. For variant data, omitted `onSale` and `unlimited` fields default to `false`, and omitted `qtyInStock` defaults to zero. Present flag values must be exact JSON booleans, and a present stock quantity must be an exact JSON integer rather than a boolean. Resolve an exact item ID and SKU and retain the `crumb` cookie set by that collection JSON response. Add the item with a unique request ID:
 
 ```sh
 curl -X POST 'https://STORE/api/commerce/shopping-cart/entries' \
@@ -395,7 +395,9 @@ Interpret both `shippingOptionsStatus` and `fulfillmentOptions`. Require every f
 
 ## Wix
 
-Wix detection and public product data generalize, but destination cart quoting does not. Obtain an anonymous e-commerce app token from `/_api/v1/access-tokens`, then query `/_api/catalog-reader-server/api/v1/products/query`. The product ID is the stable identity used by `item_ref`; product-level `sku` is optional and is returned as `null` when absent, while a present non-string SKU is a schema error. Keep the token in memory only.
+Wix detection and public product data generalize when the page's storefront-runtime bootstrap publishes a site-local `accessTokensUrl`. This endpoint is undocumented storefront-runtime plumbing, not an official generic storefront API. Use its anonymous e-commerce app token only with the same site's `/_api/catalog-reader-server/api/v1/products/query` endpoint and keep the token in memory. The product ID is the stable identity used by `item_ref`; product-level `sku` is optional and is returned as `null` when absent, while a present non-string SKU is a schema error.
+
+A generic HTTP 503 from the token bootstrap is a transient `tool_error`: fail loudly without an in-run retry or a `gated` relabel. Wix's official merchant OAuth requires an authorized app and merchant and is not a replacement for read-only discovery across arbitrary storefronts.
 
 Cart creation requires Wix's supported storefront SDK/runtime because catalog-reference and renderer state are site-specific. Treat cart/address/shipping as a BrowserSwarm or merchant integration case. Three tested stores exposed public product data; none produced a generic destination quote.
 
@@ -506,18 +508,24 @@ uv run skills/product-search/scripts/platform_search_acceptance.py run \
   /private/tmp/product-search-storefront-corpus.md
 ```
 
-The fresh run records platform detection and one literal search query per store. Its source-tree hash covers only `platform_api.py`, `platform_api_core.py`, `platforms/*.py`, and `web_bot_auth.py`; runner, test, report, and documentation edits do not change that identity. It joins each row to the learned shipping cache by domain, but it does not create product lines, addresses, or rate requests and does not prove that its selected search product is the item used by an earlier quote run.
+The schema-4 runner accepts exactly `store`, `entry_origins`, `expected_group`, and `query` for each job. `entry_origins` must be a unique, nonempty list of exact HTTPS origins that includes the normalized input origin. Every GET requires a sealed, instance-bound `ReadGet` capability that fixes its route, query, origin, and redirect policy before transport. Storefront-entry redirects may cross origins only within the job's preauthorized `entry_origins`; other permitted redirects stay on their fixed origin and resource purpose. Discovery-derived reads are bound to the source request and response SHA-256. POSTs must match a classified Shopify, Magento, Wix, or Ecwid search operation with the exact method, endpoint, body shape, and pinned GraphQL document where applicable; method overrides, query-bearing or unclassified POSTs, mutations, and subscriptions are rejected before transport.
 
-| Expected platform | Stores | Positive candidates | Empty search | Terminal/not run | Tool errors |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Shopify | 12 | 12 | 0 | 0 | 0 |
-| WooCommerce | 12 | 12 | 0 | 0 | 0 |
-| Magento | 12 | 8 | 4 | 0 | 0 |
-| BigCommerce | 11 | 8 | 2 | 1 | 0 |
-| Squarespace | 3 | 3 | 0 | 0 | 0 |
-| Wix | 3 | 2 | 1 | 0 | 0 |
-| Ecwid | 3 | 0 | 2 | 1 | 0 |
-| Salesforce Commerce Cloud | 3 | 3 | 0 | 0 | 0 |
+Each saved row preserves its exact `entry_origins`. Each HTTP evidence entry contains `operation_kind`, `body_sha256`, `document_sha256`, `source_request_sha256`, and `source_response_sha256`, never the request body or bearer material. Offline validation reconstructs the request graph, verifies every method, route, query, origin, redirect edge, and pinned GraphQL document hash, and requires each source-hash pair to identify one unique earlier request and response. The source-tree SHA-256 covers `platform_api.py`, `platform_api_core.py`, `platform_search_acceptance.py`, `read_only_http.py`, `platforms/*.py`, and `web_bot_auth.py`. The corpus-specific pinned disposition contract is excluded from that source identity so it can pin results without hashing itself; tests, reports, and documentation are also excluded.
+
+Search outcomes use the three-way `selection` discriminant: `empty` means zero candidates, `selected` means a positive candidate count with one eligible indexed product, and `no_eligible_candidate` means candidates were returned but none passed the selection contract. The generated report shows this value per store and pins an exact per-domain disposition SHA-256 over the outcome kind, candidate count, selection, selected index, safe selected-product fields, and opaque item-reference hash. The runner joins each row to the learned shipping cache by domain, but it does not create product lines, addresses, or rate requests and does not prove that its selected search product is the item used by an earlier quote run.
+
+| Expected platform | Stores | Positive candidates | Empty search | Terminal/not run | Tool errors | Detection mismatches |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Shopify | 12 | 12 | 0 | 0 | 0 | 0 |
+| WooCommerce | 12 | 12 | 0 | 0 | 0 | 0 |
+| Magento | 12 | 8 | 4 | 0 | 0 | 0 |
+| BigCommerce | 11 | 9 | 2 | 0 | 0 | 0 |
+| Squarespace | 3 | 3 | 0 | 0 | 0 | 0 |
+| Wix | 3 | 2 | 1 | 0 | 0 | 0 |
+| Ecwid | 3 | 0 | 2 | 1 | 0 | 1 |
+| Salesforce Commerce Cloud | 3 | 3 | 0 | 0 | 0 | 0 |
+
+Fifty-eight stores completed search. Wylie Beckert was the only not-run search and detection mismatch; there were no tool errors or bot-wall search outcomes.
 
 Run deterministic unit tests from the repository root:
 

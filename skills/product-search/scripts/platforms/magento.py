@@ -756,18 +756,9 @@ def _html_search(
     detection: MagentoDetectedStore,
     query: str,
 ) -> dict[str, object]:
-    search_url = urljoin(detection.entry_url, "catalogsearch/result")
-    response = http.request("GET", search_url, params={"q": query})
-    if response.status_code in {301, 302, 303, 307, 308}:
-        location = response.headers.get("location")
-        if not location:
-            raise ToolError("Magento HTML search redirect has no Location header")
-        redirect_url = urljoin(str(response.url), location)
-        if url_origin(canonical_url(redirect_url)) != detection.origin:
-            raise ToolError(
-                "Magento HTML search redirect must stay on the same storefront"
-            )
-        response = http.request("GET", redirect_url)
+    response = http.get(
+        http.magento_html_search(detection.origin, detection.entry_url, query)
+    )
     denied = _denied(
         "search",
         "/catalogsearch/result",
@@ -780,20 +771,24 @@ def _html_search(
         raise ToolError(f"Magento HTML search returned HTTP {response.status_code}")
     parser = ProductLinks()
     parser.feed(response.text)
-    links = []
+    links: list[tuple[str, str]] = []
+    product_urls: set[str] = set()
     for href in parser.links:
         candidate = _canonical_product_url(urljoin(str(response.url), href))
         if candidate is None:
             continue
-        if url_origin(candidate) == detection.origin and candidate not in links:
-            links.append(candidate)
+        if url_origin(candidate) == detection.origin and candidate not in product_urls:
+            product_urls.add(candidate)
+            links.append((candidate, href))
         if len(links) == MAX_SEARCH_RESULTS:
             break
 
     items: list[dict[str, Any]] = []
     omitted = 0
-    for product_url in links:
-        product = http.request("GET", product_url)
+    for product_url, raw_href in links:
+        product = http.get(
+            http.discovered_product_page(response, raw_href, detection.origin)
+        )
         if product.status_code == 404:
             continue
         denied = _denied(

@@ -136,12 +136,14 @@ class DetectionVariantTests(unittest.TestCase):
             mock.patch.object(platform_api.magento, "detect") as detect_magento,
             http.client,
         ):
-            detection = platform_api.detect_store(http, "store.test")
+            detection = platform_api.detect_store(
+                http, "store.test", ["https://store.test"]
+            )
 
         self.assertEqual(detection, positive)
         detect_magento.assert_not_called()
 
-    def test_all_strong_platform_detectors_run_before_magento(self) -> None:
+    def test_passive_detectors_run_before_capability_probes(self) -> None:
         calls: list[str] = []
         homepage_response = httpx.Response(
             200,
@@ -187,16 +189,18 @@ class DetectionVariantTests(unittest.TestCase):
             ),
             http.client,
         ):
-            platform_api.detect_store(http, "store.test")
+            platform_api.detect_store(
+                http, "store.test", ["https://store.test"]
+            )
 
         self.assertEqual(
             calls,
             [
-                "woocommerce",
-                "shopify",
                 "bigcommerce",
                 "squarespace",
                 "extra",
+                "woocommerce",
+                "shopify",
                 "magento",
             ],
         )
@@ -478,7 +482,7 @@ class ClosedResultTests(unittest.TestCase):
 
         product = shopify_item()
         product["item_ref"] = item_ref("shopify", {"product_id": "wrong"})
-        with self.assertRaisesRegex(ToolError, "invalid item_ref payload"):
+        with self.assertRaisesRegex(ToolError, "invalid payload"):
             search_result(ShopifySearch(), "valve", [product])
 
     def test_validator_rejects_invalid_platform_field_values(self) -> None:

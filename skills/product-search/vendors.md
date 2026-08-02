@@ -54,7 +54,7 @@ Quote only to Jordan Smith, Pacific Prototyping LLC, 747 Howard St, San Francisc
 
 ## Learned storefront cache
 
-This untiered cache is operational memory, not a vendor ranking. It is keyed by normalized domain: update a matching row when reverified and append a row for a new domain. The 2026-07-31 seed includes all 62 distinct entry domains in the acceptance corpus, plus resolved aliases and other preferred-vendor facts. Shipping is a snapshot for the tested item and SF destination, not a policy promise. `none` means no wall appeared in the tested workflow; an API gate or browser boundary is stated separately.
+This untiered cache is operational memory, not a vendor ranking. It is keyed by normalized domain: update a matching row when reverified and append a row for a new domain. The 2026-07-31 seed includes every entry domain from the 59-store acceptance corpus and three separate tracked wall investigations, plus resolved aliases and other preferred-vendor facts. Shipping is a snapshot for the tested item and SF destination, not a policy promise. `none` means no wall appeared in the tested workflow; an API gate or browser boundary is stated separately.
 
 | Domain | Platform | Bot wall | Shipping facts | Verified |
 |---|---|---|---|---|
@@ -140,7 +140,8 @@ This untiered cache is operational memory, not a vendor ranking. It is keyed by 
 | `malcowallshop.com` | Wix | none | redirects to `holzbuchstaben.ch`; SF quote not reached; storefront runtime/controller required | 2026-07-31 |
 | `northboundcoffee.com` | Ecwid | none | USD 5.00 Flat Rate pre-address fallback; SF quote not verified | 2026-07-31 |
 | `cakesafe.com` | Ecwid | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
-| `wyliebeckert.com` | Ecwid | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
+| `wyliebeckert.com` | unknown | none | no positive platform signal on the readable homepage; SF quote not reached | platform 2026-08-01; shipping probe 2026-07-31 |
 | `us.dunlopsports.com` | Salesforce Commerce Cloud | none | SF: Ground USD 6.99; 2 Day USD 14.99; tax USD 3.19; Ground total USD 40.17 | 2026-07-31 |
-| `alcott.eu` | Salesforce Commerce Cloud | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
+| `alcott.eu` | Salesforce Commerce Cloud | none | redirects through an insecure URL; use `www.alcott.eu` for HTTPS-only workflows | platform 2026-07-31; redirect 2026-08-01 |
+| `www.alcott.eu` | Salesforce Commerce Cloud | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
 | `hugoboss.com` | Salesforce Commerce Cloud | none | SF quote not reached; storefront runtime/controller required | 2026-07-31 |
