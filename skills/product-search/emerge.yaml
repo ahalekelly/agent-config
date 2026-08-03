@@ -1,0 +1,33 @@
+---
+# Emerge codebase visualization config. Run from this directory:
+#   emerge -c emerge.yaml
+# then open emerge-out/html/emerge-force-graph.html (interactive dependency graph).
+project_name: product-search
+loglevel: info
+analyses:
+- analysis_name: product-search
+  source_directory: .
+  only_permit_languages:
+  - py
+  - typescript
+  only_permit_file_extensions:
+  - .py
+  - .ts
+  ignore_directories_containing:
+  - __pycache__
+  - .venv
+  - .pytest_cache
+  - node_modules
+  - emerge-out
+  file_scan:
+  - number_of_methods
+  - source_lines_of_code
+  - dependency_graph
+  - louvain_modularity
+  - fan_in_out
+  - tfidf
+  export:
+  - directory: emerge-out
+  - json
+  - tabular_console_overall
+  - d3

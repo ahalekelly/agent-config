@@ -1,0 +1,7 @@
+emerge-out/
+.codeboarding/cache/
+.codeboarding/logs/
+.codeboarding/static_analysis.*
+__pycache__/
+.pytest_cache/
+.DS_Store
