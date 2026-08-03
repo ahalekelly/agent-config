@@ -1,6 +1,7 @@
 ---
 # Emerge codebase visualization config. Run from this directory:
-#   emerge -c emerge.yaml
+#   mkdir -p emerge-out && emerge -c emerge.yaml
+# (emerge errors if the export directory doesn't already exist)
 # then open emerge-out/html/emerge-force-graph.html (interactive dependency graph).
 project_name: product-search
 loglevel: info

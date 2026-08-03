@@ -1,7 +1,11 @@
 emerge-out/
 .codeboarding/cache/
 .codeboarding/logs/
+.codeboarding/health/
 .codeboarding/static_analysis.*
+.codeboarding/*.lock
+.codeboarding/fingerprint.json
+.codeboarding/file_coverage.json
 __pycache__/
 .pytest_cache/
 .DS_Store
