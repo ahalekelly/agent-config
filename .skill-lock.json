@@ -1,24 +1,6 @@
 {
   "version": 3,
   "skills": {
-    "obsidian-vault": {
-      "source": "mattpocock/skills",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/mattpocock/skills.git",
-      "skillPath": "skills/personal/obsidian-vault/SKILL.md",
-      "skillFolderHash": "1e814d168a215762391895aee58f4de06c8e3b7f",
-      "installedAt": "2026-06-21T09:11:52.393Z",
-      "updatedAt": "2026-06-21T09:11:52.393Z"
-    },
-    "ubiquitous-language": {
-      "source": "mattpocock/skills",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/mattpocock/skills.git",
-      "skillPath": "skills/deprecated/ubiquitous-language/SKILL.md",
-      "skillFolderHash": "483fe10b01bed81b7eba7ee26df3f1bef9540c88",
-      "installedAt": "2026-06-21T09:11:52.398Z",
-      "updatedAt": "2026-06-21T09:11:52.398Z"
-    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
