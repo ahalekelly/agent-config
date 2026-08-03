@@ -167,6 +167,7 @@ source = "/Users/akelly/.cache/codex-runtimes/codex-primary-runtime/plugins/open
 
 [features]
 hooks = true
+default_mode_request_user_input = true
 terminal_resize_reflow = true
 goals = true
 prevent_idle_sleep = true
