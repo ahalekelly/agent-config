@@ -11,6 +11,7 @@ sandbox = "elevated"
 
 [features]
 hooks = true
+default_mode_request_user_input = true
 js_repl = false
 
 [[hooks.PreToolUse]]
