@@ -86,5 +86,15 @@ This must run outside the sandbox (`open` needs LaunchServices access, which the
 
 The Obsidian CLI is also installed for richer vault operations — read/create/append, search, properties, tasks, backlinks (`obsidian help` for the full list). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must also run outside the sandbox.
 
+## Errors in My Tools
+
+If a tool I developed throws an error or misbehaves while you're using it (pi-for-claude, show-in-browser, browser-swarm, or anything else of mine — repos owned by ahalekelly, typically under ~/Git or ~/.agents), treat the error as a bug report, not just an obstacle. Spawn a background Fable subagent to own the investigation, and continue your original task, working around the error if you need to keep moving. Mention the error and the resulting PR in your reply.
+
+The Fable subagent acts as an orchestrator: it does the judgment work itself — reproducing the error, diagnosing the root cause, and deciding whether this was a bug in the tool or a misuse of it — and delegates mechanical work (searching, running test matrices, implementing a worked-out fix) to its own subagents per the model routing rules. Point it at the transcript of the agent session where the error happened, and quote the failing invocation and full error output in its prompt, so it starts from what actually occurred rather than a paraphrase.
+
+Either verdict usually produces a PR. A bug gets a clean root-cause fix. A misuse means the tool let an agent go wrong: improve the docs, tighten the interface, or make the error message say what to do instead. When the fix is prompt docs — anything an agent reads as instructions — write it as suggestions and defaults, not hard rules, leaving the reading agent room for judgment.
+
+Short of an error, if a tool's behavior gets in your way and the friction seems like it would be common rather than specific to your task, consider filing a feature request on the tool's repo. Weigh the friction against the complexity the feature would add to the tool — frequent friction that's cheap to fix is an easy yes; a niche annoyance that would demand a new option or code path isn't worth filing. Describe what you were trying to do, what got in the way, and how you worked around it — check for an existing issue first.
+
 Let me know if you run into workflow issues with anything in this doc, or think something in this doc should be changed or explained better.
 
