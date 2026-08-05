@@ -147,6 +147,12 @@
         "repo": "mattpocock/skills"
       },
       "autoUpdate": true
+    },
+    "anthropic-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/skills"
+      }
     }
   },
   "sandbox": {
