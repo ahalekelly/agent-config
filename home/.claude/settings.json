@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "date '+Time: %A %Y-%m-%d %H:%M %Z'"
+            "command": "bash ~/.agents/hooks/usage-context.sh"
           }
         ]
       }

@@ -71,6 +71,15 @@ fi
 profile="personal"
 [[ "${CLAUDE_CONFIG_DIR:-}" == *claude-work* ]] && profile="work"
 
+# Cache rate limits for the usage-context prompt hook (per profile), atomically.
+rl=$(echo "$input" | jq -c '.rate_limits // empty')
+if [ -n "$rl" ]; then
+  cache_dir="$HOME/.cache/claude-usage"
+  mkdir -p "$cache_dir"
+  echo "{\"ts\":$(date +%s),\"rate_limits\":$rl}" > "$cache_dir/rate-limits.$profile.json.tmp" &&
+    mv "$cache_dir/rate-limits.$profile.json.tmp" "$cache_dir/rate-limits.$profile.json"
+fi
+
 parts=("$base" "$git_part" "$tokens_part" "$cost_part" "$usage_part" "$profile" "$model")
 line=""
 for part in "${parts[@]}"; do
