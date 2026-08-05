@@ -49,7 +49,7 @@ exclude = ["*_PASSWORD", "AWS_*"]
 [shell_environment_policy.set ]
 PATH = "/Users/akelly/.agents/bin:/Users/akelly/.pi/agent/bin:/Users/akelly/.platformio/penv/bin:/Users/akelly/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/MacGPG2/bin:/Applications/iTerm.app/Contents/Resources/utilities:/Applications/Obsidian.app/Contents/MacOS:/Users/akelly/Git/codex-plugin-cc/bin:/Users/akelly/.agents/pi-run/bin"
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e,8785b5437d98636c3002d3d7e64b98db79c3b66870b1bd3d18dea953a99b1562"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e,f204d340535055781952b10ed396de20b842f00a19e430852f7e121ad1ce91f6"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/akelly/.codex"
 
 [agents]
@@ -91,13 +91,13 @@ NODE_REPL_NODE_MODULE_DIRS = "/Applications/ChatGPT.app/Contents/Resources/cua_n
 NODE_REPL_NODE_PATH = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/akelly/.codex"
 CODEX_HOME = "/Users/akelly/.codex"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e,8785b5437d98636c3002d3d7e64b98db79c3b66870b1bd3d18dea953a99b1562"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e,f204d340535055781952b10ed396de20b842f00a19e430852f7e121ad1ce91f6"
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
 NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = "Control desktop apps on macOS through Computer Use."
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.727.40816"
+BROWSER_USE_CODEX_APP_VERSION = "26.727.51351"
 SKY_CUA_SERVICE_PATH = "/Users/akelly/.codex/computer-use/Codex Computer Use.app"
 CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
 
