@@ -71,6 +71,8 @@ macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n;
 
 To interact with web pages, spawn `browser-swarm-1...10` subagents — up to 10 in parallel, one per type, up to 2 tabs each. They come pre-wired to a shared headless browser daemon (Playwright MCP over CDP port 9377).
 
+Never attach a whole-browser CDP client (e.g. Playwright `connect_over_cdp`) to my real Vivaldi — it attaches a debugger to every target, which force-loads my 100+ lazily-suspended tabs and can wedge the browser. To inspect my real browser, list targets passively via `/json/list` and open a websocket directly to just the page targets you need.
+
 There are often multiple agents working on different tasks in the same project, don't interfere with the other agent's work. Sometimes I will also edit files while you're working.
 
 If I ask a question mid task, always answer my question first, before resuming what you were working on. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
