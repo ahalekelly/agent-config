@@ -4,8 +4,6 @@ Shared instructions for all coding agents live in ~/.agents/AGENTS.md (Codex and
 
 ## Claude Code Specifics
 
-Don't run bash commands that have long outputs, they put the entire output in the chat with me. Try not to use `cat` to read a file — use the `Read` tool instead, even when it means splitting a compound shell command apart (e.g. `ls dir; cat file` becomes a Bash call for `ls dir` plus a separate Read call for `file`, not one bundled command).
-
 Text written between tool calls is not displayed to me (Claude Code bug, anthropics/claude-code#75900). Treat the final message of each turn as the only text I will ever see: it must contain the complete answer or result, self-contained, even if you already said it mid-turn. Never end a turn on an aside or a message that assumes I read earlier text.
 
 The `!` prefix I use to run a command myself still executes in the session's non-interactive shell, not a real TTY. When a command needs sudo or another interactive terminal prompt, tell me to run it in a separate real Terminal window instead of suggesting `!`.
