@@ -26,6 +26,15 @@ One patch per tool description: `defer-workflow-description` (Workflow → stub 
 
 Point `port-agent.sh`'s prompt at Piebald-AI/claude-code-system-prompts — per-release Claude Code system prompts, updated within minutes of each release — plus the previous version's unpacked bundle. A better drift input than per-version patch baselines ever were, especially for prompt-anchored patches: `trim-context-bloat` and content refreshes of the two defer patches.
 
+## Upstream watch
+
+Each new version's port also runs the suite against the stock `.orig`: a test that **passes on stock** means Anthropic shipped that behavior natively and the patch is presumptively obsolete. After promotion, the port spawns an advisory `claude -p` agent (same sandboxed auto mode and Terminal-window-or-headless launch as tier 2) that:
+
+1. Reviews phate45/claude-patching commits since the SHA recorded in `port-state/phate45-reviewed` (shallow fetch to a temp dir — the vendored clone no longer exists): new patches worth adopting as rewrites, improved anchors, retirements or advisories (the quiet-notifications retirement is the model case).
+2. Investigates any passed-on-stock tests plus the version's release notes for patches Anthropic has obsoleted.
+
+It writes recommendations into the port message (printed at the next launch) and the completion notification, updates the reviewed SHA, and never edits patches itself — recommendations only, promotion is already done by the time it runs.
+
 ## External-user readiness
 
 - No machine-specifics: audit scripts and tests for `/Users/akelly`, `.agents`, and other local assumptions; everything stays `$ROOT`-relative plus the standard native-install paths.
