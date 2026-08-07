@@ -4,3 +4,6 @@
 [submodule "browser-leaf"]
 	path = browser-swarm
 	url = https://github.com/ahalekelly/browser-swarm.git
+[submodule "claude-patching"]
+	path = claude-patching
+	url = https://github.com/ahalekelly/claude-patching.git
