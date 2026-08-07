@@ -1,6 +1,6 @@
 # Preferred Vendors
 
-Tier is a soft ranking bias — a tiebreaker among comparable candidates, never a filter: the best product from any vendor still appears in the report, with its tier noted. Tiers: **preferred** (buy from these when possible) · **decent** (fine, no edge) · **last-resort** (only when nothing better exists). Unlisted vendors are unrated and judged on their own merits. Vendor notes are maintained guidance; re-verify current prices, stock, platform behavior, and shipping when load-bearing.
+Tier is a soft ranking bias — a tiebreaker among comparable candidates, never a filter: the best product from any vendor still appears in the report, with its tier noted. Tiers: **preferred** (buy from these when possible) · **decent** (fine, no edge) · **last-resort** (only when nothing better exists) · **blacklisted** (never buy; the exception to "tiers never exclude" — a blacklisted vendor may still appear in a report as a spec/existence data point, marked not purchasable). Unlisted vendors are unrated and judged on their own merits. Vendor notes are maintained guidance; re-verify current prices, stock, platform behavior, and shipping when load-bearing.
 
 When no stocked part fits, custom fabrication is in scope as an option (e.g. CNC machining in China often beats Misumi on price and lead time) — surface it via the manufacturer-RFQ technique; specific fab services aren't tiered here.
 
@@ -34,3 +34,4 @@ Platform labels are a scan aid. The storefront tool's `vendors.json` registry ho
 | LCSC | electronics | last-resort | slower and more expensive shipping than AliExpress | listings reliable | custom | — |
 | Adafruit | hobbyist modules | last-resort | pricing and shipping cost; good docs remain the draw | listings authoritative | Zen Cart | — |
 | Misumi | configurable precision mechanical | last-resort | long lead times and pricing; custom precision parts often better CNC-machined in China | listings authoritative | custom | — |
+| Nash Fuel | propane/LP-gas equipment | blacklisted | Adrian-directed blacklist (2026-08-07); do not buy | — | custom | — |
