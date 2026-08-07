@@ -4,6 +4,8 @@ Shared instructions for all coding agents live in ~/.agents/AGENTS.md (Codex and
 
 ## Claude Code Specifics
 
+Text written between tool calls is often silently dropped before reaching me or the transcript (Claude Code bug, anthropics/claude-code#75900). Only the turn-final message reliably survives, so make it self-contained: restate anything important you wrote mid-turn. Delete this paragraph once the bug is fixed.
+
 The `!` prefix I use to run a command myself still executes in the session's non-interactive shell, not a real TTY. When a command needs sudo or another interactive terminal prompt, tell me to run it in a separate real Terminal window instead of suggesting `!`.
 
 WebFetch's text extraction often fails on PDFs ("corrupted/unreadable" or empty answers), but it still saves the raw file to a local path noted in the result. Don't retry WebFetch or hunt for another copy — Read the saved file, the Read tool renders PDF pages natively. For a URL you already know is a PDF, fetch and Read in one step. Reading a PDF costs vision tokens, so if a task requires reading multiple PDFs, delegate it to an Opus subagent or GPT via pi-for-claude instead of reading them yourself.
