@@ -69,7 +69,7 @@ When creating Python scripts, always use `uv run` and put PEP 723 headers at the
 
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
-To interact with web pages, spawn `browser-swarm-1...10` subagents — up to 10 in parallel, one per type, up to 2 tabs each. They come pre-wired to a shared headless browser daemon (Playwright MCP over CDP port 9377).
+To interact with web pages, spawn `browser-swarm` subagents — every invocation gets its own MCP session and isolated context in the shared headless browser daemon (Playwright MCP over CDP port 9377), so run as many concurrently as needed, though each context costs 100–200 MB so keep fan-outs to about 10, up to 2 tabs each. For sites that block Chromium, `browser-swarm-firefox` gets an isolated context on one shared Firefox process the same way.
 
 Never attach a whole-browser CDP client (e.g. Playwright `connect_over_cdp`) to my real Vivaldi — it attaches a debugger to every target, which force-loads my 100+ lazily-suspended tabs and can wedge the browser. To inspect my real browser, list targets passively via `/json/list` and open a websocket directly to just the page targets you need.
 
