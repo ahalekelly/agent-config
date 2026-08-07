@@ -28,10 +28,12 @@ Point `port-agent.sh`'s prompt at Piebald-AI/claude-code-system-prompts — per-
 
 ## Upstream watch
 
-Each new version's port also runs the suite against the stock `.orig`: a test that **passes on stock** means Anthropic shipped that behavior natively and the patch is presumptively obsolete. After promotion, the port spawns an advisory `claude -p` agent (same sandboxed auto mode and Terminal-window-or-headless launch as tier 2) that:
+Each new version's port also runs the suite against the stock `.orig`, recording every test's result **and failure-reason string**. A test that **passes on stock** is not a verdict, it is a lost-discrimination flag with three possible causes: Anthropic shipped the behavior natively (retire the patch), the assertion drifted vacuous (an unrelated change satisfied it — the test needs strengthening, and until then its pass on the candidate proves nothing, so the gate treats it as suspect), or a flake. The reason strings are the diagnostic for the mirror-image miss too: tests that assert patch artifacts (the mcp canary, the defer stub text) can never pass on stock even when Anthropic fixes the underlying behavior, but their stock failure reasons distinguish "behavior still broken" from "behavior possibly fixed, artifact absent".
+
+After promotion, the port spawns an advisory `claude -p` agent (same sandboxed auto mode and Terminal-window-or-headless launch as tier 2) that:
 
 1. Reviews phate45/claude-patching commits since the SHA recorded in `port-state/phate45-reviewed` (shallow fetch to a temp dir — the vendored clone no longer exists): new patches worth adopting as rewrites, improved anchors, retirements or advisories (the quiet-notifications retirement is the model case).
-2. Investigates any passed-on-stock tests plus the version's release notes for patches Anthropic has obsoleted.
+2. Reads the stock run's per-test reasons plus the version's release notes: classifies any passed-on-stock test as fixed/vacuous/flake, and looks for artifact-asserting tests whose underlying behavior Anthropic has fixed.
 
 It writes recommendations into the port message (printed at the next launch) and the completion notification, updates the reviewed SHA, and never edits patches itself — recommendations only, promotion is already done by the time it runs.
 
