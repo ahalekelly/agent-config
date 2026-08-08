@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cross-shop": {
+      "command": "uv",
+      "args": ["run", "--project", "/Users/akelly/.agents/skills/product-search/cross-shop", "cross-shop-mcp"]
+    }
+  }
+}

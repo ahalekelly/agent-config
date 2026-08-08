@@ -66,7 +66,7 @@ Use this pass only when comparing vendors. If shipping may exceed roughly 20% of
 
 1. Search comprehensively for vendors, then give each plausible vendor to a separate Terra or Sonnet subagent, with at most five vendor subagents active at once.
 2. Check the vendor's published free- or flat-shipping rules before creating a quote cart.
-3. Batch API-capable stores through `uv run --project cross-shop cross-shop search …`, inspect candidates with `product`, then quote exact refs or variant handles. Use `scripts/amazon_product.py` for a known Amazon ASIN. Open `platform-apis.md` for protocol and failure details.
+3. Batch API-capable stores through the `cross-shop` MCP tools (`search`, `product`, `quote`, `images`) when the agent has them — Claude agents do, and Pi does via pi-mcp-adapter. Agents without the MCP registration run the same commands as a CLI: `uv run --project cross-shop cross-shop search …`. Inspect candidates with `product`, then quote exact refs or variant handles. Use `scripts/amazon_product.py` for a known Amazon ASIN. Open `platform-apis.md` for protocol and failure details.
 4. Use BrowserSwarm only for residue explicitly marked as a browser boundary. Keep it invisible, follow its README resource rules and two-tab cap, close tabs promptly, and never place an order, create an account, or enter payment details.
 5. Let successful live detection update `vendors.json`; keep `vendors.md` limited to maintained human-facing vendor notes. Do not turn learned domains into preferred vendors or change tiers.
 
