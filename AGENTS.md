@@ -4,7 +4,7 @@ Hi I'm Adrian Kelly, welcome to my computer
 
 Cut Unnecessary Words: Don't add any words that are not essential to the meaning.
 Use Active Voice: Favor the active voice over the passive voice.
-Use Simple Language: Opt for everyday English over jargon, or scientific terms.
+Use Simple Language: Opt for everyday English over jargon or scientific terms.
 
 ## Code Style
 
@@ -16,33 +16,26 @@ Prefer established, well-maintained libraries when they reduce overall complexit
 Lean on the dependencies already in the project before writing your own implementation or adding packages. Do not assume a library lacks a capability without checking its documentation and types.
 Make architectural decisions for the long term. Do not accept a stopgap that only works for now and is meant to be replaced later.
 
-Write extremely easy to consume code, it should be "skimmable" and easy to understand. Optimize for how easy the code is to read.
-Prefer fewer states, fewer arguments, and required values over optional ones.
-Minimize possible states by reducing number of arguments, remove or narrow any state.
-Use discriminated unions to reduce number of states the code can be in.
-Exhaustively handle any objects with multiple different types, fail on unknown type.
-Don't write defensive code, assume the values are always what types tell you they are.
-Verify data that gets loaded or passed into a function and don't be afraid to raise errors if it's incorrect. Always be highly opinionated about the parameters you pass around. Don't let things be optional if not strictly required.
-Remove any changes that are not strictly required.
-Bias for fewer lines of code.
-Don't break out into too many functions, that's hard to read.
-Use "if: raise" instead of try catches or default values when you do expect something to exist.
-Never pass overrides except strictly necessary, keep argument count low.
-Don't make arguments optional if they are actually required.
+Write skimmable code — optimize for how easy it is to read.
+Minimize possible states: fewer arguments, narrower state, required values instead of optional ones. Don't add optional arguments or overrides unless strictly necessary.
+Use discriminated unions to reduce the number of states. Handle each type exhaustively and fail on unknown types.
+Don't write defensive code, assume values are what their types say. Verify data where it's loaded or passed in and raise errors if it's incorrect — use "if: raise" instead of try/catch or default values when you expect something to exist.
+Remove any changes that are not strictly required. Bias for fewer lines of code.
+Don't break code into too many functions, that's hard to read.
 
-When you refactor or remove some functionality, also remove any dead code created by that change. Code and docs should reflect the intended end state, not the historical path that produced the current implementation. Optimize for the code that should exist, not the smallest diff from the old shape. Delete dead compatibility paths instead of making them better. Do not invent a generic framework for one feature. Prefer names that describe product intent over implementation history.
+When you refactor or remove some functionality, also remove any dead code created by that change. Code and docs should reflect the intended end state, not the historical path that produced the current implementation. Optimize for the code that should exist, not the smallest diff from the old shape. Do not invent a generic framework for one feature. Prefer names that describe product intent over implementation history.
 
-Don't make workarounds for code in the same project, if you're adding new functionality and it would reduce complexity and total LOC to refactor to do it properly then do it.
+Don't work around code in the same project — if adding the new functionality properly via a refactor would reduce complexity and total LOC, do the refactor.
 
-If things aren't working they should fail loudly and provide clear error messages to the user. Fallback paths are almost always unecessary extra code, they make functionality harder to reason about and hide when there are errors that need to be fixed.
+If things aren't working they should fail loudly with clear error messages. Fallback paths are almost always unnecessary extra code: they make functionality harder to reason about and hide errors that need to be fixed.
 
-Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs, the docs and code comments shouldn't mention, refer to, or imply previous versions of the code. Do not mention in comments or docs how the code is different now from how it was before, except in a specific high level project changelog. Code comments can still include warnings about specific mistakes to avoid.
+Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs: docs and code comments shouldn't mention, refer to, or imply previous versions of the code, except in a specific high-level project changelog. Code comments can still include warnings about specific mistakes to avoid.
 
 Timeless also means independent of the conversation that produced the edit: answer my question in your reply, and write the doc from the document's own point of view, stating facts positively rather than as responses ("the scope of X is ..." not "there is no separate definition of X"). Test: would the text make sense if it had always been in the doc?
 
-Reports are different, they're an explanation for the user to read immediately after creation, and a point-in-time snapshot, they don't have to be timeless. Put the datetime in a report's title — it marks the content as frozen at that date, so any future reader knows current docs win on conflict. If a report needs updating, it has become a living doc — drop the date from the title and record `created:` and `verified:` (last fact-checked) as frontmatter properties instead. Git preserves history, so delete or consolidate superseded reports rather than curating them. Keep reports in a `reports/` subfolder beside the project's living docs, so a project folder shows only maintained docs.
+Reports are different: they're an explanation for the user to read immediately after creation, a point-in-time snapshot, and don't have to be timeless. Put the datetime in a report's title — it marks the content as frozen at that date, so any future reader knows current docs win on conflict. If a report needs updating, it has become a living doc — drop the date from the title and record `created:` and `verified:` (last fact-checked) as frontmatter properties instead. Git preserves history, so delete or consolidate superseded reports rather than curating them. Keep reports in a `reports/` subfolder beside the project's living docs, so a project folder shows only maintained docs.
 
-When creating Markdown files in greenfield projects, don't use newlines to hard-wrap, the markdown viewer's soft line wrapping is preferred.
+When creating Markdown files in greenfield projects, don't hard-wrap with newlines; the markdown viewer's soft wrapping is preferred.
 
 My requests are approximate. I am not the one coding; you are. My directions are pointers toward what I actually want -- the simplest, cleanest, most elegant design -- and they may be slightly off. That goal ALWAYS outranks my literal words.
 
@@ -58,12 +51,11 @@ API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, read
 
 `~/.agents` is a git repo holding shared configuration for all coding agents; `~/.claude`, `~/.claude-work`, and `~/.codex` are symlinks into `~/.agents/home/`. `~/.agents/AGENTS.md` (this file) holds the shared instructions; `~/.agents/home/.claude/CLAUDE.md` adds Claude-specific sections on top. Skills are shared across projects via the `~/.claude/skills` symlink (real path `~/.agents/skills`). When editing any of these files, use the real `~/.agents/` paths — some tools refuse to write through the symlinks.
 
-
 ## Workflow
 
 Never use `rm` to delete files or directories, use the `trash` command instead so deleted items can be recovered.
 
-Python, Typescript, and Rust are the preferred languages when starting a greenfield project.
+Python, TypeScript, and Rust are the preferred languages when starting a greenfield project.
 
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
 
@@ -73,37 +65,35 @@ To interact with web pages, spawn `browser-swarm` subagents — every invocation
 
 Never attach a whole-browser CDP client (e.g. Playwright `connect_over_cdp`) to my real Vivaldi — it attaches a debugger to every target, which force-loads my 100+ lazily-suspended tabs and can wedge the browser. To inspect my real browser, list targets passively via `/json/list` and open a websocket directly to just the page targets you need.
 
-There are often multiple agents working on different tasks in the same project, don't interfere with the other agent's work. Sometimes I will also edit files while you're working.
+There are often multiple agents working on different tasks in the same project, don't interfere with the other agents' work. Sometimes I will also edit files while you're working.
 
 If I ask a question mid task, always answer my question first, before resuming what you were working on. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
 
 Sometimes I miss an earlier message of yours, especially one buried in a long run of tool calls. Don't assume I read everything: repeat anything still relevant — open questions, warnings, key findings — in your latest reply.
 
-If you find a bug in one place in the code, look for other places where that same class of bug could have occured. More generally, whenever you learn something surprising, like finding a bug, think about what that tells you about the state of the codebase and where it indicates there are areas for improvement, if they're small changes just do them, if they're big changes suggest them to me.
+If you find a bug in one place in the code, look for other places where that same class of bug could have occurred. More generally, whenever you learn something surprising, like finding a bug, think about what that tells you about the state of the codebase and where it indicates areas for improvement: if they're small changes just do them, if they're big changes suggest them to me.
 
 Don't be afraid to use web search to look things up.
 
-Split distinct logical changes into separate commits. After making changes, you should typically commit before returning to the user. 
+Split distinct logical changes into separate commits. After making changes, you should typically commit before returning to the user.
 
-Typically commit at file granularity, don't stage part of a file. If one file ends up containing multiple different changes you made, just commit them together. If the work is unfinished or tests are failing, flag these and don't commit. If a file you're working on also has edits that you didn't make, flag this and don't commit until the user explicitly asks you to.
+Typically commit at file granularity, don't stage part of a file. If one file ends up containing multiple different changes you made, just commit them together. If the work is unfinished or tests are failing, flag these and don't commit. If a file you're working on also has edits that you didn't make, flag this and don't commit until I explicitly ask you to.
 
 On repos I (ahalekelly) own, don't open pull requests for changes I asked for, just commit to main without pushing. If you are running in /goal or a similar mode without me in the loop and come up with ideas for improvements to my repos, try them and submit them as PRs if they work and seem good.
 
-Make sure to keep docs up to date whenever something changes, but please keep user-facing docs succinct. If you notice a doc doesn't match the comitted code, update it, even if you're not the one who made it out of date. But if the doc doesn't match uncomitted changes done by another agent, no need to update the doc, they'll update the doc before they commit the code.
+Keep docs up to date whenever something changes, and keep user-facing docs succinct. If you notice a doc doesn't match the committed code, update it, even if you're not the one who made it out of date. But if the doc doesn't match uncommitted changes made by another agent, no need to update it — they'll update the doc before they commit the code.
 
 If I ask a question with a question mark, it is an actual question where I'm looking for an answer, NOT a rhetorical question asking you to make a change. Answering the question is the entire deliverable. Investigation to find the answer is fine (reading, searching, throwaway tests in scratch dirs), but do not modify project files or anything else based on what you find. If the answer implies an obvious fix, state the fix and stop — I'll ask for it if I want it. This applies even when the fix is small, even when you're confident, and even to mid-task questions (answer first, then resume the original task).
 
 If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me.
 
-If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file. 
+If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file.
 
 To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` (outside the sandbox): it opens the file (deduping tabs), `focus` brings it forward, `last` moves its tab to the end to highlight it to me. Default to `last` but not `focus`, but if I tell you to do otherwise, make that the new default for the rest of that conversation. The extension live-reloads the visible page in place with zero flicker whenever you edit the file — no need to re-run the script to refresh. Pages with `<script>`s get a full (flashing) reload instead of the flicker-free swap.
 
-To show me a Markdown file, if it is not in an Obsidian vault, open it with Vivaldi. If it is, use `open "obsidian://open?path=~/Git/Repo/Note.md"`
+To show me a Markdown file, open it with Vivaldi, or if it's in an Obsidian vault use `open "obsidian://open?path=/absolute/path/Note.md"` instead. `open` must run outside the sandbox (it needs LaunchServices access, which the sandbox blocks).
 
-Obsidian and Vivaldi both auto-reload .md files. In Vivaldi this is done with the [markdown-viewer extension](https://github.com/simov/markdown-viewer). If we run into issues, let me know and we can try installing [md-reader](https://github.com/md-reader/md-reader) instead.
-
-This must run outside the sandbox (`open` needs LaunchServices access, which the sandbox blocks).
+Obsidian and Vivaldi both auto-reload .md files. Vivaldi does this with the [markdown-viewer extension](https://github.com/simov/markdown-viewer); if we run into issues, let me know and we can try installing [md-reader](https://github.com/md-reader/md-reader) instead.
 
 The Obsidian CLI is also installed for richer vault operations — read/create/append, search, properties, tasks, backlinks (`obsidian help` for the full list). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must also run outside the sandbox.
 
@@ -118,4 +108,3 @@ Either verdict usually produces a PR. A bug gets a clean root-cause fix. A misus
 Short of an error, if a tool's behavior gets in your way and the friction seems like it would be common rather than specific to your task, consider filing a feature request on the tool's repo. Weigh the friction against the complexity the feature would add to the tool — frequent friction that's cheap to fix is an easy yes; a niche annoyance that would demand a new option or code path isn't worth filing. Describe what you were trying to do, what got in the way, and how you worked around it — check for an existing issue first, scanning closed ones too.
 
 Let me know if you run into workflow issues with anything in this doc, or think something in this doc should be changed or explained better.
-
