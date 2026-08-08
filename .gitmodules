@@ -7,3 +7,6 @@
 [submodule "claude-patching"]
 	path = claude-patching
 	url = https://github.com/ahalekelly/claude-patching.git
+[submodule "skills/product-search/cross-shop"]
+	path = skills/product-search/cross-shop
+	url = https://github.com/ahalekelly/cross-shop.git
