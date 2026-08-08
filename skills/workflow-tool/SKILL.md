@@ -7,6 +7,8 @@ description: Full reference for the Workflow tool — scripting API (meta, agent
 
 The Workflow tool's inline description is a short stub (patched into the Claude Code binary by `~/.agents/claude-patching`) that points here; this skill holds the full original guidance. Everything below is the tool's complete usage text.
 
+The defer-workflow-description patch writes this file from the binary it defers, so edit the patch rather than this file. Values the binary interpolates are inlined; an expression the patch cannot resolve to a literal is left as `${...}`.
+
 This machine configures a small workflow size guideline: keep workflows under ~5 agents unless the user's prompt calls for a different scale.
 
 ---

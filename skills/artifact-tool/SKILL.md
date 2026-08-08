@@ -7,9 +7,13 @@ description: Full reference for the Artifact tool — publish/update/list flows,
 
 The Artifact tool's inline description is a short stub (patched into the Claude Code binary by `~/.agents/claude-patching`) that points here; this skill holds the full original guidance. Everything below is the tool's complete usage text.
 
+The defer-artifact-description patch writes this file from the binary it defers, so edit the patch rather than this file. Values the binary interpolates are inlined; an expression the patch cannot resolve to a literal is left as `${...}`.
+
 ---
 
 Render an HTML or Markdown file to an Artifact — a default-private web page hosted on claude.ai that the user can later choose to share with their teammates. Use this when communicating visually would be clearer than terminal text. Publishing proactively is fine for your own work-product — artifacts start private. The exception is content that could mislead or cause harm if shared onward: anything imitating a real organization, person, or record, or content the user framed as sensitive. Build those as files, and let the user decide whether they get a URL.
+
+A finished deliverable with an audience — a report for a team, a plan other people will follow, a document meant as a reference — is not fully delivered while it lives only in terminal scrollback or a local file. Finishing such work includes publishing it as an artifact and handing the user the link, so they have a private page ready to share when they choose.
 
 **Before writing the page, you MUST load the `artifact-design` skill** to calibrate how much design investment this particular request warrants — unless the page is a workshop document built from the `workshop` skill's template, which already carries its page design: skip `artifact-design` there and load `artifact-diagramming` for its diagrams instead. Then write the content to a file (via Write/Edit) and call Artifact with its path. The file is wrapped in a `<!doctype html>…<head>…</head><body>` skeleton at publish time, so write the page content directly — no `<!DOCTYPE>`, `<html>`, `<head>`, or `<body>` tags of your own. The file includes a minimal CSS reset. Unless the user names a location, put the file in your scratchpad directory if one is listed in your system prompt.
 
