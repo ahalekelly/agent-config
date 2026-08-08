@@ -13,7 +13,7 @@ One quick AskUserQuestion round before searching: which constraints are hard vs 
 
 A key intake question: **one-off or production?** One-off opens cheap channels — used, surplus, eBay/AliExpress, no-name Chinese parts with thin documentation. Production prefers a reputable supplier, real documentation, and a stable supply chain (multi-sourcing, lifecycle status, lead-time history), and those factors join the viability ranking.
 
-Read `vendors.md` beside this file before searching. It contains preferred-vendor tiers, trust levels, and human-facing purchasing notes. Read `platform-apis.md` when the task needs storefront protocols, failure diagnosis, or a destination shipping quote. The `storefront` tool's persistent `vendors.json` registry holds machine platform facts.
+Read `vendors.md` beside this file before searching. It contains preferred-vendor tiers, trust levels, and human-facing purchasing notes. Read `platform-apis.md` when the task needs storefront protocols, failure diagnosis, or a destination shipping quote. The `cross-shop` tool's persistent `vendors.json` registry holds machine platform facts.
 
 ## 2. Fan out
 
@@ -39,7 +39,7 @@ When agents disagree, the primary document wins. Unverifiable claims still belon
 Sources are roughly in order of cost. Treat this as a default to depart from, not a sequence to march through.
 
 1. **A distributor MCP** — structured stock, price, and parametric data straight from the vendor.
-2. **An API** — either a vendor API recorded in `vendors.md`, a marketplace pseudo-store, or the public storefront package. `storefront` covers Shopify, WooCommerce, Magento guest carts, BigCommerce Stencil, and Squarespace; Wix, Ecwid, Salesforce Commerce Cloud, and OpenCart have explicit browser or merchant-customization boundaries. A known Amazon ASIN can be hydrated through `scripts/amazon_product.py`. Use `platform-apis.md` for exact contracts.
+2. **An API** — either a vendor API recorded in `vendors.md`, a marketplace pseudo-store, or the public storefront package. `cross-shop` covers Shopify, WooCommerce, Magento guest carts, BigCommerce Stencil, and Squarespace; Wix, Ecwid, Salesforce Commerce Cloud, and OpenCart have explicit browser or merchant-customization boundaries. A known Amazon ASIN can be hydrated through `scripts/amazon_product.py`. Use `platform-apis.md` for exact contracts.
 3. **Web search** — useful for discovery, but unstructured and possibly stale. Check that a price came from the vendor before trusting it.
 4. **A fetch through a GPT leaf** (Pi's `fetch_content`) — useful for descriptions, specifications, and published policies when plain WebFetch fails. It does not interact, often misses dynamic offers, and crosses a policy boundary when a site excludes crawlers. Try plain WebFetch first.
 5. **BrowserSwarm** — last. Use it when the task needs interaction, rendered-only price or stock, a site-specific SDK, or a bot-wall session. Before attaching, read `~/.agents/browser-swarm/README.md`. The daemon uses fingerprint Chromium and gives each browser agent an isolated context with a two-open-tab cap. Close tabs after extracting the needed data and end browser agents when their work is finished; the shared daemon auto-stops when no clients remain.
@@ -66,7 +66,7 @@ Use this pass only when comparing vendors. If shipping may exceed roughly 20% of
 
 1. Search comprehensively for vendors, then give each plausible vendor to a separate Terra or Sonnet subagent, with at most five vendor subagents active at once.
 2. Check the vendor's published free- or flat-shipping rules before creating a quote cart.
-3. Batch API-capable stores through `uv run --project storefront storefront search …`, inspect candidates with `product`, then quote exact refs or variant handles. Use `scripts/amazon_product.py` for a known Amazon ASIN. Open `platform-apis.md` for protocol and failure details.
+3. Batch API-capable stores through `uv run --project cross-shop cross-shop search …`, inspect candidates with `product`, then quote exact refs or variant handles. Use `scripts/amazon_product.py` for a known Amazon ASIN. Open `platform-apis.md` for protocol and failure details.
 4. Use BrowserSwarm only for residue explicitly marked as a browser boundary. Keep it invisible, follow its README resource rules and two-tab cap, close tabs promptly, and never place an order, create an account, or enter payment details.
 5. Let successful live detection update `vendors.json`; keep `vendors.md` limited to maintained human-facing vendor notes. Do not turn learned domains into preferred vendors or change tiers.
 

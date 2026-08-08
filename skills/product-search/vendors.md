@@ -4,7 +4,7 @@ Tier is a soft ranking bias — a tiebreaker among comparable candidates, never 
 
 When no stocked part fits, custom fabrication is in scope as an option (e.g. CNC machining in China often beats Misumi on price and lead time) — surface it via the manufacturer-RFQ technique; specific fab services aren't tiered here.
 
-Platform labels are a scan aid. The storefront tool's `vendors.json` registry holds operational domain-to-platform facts.
+Platform labels are a scan aid. The cross-shop tool's `vendors.json` registry holds operational domain-to-platform facts.
 
 | Vendor | Categories | Tier | Why | Trust | Platform (2026-07-31) | Cached facts |
 |---|---|---|---|---|---|---|

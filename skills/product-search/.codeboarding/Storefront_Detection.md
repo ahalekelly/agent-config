@@ -23,8 +23,8 @@ Implements the search adapters for the three "browser-boundary" platforms — Wi
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.adapters.extra._ecwid_search`:245-283
-- `storefront.src.storefront.core.EcwidSearch`:550-552
+- `cross-shop.src.cross_shop.adapters.extra._ecwid_search`:245-283
+- `cross-shop.src.cross_shop.core.EcwidSearch`:550-552
 
 
 ### HTTP Session & Request Infrastructure with Shopify/Squarespace Search
@@ -33,9 +33,9 @@ Provides the isolated per-store HTTP transport and request-building layer, plus 
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.core.Session`:87-216
-- `storefront.src.storefront.core.RequestSpec`:80-84
-- `storefront.src.storefront.adapters.squarespace.SearchParser`:55-64
+- `cross-shop.src.cross_shop.core.Session`:87-216
+- `cross-shop.src.cross_shop.core.RequestSpec`:80-84
+- `cross-shop.src.cross_shop.adapters.squarespace.SearchParser`:55-64
 
 
 ### Detection Orchestration & Outcome Classification
@@ -44,11 +44,11 @@ The heart of the subsystem. It orchestrates the detection cascade and classifies
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.core.DetectedStore`:37-43
-- `storefront.src.storefront.core.StorefrontBotWall`:66-72
-- `storefront.src.storefront.core.UnknownStore`:58-62
-- `storefront.src.storefront.core.wall_system`:521-528
-- `storefront.src.storefront.service.Storefront._detect`:283-331
+- `cross-shop.src.cross_shop.core.DetectedStore`:37-43
+- `cross-shop.src.cross_shop.core.StorefrontBotWall`:66-72
+- `cross-shop.src.cross_shop.core.UnknownStore`:58-62
+- `cross-shop.src.cross_shop.core.wall_system`:521-528
+- `cross-shop.src.cross_shop.service.CrossShop._detect`:283-331
 
 
 

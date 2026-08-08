@@ -5,17 +5,17 @@ verified: 2026-08-02
 
 # Storefront platform APIs
 
-Use `storefront` after discovery identifies vendors that need live product data or destination shipping. Start with the package's plain HTTP adapters and escalate to BrowserSwarm only at an explicit runtime or wall boundary.
+Use `cross-shop` after discovery identifies vendors that need live product data or destination shipping. Start with the package's plain HTTP adapters and escalate to BrowserSwarm only at an explicit runtime or wall boundary.
 
 ## CLI
 
 From the product-search directory:
 
 ```sh
-uv run --project storefront storefront search '[{"store":"https://example.com","query":"bearing"}]'
-uv run --project storefront storefront product '["r1.1.1"]'
-uv run --project storefront storefront quote '[{"store":"https://example.com","lines":[{"item":"r1.1.1.2","quantity":2}]}]'
-uv run --project storefront storefront images r1.1.1 1:3
+uv run --project cross-shop cross-shop search '[{"store":"https://example.com","query":"bearing"}]'
+uv run --project cross-shop cross-shop product '["r1.1.1"]'
+uv run --project cross-shop cross-shop quote '[{"store":"https://example.com","lines":[{"item":"r1.1.1.2","quantity":2}]}]'
+uv run --project cross-shop cross-shop images r1.1.1 1:3
 ```
 
 `search`, `product`, and `quote` are batch commands. They group work by canonical store, run up to five stores concurrently, keep one session per store, consult the vendor registry before detection, and preserve input order. `--redetect` refreshes registry facts. `--debug` adds detection and request evidence omitted from token-lean default output.
@@ -137,7 +137,7 @@ Never persist cookies, Woo cart tokens, Shopify cart IDs, Magento masked IDs, Bi
 The package test suite uses mock transports and fixtures only:
 
 ```sh
-uv run --project storefront pytest
+uv run --project cross-shop pytest
 ```
 
 Live smoke tests are deliberate and separate. Inspect product detail and select an exact variant ref before any cart request. Dated acceptance results in this document describe observed protocol behavior, not prices or availability that tests should pin.

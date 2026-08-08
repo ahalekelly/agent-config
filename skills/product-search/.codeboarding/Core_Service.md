@@ -13,7 +13,7 @@ graph LR
 
 ## Details
 
-The central Storefront orchestrator that resolves items, detects stores, fans out work across a thread pool, normalizes variants, persists runs/vendors, and applies web-bot auth signing as a cross-cutting security concern.
+The central CrossShop orchestrator that resolves items, detects stores, fans out work across a thread pool, normalizes variants, persists runs/vendors, and applies web-bot auth signing as a cross-cutting security concern.
 
 ### BigCommerce Storefront Adapter
 Encapsulates the BigCommerce storefront integration. It provides the `BigCommerce` adapter that performs search against the `/search.php` endpoint, parses product pages and search result links, extracts product data, and drives quote/shipping flows. It also defines the BigCommerce-specific result models (`BigCommerceSearch`, `BigCommerceQuote`, `BigCommerceShipping`) in the core module that carry the normalized outcome of each operation back to the orchestrator. This component is a leaf adapter behind the common adapter interface, invoked by the orchestrator's worker lanes for any store detected as BigCommerce.
@@ -21,11 +21,11 @@ Encapsulates the BigCommerce storefront integration. It provides the `BigCommerc
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.adapters.bigcommerce.BigCommerce`:180-210
-- `storefront.src.storefront.adapters.bigcommerce.ProductParser`:131-177
-- `storefront.src.storefront.core.BigCommerceSearch`
-- `storefront.src.storefront.core.BigCommerceQuote`
-- `storefront.src.storefront.core.BigCommerceShipping`:589-591
+- `cross-shop.src.cross_shop.adapters.bigcommerce.BigCommerce`:180-210
+- `cross-shop.src.cross_shop.adapters.bigcommerce.ProductParser`:131-177
+- `cross-shop.src.cross_shop.core.BigCommerceSearch`
+- `cross-shop.src.cross_shop.core.BigCommerceQuote`
+- `cross-shop.src.cross_shop.core.BigCommerceShipping`:589-591
 
 
 ### Magento Storefront Adapter
@@ -34,10 +34,10 @@ Encapsulates the Magento storefront integration. It provides the `Magento` adapt
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.adapters.magento.Magento`:297-325
-- `storefront.src.storefront.adapters.magento.ProductPage`:108-187
-- `storefront.src.storefront.adapters.magento._graphql_search`:328-407
-- `storefront.src.storefront.core.MagentoSearch`:536-538
+- `cross-shop.src.cross_shop.adapters.magento.Magento`:297-325
+- `cross-shop.src.cross_shop.adapters.magento.ProductPage`:108-187
+- `cross-shop.src.cross_shop.adapters.magento._graphql_search`:328-407
+- `cross-shop.src.cross_shop.core.MagentoSearch`:536-538
 
 
 ### Core Normalization & Web-Bot Auth
@@ -46,11 +46,11 @@ Provides the shared, cross-cutting foundation that both the orchestrator and all
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.core.normalize_variant`:407-452
-- `storefront.src.storefront.core.validate_ref`:336-388
-- `storefront.src.storefront.core.canonical_url`:239-245
-- `storefront.src.storefront.core.ToolError`:32-33
-- `storefront.src.storefront.web_bot_auth.build_signer`:20-48
+- `cross-shop.src.cross_shop.core.normalize_variant`:407-452
+- `cross-shop.src.cross_shop.core.validate_ref`:336-388
+- `cross-shop.src.cross_shop.core.canonical_url`:239-245
+- `cross-shop.src.cross_shop.core.ToolError`:32-33
+- `cross-shop.src.cross_shop.web_bot_auth.build_signer`:20-48
 
 
 

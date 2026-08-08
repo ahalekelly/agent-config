@@ -41,11 +41,11 @@ Detects which e-commerce platform a given store runs on by probing its homepage,
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.core.DetectedStore`:37-43
-- `storefront.src.storefront.core.MagentoDetectedStore`:47-54
-- `storefront.src.storefront.core.StorefrontBotWall`:66-72
-- `storefront.src.storefront.core.Session`:87-216
-- `storefront.src.storefront.core.UnknownStore`:58-62
+- `cross-shop.src.cross_shop.core.DetectedStore`:37-43
+- `cross-shop.src.cross_shop.core.MagentoDetectedStore`:47-54
+- `cross-shop.src.cross_shop.core.StorefrontBotWall`:66-72
+- `cross-shop.src.cross_shop.core.Session`:87-216
+- `cross-shop.src.cross_shop.core.UnknownStore`:58-62
 
 
 ### Platform Adapters
@@ -54,11 +54,11 @@ Implements the per-platform adapter strategy behind the common BoundaryAdapter i
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.service.BoundaryAdapter`:38-52
-- `storefront.src.storefront.adapters.extra.Wix`:117-123
-- `storefront.src.storefront.adapters.extra.Ecwid`:126-132
-- `storefront.src.storefront.adapters.extra.Sfcc`:135-141
-- `storefront.src.storefront.adapters.extra._BrowserBoundary`:97-114
+- `cross-shop.src.cross_shop.service.BoundaryAdapter`:38-52
+- `cross-shop.src.cross_shop.adapters.extra.Wix`:117-123
+- `cross-shop.src.cross_shop.adapters.extra.Ecwid`:126-132
+- `cross-shop.src.cross_shop.adapters.extra.Sfcc`:135-141
+- `cross-shop.src.cross_shop.adapters.extra._BrowserBoundary`:97-114
 
 
 ### CLI Interface [[Expand]](./CLI_Interface.md)
@@ -67,11 +67,11 @@ Provides the command-line entry point (search, product, quote, images, config), 
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.cli.main`:14-37
-- `storefront.src.storefront.cli._parser`:40-66
-- `storefront.src.storefront.cli._json`:93-97
-- `storefront.src.storefront.cli._has_api_error`:100-105
-- `storefront.src.storefront.cli._config`:74-90
+- `cross-shop.src.cross_shop.cli.main`:14-37
+- `cross-shop.src.cross_shop.cli._parser`:40-66
+- `cross-shop.src.cross_shop.cli._json`:93-97
+- `cross-shop.src.cross_shop.cli._has_api_error`:100-105
+- `cross-shop.src.cross_shop.cli._config`:74-90
 
 
 ### Amazon Product Scraper [[Expand]](./Amazon_Product_Scraper.md)
@@ -88,15 +88,15 @@ A standalone script that reads one US Amazon product and its current all-offers 
 
 
 ### Core Service [[Expand]](./Core_Service.md)
-The central Storefront orchestrator that resolves items, detects stores, fans out work across a thread pool, normalizes variants, persists runs/vendors, and applies web-bot auth signing as a cross-cutting security concern.
+The central CrossShop orchestrator that resolves items, detects stores, fans out work across a thread pool, normalizes variants, persists runs/vendors, and applies web-bot auth signing as a cross-cutting security concern.
 
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.core.ToolError`:32-33
-- `storefront.src.storefront.core.normalize_variant`:407-452
-- `storefront.src.storefront.core.canonical_url`:239-245
-- `storefront.src.storefront.web_bot_auth.build_signer`:20-48
+- `cross-shop.src.cross_shop.core.ToolError`:32-33
+- `cross-shop.src.cross_shop.core.normalize_variant`:407-452
+- `cross-shop.src.cross_shop.core.canonical_url`:239-245
+- `cross-shop.src.cross_shop.web_bot_auth.build_signer`:20-48
 
 
 

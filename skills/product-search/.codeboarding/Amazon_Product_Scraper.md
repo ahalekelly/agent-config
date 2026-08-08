@@ -20,11 +20,11 @@ Implements the storefront adapter contract for the remaining platforms — Magen
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.core.MagentoQuote`:565-567
-- `storefront.src.storefront.core.WooCommerceQuote`:561-563
-- `storefront.src.storefront.core.WooCommerceSearch`
-- `storefront.src.storefront.core.quote_outcome`:614-625
-- `storefront.src.storefront.core.shipping_option`:604-607
+- `cross-shop.src.cross_shop.core.MagentoQuote`:565-567
+- `cross-shop.src.cross_shop.core.WooCommerceQuote`:561-563
+- `cross-shop.src.cross_shop.core.WooCommerceSearch`
+- `cross-shop.src.cross_shop.core.quote_outcome`:614-625
+- `cross-shop.src.cross_shop.core.shipping_option`:604-607
 
 
 ### Shopify Storefront Adapter
@@ -33,11 +33,11 @@ Implements the storefront adapter contract for Shopify by driving the tokenless 
 
 **Related Classes/Methods**:
 
-- `storefront.src.storefront.adapters.shopify.Shopify`:160-345
-- `storefront.src.storefront.core.ShopifyQuote`
-- `storefront.src.storefront.core.ShopifySearch`
-- `storefront.src.storefront.core.ShopifyShipping`:576-578
-- `storefront.src.storefront.core.search_result`:610-611
+- `cross-shop.src.cross_shop.adapters.shopify.Shopify`:160-345
+- `cross-shop.src.cross_shop.core.ShopifyQuote`
+- `cross-shop.src.cross_shop.core.ShopifySearch`
+- `cross-shop.src.cross_shop.core.ShopifyShipping`:576-578
+- `cross-shop.src.cross_shop.core.search_result`:610-611
 
 
 ### Amazon Product Scraper
