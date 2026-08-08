@@ -166,6 +166,7 @@
         "~/.cache/uv",
         "~/.Trash",
         "~/.agents/.git",
+        "~/.agents/claude-patching",
         "/Users/akelly/.agents/home/.pi/agent/auth.json",
         "/Users/akelly/.agents/home/.pi/agent/auth.json.lock"
       ],
