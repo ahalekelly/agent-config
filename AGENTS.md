@@ -18,18 +18,16 @@ Make architectural decisions for the long term. Do not accept a stopgap that onl
 
 Write skimmable code — optimize for how easy it is to read.
 Minimize possible states: fewer arguments, narrower state, required values instead of optional ones. Don't add optional arguments or overrides unless strictly necessary.
-Use discriminated unions to reduce the number of states. Handle each type exhaustively and fail on unknown types.
 Don't write defensive code, assume values are what their types say. Verify data where it's loaded or passed in and raise errors if it's incorrect — use "if: raise" instead of try/catch or default values when you expect something to exist.
-Remove any changes that are not strictly required. Bias for fewer lines of code.
 Don't break code into too many functions, that's hard to read.
+In our projects, bias for fewer total lines of code instead of minimizing the size of the diff. When you refactor or remove some functionality, also remove any dead code created by that change. Code and docs should reflect the intended end state, not the historical path that produced the current implementation. Optimize for the code that should exist, not the smallest diff from the old shape. Do not invent a generic framework for one feature. Prefer names that describe product intent over implementation history.
+Don't create workarounds for code that's in a project we own. If adding the new functionality properly via a refactor would reduce complexity and total LOC across our projects, do the refactor.
 
-When you refactor or remove some functionality, also remove any dead code created by that change. Code and docs should reflect the intended end state, not the historical path that produced the current implementation. Optimize for the code that should exist, not the smallest diff from the old shape. Do not invent a generic framework for one feature. Prefer names that describe product intent over implementation history.
-
-Don't work around code in the same project — if adding the new functionality properly via a refactor would reduce complexity and total LOC, do the refactor.
+When writing code to contribute to other people's open source projects, keep the diff size small. Ask me for each project whether we're contributing upstream or not and note that in your memory.
 
 If things aren't working they should fail loudly with clear error messages. Fallback paths are almost always unnecessary extra code: they make functionality harder to reason about and hide errors that need to be fixed.
 
-Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs: docs and code comments shouldn't mention, refer to, or imply previous versions of the code, except in a specific high-level project changelog. Code comments can still include warnings about specific mistakes to avoid.
+Documentation and code comments should be timeless, imagine you're writing them for someone reading a year from now. No breadcrumbs: docs shouldn't mention, refer to, or imply previous versions of the code, except in a specific high-level project changelog. Code comments should only mention code changes if they are warning about specific mistakes to avoid.
 
 Timeless also means independent of the conversation that produced the edit: answer my question in your reply, and write the doc from the document's own point of view, stating facts positively rather than as responses ("the scope of X is ..." not "there is no separate definition of X"). Test: would the text make sense if it had always been in the doc?
 
@@ -43,15 +41,19 @@ So when you hit a wall -- a case that doesn't fit, a spec that breaks, an assump
 
 What you must never do is patch around the wall to comply with my words: a flag, a special case, a conversion shim, a second channel, a parallel path, a test rewritten to dodge a broken rule. The patch IS the failure. Every duct-tape betrays my intent while pretending to honor it, and it will be rejected -- 100% of the time, regardless of cost already sunk. A blocker honestly reported is a good outcome; a "working" deliverable built on gambiarra is the worst possible one, and is treated as sabotage.
 
-## Secrets
-
-API keys live in `~/.agents/secrets.env`, one `export NAME=value` per line, readable from inside both the Claude and Codex sandboxes and normally already present in the command environment. If one is missing (e.g. in a desktop-launched session), source the file in the command that needs it: `. ~/.agents/secrets.env && <command>`. Never commit this file or print its contents.
+If you find a bug in one place in the code, look for other places where that same class of bug could have occurred. More generally, whenever you learn something surprising, like finding a bug, think about what that tells you about the state of the codebase and where it indicates areas for improvement: if they're small changes just do them, if they're big changes suggest them to me.
 
 ## Config Layout
 
 `~/.agents` is a git repo holding shared configuration for all coding agents; `~/.claude`, `~/.claude-work`, and `~/.codex` are symlinks into `~/.agents/home/`. `~/.agents/AGENTS.md` (this file) holds the shared instructions; `~/.agents/home/.claude/CLAUDE.md` adds Claude-specific sections on top. Skills are shared across projects via the `~/.claude/skills` symlink (real path `~/.agents/skills`). When editing any of these files, use the real `~/.agents/` paths — some tools refuse to write through the symlinks.
 
 ## Workflow
+
+There are often multiple agents working on different tasks in the same project, don't interfere with the other agents' work. Sometimes I will also edit files while you're working.
+
+If I ask a question mid task, always answer my question first, before resuming what you were working on. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
+
+Sometimes I miss an earlier message of yours, especially one buried in a long run of tool calls. Don't assume I read everything: repeat anything still relevant — open questions, warnings, key findings — in your latest reply.
 
 Never use `rm` to delete files or directories, use the `trash` command instead so deleted items can be recovered.
 
@@ -61,19 +63,11 @@ When creating Python scripts, always use `uv run` and put PEP 723 headers at the
 
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
-To interact with web pages, spawn `browser-swarm` subagents — every invocation gets its own MCP session and isolated context in the shared headless browser daemon (Playwright MCP over CDP port 9377), so run as many concurrently as needed, though each context costs 100–200 MB so keep fan-outs to about 10, up to 2 tabs each. For sites that block Chromium, `browser-swarm-firefox` gets an isolated context on one shared Firefox process the same way.
+Do not interrupt the user by using computer-use or playwright-mcp with an on-screen app unless specifically directed. To interact with web pages, spawn `browser-swarm` subagents — every invocation gets its own MCP session and isolated context in the shared headless Chrome browser daemon (Playwright MCP over CDP port 9377), each context costs 100–200 MB so keep fan-outs to about 10, up to 2 tabs each. For sites that block Chrome, `browser-swarm-firefox` gets an isolated context on one shared Firefox process the same way.
 
 Never attach a whole-browser CDP client (e.g. Playwright `connect_over_cdp`) to my real Vivaldi — it attaches a debugger to every target, which force-loads my 100+ lazily-suspended tabs and can wedge the browser. To inspect my real browser, list targets passively via `/json/list` and open a websocket directly to just the page targets you need.
 
-There are often multiple agents working on different tasks in the same project, don't interfere with the other agents' work. Sometimes I will also edit files while you're working.
-
-If I ask a question mid task, always answer my question first, before resuming what you were working on. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
-
-Sometimes I miss an earlier message of yours, especially one buried in a long run of tool calls. Don't assume I read everything: repeat anything still relevant — open questions, warnings, key findings — in your latest reply.
-
-If you find a bug in one place in the code, look for other places where that same class of bug could have occurred. More generally, whenever you learn something surprising, like finding a bug, think about what that tells you about the state of the codebase and where it indicates areas for improvement: if they're small changes just do them, if they're big changes suggest them to me.
-
-Don't be afraid to use web search to look things up.
+Use Web Search to look up anything that you're uncertain about.
 
 Split distinct logical changes into separate commits. After making changes, you should typically commit before returning to the user.
 
@@ -81,13 +75,13 @@ Typically commit at file granularity, don't stage part of a file. If one file en
 
 On repos I (ahalekelly) own, don't open pull requests for changes I asked for, just commit to main without pushing. If you are running in /goal or a similar mode without me in the loop and come up with ideas for improvements to my repos, try them and submit them as PRs if they work and seem good.
 
-Keep docs up to date whenever something changes, and keep user-facing docs succinct. If you notice a doc doesn't match the committed code, update it, even if you're not the one who made it out of date. But if the doc doesn't match uncommitted changes made by another agent, no need to update it — they'll update the doc before they commit the code.
+Keep docs up to date whenever something changes, and keep user-facing docs very succinct. Any time you write to a doc, do a second concision pass afterwards on anything you added to remove any extraneous words or info that wouldn't be relevant to the user. If you notice a doc doesn't match committed or untracked changes, update it, even if you're not the one who made it out of date. If the doc doesn't match *uncommitted* changes, no need to update it.
 
 If I ask a question with a question mark, it is an actual question where I'm looking for an answer, NOT a rhetorical question asking you to make a change. Answering the question is the entire deliverable. Investigation to find the answer is fine (reading, searching, throwaway tests in scratch dirs), but do not modify project files or anything else based on what you find. If the answer implies an obvious fix, state the fix and stop — I'll ask for it if I want it. This applies even when the fix is small, even when you're confident, and even to mid-task questions (answer first, then resume the original task).
 
-If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me.
+If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me and do not implement until I approve those.
 
-If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file.
+If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file, and make your final response just be a link to the file.
 
 To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` (outside the sandbox): it opens the file (deduping tabs), `focus` brings it forward, `last` moves its tab to the end to highlight it to me. Default to `last` but not `focus`, but if I tell you to do otherwise, make that the new default for the rest of that conversation. The extension live-reloads the visible page in place with zero flicker whenever you edit the file — no need to re-run the script to refresh. Pages with `<script>`s get a full (flashing) reload instead of the flicker-free swap.
 
@@ -99,7 +93,7 @@ The Obsidian CLI is also installed for richer vault operations — read/create/a
 
 ## Errors in My Tools
 
-If a tool I developed throws an error or misbehaves while you're using it (pi-for-claude, show-in-browser, browser-swarm, or anything else of mine — repos owned by ahalekelly, typically under ~/Git or ~/.agents), treat the error as a bug report, not just an obstacle. Scan all PRs and issues — closed and merged ones too, not just open (`--state all`) — for one that seems to match; if an open one does, briefly comment on it and move on, and if a closed one does, it's context for the investigation. If none matches, spawn a background Fable subagent to own the investigation and open a PR. Continue your original task, working around the error as needed. Mention the error and the resulting PR in your reply.
+If a tool I developed throws an error or misbehaves while you're using it (pi-for-claude, show-in-browser, browser-swarm, or anything else of mine — repos owned by ahalekelly, typically under ~/Git or ~/.agents), treat the error as a bug report, not just an obstacle. Scan all PRs and issues — closed and merged ones too (`--state all`) — for ones that seem to match; if an open one does, briefly comment on it and move on, and if a closed one does, it's context for the investigation. If none matches, spawn a background Fable subagent to own the investigation and open a PR. Continue your original task, working around the error as needed. Mention the error and the resulting PR in your reply. If no good fix can be found, open an issue instead of a PR.
 
 The Fable subagent acts as an orchestrator: it does the judgment work itself — reproducing the error, diagnosing the root cause, and deciding whether this was a bug in the tool or a misuse of it — and delegates mechanical work (searching, implementing a worked-out fix, running tests) to its own subagents per the model routing rules. Point it at the transcript of the agent session where the error happened, and quote the failing invocation and full error output in its prompt, so it starts from what actually occurred rather than a paraphrase.
 
