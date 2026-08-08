@@ -25,7 +25,7 @@ Platform labels are a scan aid. The storefront tool's `vendors.json` registry ho
 | Omega | sensors, instrumentation | decent | authoritative specs, premium pricing | listings authoritative | custom | — |
 | AliExpress | prototype-grade imports (mostly electronics, screws) | decent | cheap; some items only exist from no-name Chinese factories | verify everything | custom | official Affiliate Product API requires an approved app key; none is configured |
 | Alibaba | bulk/custom from manufacturers | decent | real RFQ + purchase channel for volume/custom parts | verify everything — listed MOQs and prices unreliable | custom | practical minimum orders are typically a few hundred dollars |
-| Zoro / Grainger | MRO/industrial | decent | Zoro is largely Grainger stock at lower prices with frequent coupons — always check Zoro pricing before recommending a Grainger part | listings reliable | custom | — |
+| Zoro / Grainger | MRO/industrial | decent | Zoro is largely Grainger stock at lower prices with frequent coupons — always check Zoro pricing before recommending a Grainger part | listings reliable | custom | Both DataDome-walled to all automated fetch/browser routes (2026-08-07, challenge canvas renders height=0, unsolvable; one attempt drew an IP-level block) — price checks need a human or the user |
 | GoBilda / ServoCity | robotics mechanicals | decent | robotics-mechanical ecosystem, premium vs raw imports; same parent company | listings reliable | BigCommerce | — |
 | StepperOnline (OMC) | steppers, servos | decent | cheap-but-documented motors | verify key specs | OpenCart | — |
 | Lowes / Home Depot | hardware-store goods | decent | on the commute — bulky items that would be expensive to ship; also online orders | listings reliable | custom | — |
