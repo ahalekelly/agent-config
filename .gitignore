@@ -13,6 +13,7 @@ node_modules/
 /.codex/
 .cc-writes/
 .agents/
+sessions/
 .playwright-mcp/
 
 # Python runtime caches for the product-search helpers.
