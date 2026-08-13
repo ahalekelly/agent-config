@@ -1,5 +1,5 @@
 name = "web-bot-auth"
-main = "worker.js"
+main = "../skills/product-search/cross-shop/key-directory/worker.js"
 compatibility_date = "2026-07-01"
 workers_dev = false
 routes = [
