@@ -1,0 +1,55 @@
+# Marketplace Expansion Survey 2026-08-13
+
+Five-cluster research fan-out (Opus agents, live probes + docs + ToS reads) into additional marketplaces and platforms for cross-shop, beyond the committed Walmart/Target/Best Buy/Etsy adapters (researched separately). Probing rules: read-only GETs, honest UA, stop at first 403/challenge; a ToS clause banning automated access is a dead end regardless of robots.txt.
+
+**Cross-cutting findings:**
+- **SerpApi census (verified directly):** commerce engines are Google Shopping (+Light/Immersive/Lens), Bing Shopping/Product, Amazon, eBay, Walmart, Home Depot — nothing else. No engine for any niche marketplace surveyed. Two clusters' write-ups listing Etsy/Brave/App Store engines were wrong; no Google Books engine either (SerpApi roadmap issue #63 frozen; the Google Books engine people remember is SearchApi.io, a different vendor).
+- **robots.txt is systematically misleading in used-goods verticals** — Swappa and Craigslist publish near-empty robots files while their ToS ban scraping outright; OfferUp does the inverse. Judge on the contract, not the file.
+- Auction/resale sites are overwhelmingly Cloudflare/DataDome/Akamai-walled to non-browser clients, frequently including their own robots.txt and ToS pages.
+
+## Build order (merged ranking)
+
+1. **Reverb** — unauthenticated REST API (`api.reverb.com/api/listings/all`, `Accept-Version: 3.0`), probed 200. One search call returns price, condition (`display_name`/`slug`), seller, and `shipping.rates[]` keyed by region (`US_CON`) — a real anonymous destination shipping quote. robots.txt disallows only `/api/my/` and a few private paths; bans by exception ("no good business reason" comment re one bad bot), no AI clause. Open risk: the API ToS page 403s to curl (browser check in flight); it reportedly reserves the right to charge for future API use. Free self-serve OAuth token at reverb.com/my/api_settings for attributable traffic. A day's work.
+2. **Open Library ISBN-expansion layer** — free, keyless (`openlibrary.org/search.json`, `/isbn/{isbn}.json`), best work↔edition↔ISBN graph. Not a storefront: an expansion layer (fuzzy title → ISBN set → exact-ISBN fan-out at Amazon/eBay) that improves book recall on backends cross-shop already has. Cheapest win in the survey. Descriptive UA with contact info; they throttle anonymous hammering.
+3. **Gazelle** — buy.gazelle.com is a Shopify store (`powered-by: Shopify`; `/products.json` probed 200). Cosmetic condition is a variant axis with per-grade pricing; carrier-lock/storage in tags; free US shipping so no quote endpoint needed. Near-zero new code: add the domain, map `Cosmetic Condition` option → grade, `Carrier:`/`Storage:` tags. Caveat: gazelle.com ToS not yet read for an automated-access clause.
+4. **Bonanza** — free self-serve official "Bonapitit" API (api.bonanza.com, approval "1-2 business days"). findItemsByKeywords/getSingleItem/etc. return price, condition, seller feedback, and `shippingServiceCost` + ship-to locations inline with search — search, detail, AND quote from one documented, permitted API. ToS bans scraping; the dev token is the express permission. 10k-item search ceiling, no documented rate limit (self-throttle). ~50k long-tail US sellers, collectibles/craft/discontinued goods.
+5. **1stDibs** — no API, but anonymous HTML carries full JSON-LD (search: `/buy/<slug>/` Product array; detail: offers in 10 currencies + Relay store with condition and seller tenure/order count). robots.txt names ClaudeBot with `Crawl-delay: 1` and allows the canonical paths; user agreement has NO anti-scraping clause (unique in the auctions cluster). Fastly SigSci passed default-curl probes. Gotchas: `/buy/` slugs 301 with semantic drift (record canonical slug); shipping quotes unverified. Unlocks $1k–$500k dealer-vetted design/antiques/watches with structured condition and creator/period/materials.
+
+Then: **JLCPCB via jlcparts mirror** (github.com/yaqwsx/jlcparts + CDFER/jlcpcb-parts-database — daily-updated SQLite/CSV of the full assembly catalog with stock + tiered pricing; a local index, zero bot-wall risk; LCSC direct is Akamai-blocked), **Discogs** (api.discogs.com unauth 25 req/min / 60 with free token; `/marketplace/stats/{release}` = one-call stock+price-floor oracle; gap: no cross-seller listing search; www HTML is Cloudflare-challenged), **Mouser** (free key, 1–2 day approval, price breaks + live stock; complements existing Digi-Key/McMaster MCPs), **AbeBooks** (below, after permission questions settle), **Chairish** (JSON-LD like 1stDibs; AI crawlers permitted apparently by robots-authoring accident — gate behind a config flag; `/shipping/` disallowed so no quotes), **BrickLink** (sanctioned API but OAuth1.0a bound to registered static IPs, own-store inventory only — price oracle not buy path; GPTBot banned from HTML).
+
+## Home Depot (from the interim census)
+
+The only additional retailer with a turnkey SerpApi path, and the strongest quote story of the paid options: `home_depot_product` takes `delivery_zip` + `store_id` and returns bulk/promo pricing, availability enum, and fulfillment options with costs and arrival dates. Fits the existing `SerpApi` adapter class (~80–120 lines, third engine branch + real product()/quote()).
+
+## AbeBooks (apply-and-wait; highest-value email in the books cluster)
+
+Search Web Services: affiliate-gated but free, human-approved by email (affiliate@abebooks.com). Plain unsigned GET (`search2.abebooks.com/search?clientkey=…&isbn=…&destinationcountry=USA&shippingdetails=yes`), XML, 4–5 qps documented. Per-copy condition vocabulary (new…poor), dust-jacket/first-edition/signed flags, seller rating, and true per-destination shipping quotes (11 countries). Purchase API is select-partners-only. Two blockers to settle before emailing: (1) client key is bound to a declared source IP — a residential/rotating-IP local MCP can't use it; decide on a fixed-IP relay vs hosted-only backend first; (2) 2008 "service bureau" clause limits results to the user who queried — describe the agent use case in the application and get written blessing (the ToS's item (iii) is the escape hatch). Page-scraping AbeBooks is separately a permanent dead end (explicit ToS ban).
+
+## Apply-and-wait (start clocks, no code yet)
+
+- **StockX** — official API only (developer.stockx.com): partner-gated, 1–2 week manual review, applicants rejected for unpolished sites. 25k req/day, ~1 rps; catalog returns per-size bid/ask market data (unique dataset) but `retail_price` is always null. Site scraping permanently off (Cloudflare + PerimeterX + robots ban). Aug-2026 signup status unconfirmed (SPA defeats extraction) — verify in a browser before applying.
+- **AbeBooks** affiliate + written-permission email (above).
+- **Biblio** — real affiliate API exists but docs are a 2013 blog post and the site 403s non-browsers; apply for key AND current docs, zero engineering until both land.
+
+## Email-not-code
+
+- **Swappa** — ToS bans all automated access "except to the extent expressly permitted by … Swappa's API Terms of Use", implying a private API program; best structured source for carrier-lock/IMEI-clean/battery-health. Ask for written permission.
+- **Heritage Auctions** — permissive robots but DataDome-walled; ToS unread. 6M+ free searchable prices-realized records = best sold-price oracle in the auctions vertical. Ask for crawl permission / data agreement.
+
+## Open decisions (Adrian)
+
+- **Poshmark**: `/vm-rest/posts` is fully open (no auth, not in robots.txt, rich structured JSON over ~80M listings — better than most official APIs) but ToS §4(b) bans automated collection. Recorded DEAD END under the contract-over-robots rule; session recommendation: keep it dead — cross-shop's identity is the Web Bot Auth-signed polite bot, and publishing a ToS-violating adapter undercuts that and creates publisher exposure.
+- **Sotheby's spike**: most permissive major-auction robots (Crawl-delay 15, lot pages allowed), WAF and ToS unprobed. One lot-page probe + ToS read is cheap.
+- **Gazelle ToS read** before shipping the domain mapping.
+
+## Never revisit (explicit bans on record)
+
+**Craigslist** (ToS bans all automated AND manual copying; $1,000/violation liquidated-damages clause (J) makes *distributing* software with an adapter a named violation; 3Taps: $1M judgment + permanent injunction). **Vinted** (robots.txt blocks ClaudeBot by name; "TRANSACTIONAL GOVERNANCE" block bans AI agents from accounts/carts/checkout "regardless of intent" with legal-referral enforcement notice). **LiveAuctioneers** (ToS §8.3 total automation ban + Imperva). **ThriftBooks** (site answers but ToS §11(c) bans collection of listings/prices — a trap). **Back Market** (seller-only API; ToS §5.4 scraping ban; only path is Awin affiliate feed, batch-only). **OfferUp** (ToS bans third-party apps existing without written consent). **ThomasNet** (DataDome CAPTCHA on robots.txt itself; directory with no prices anyway). **AbeBooks page-scraping** (API instead). **Facebook Marketplace** (no logged-off data; Meta v. Bright Data helps only logged-off scraping). **Decluttr** (closed June 2025). **TCGplayer** (closed to new API keys since late 2024). **Octopart/Nexar** (1000-part lifetime cap on free tier). **Chrono24** (no API of any kind; Cloudflare-challenged; would have been the best structured join key — watch reference numbers — in the vertical). **Catawiki/Invaluable/WorthPoint/Ricardo.ch** (walls and/or no buyer-side API; Ricardo's robots.txt itself warns of Cloudflare challenges). **Mercari US** (cf challenge on everything incl. ToS), **Depop/Grailed/GOAT** (Cloudflare blocks; Grailed's llms.txt is itself 403'd). **Mercari JP** (robots disallows the API path family; domestic-only shipping breaks the quote contract). **Alibaba B2B/IndiaMART/Made-in-China** (walls or robots bans; deeper reason: RFQ/MOQ flow means an agent can't transact at surfaced prices). **Alibris** (API host no longer resolves). **Better World Books** (Content-Signal rights reservation + ClaudeBot ban). **Bookshop.org** (policy welcomes AI *agents* via Cloudflare verified-bot list — which cross-shop isn't on; revisit only if cross-shop gets verified-bot status; don't spoof the allowed UAs).
+
+## Related distributor notes
+
+Mouser (free key) and Digi-Key V4 (free OAuth self-serve) are ToS-clean price+stock APIs; element14/Newark is rep-gated (not self-serve). Adafruit/SparkFun: custom storefronts (not Shopify), catalogs resold through Digi-Key/Mouser under same MPNs — no separate integration needed. Findchips: no API, adds nothing over the distributors.
+
+## Pending at time of writing
+
+Separate research in flight: Walmart/Target/Best Buy/Etsy access paths (gates the committed adapter build; one finding already landed — Best Buy API keys no longer issued to free-email addresses, company domain required; open-box endpoints return condition grades + new/open-box price pairs); government-surplus vertical (GovDeals/AllSurplus/GSA Auctions/Public Surplus/B-Stock etc.); browser checks on Reverb's 403-walled API ToS and BoardGameGeek's newly-401'd XML API registration.
