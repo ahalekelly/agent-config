@@ -36,11 +36,24 @@ Search Web Services: affiliate-gated but free, human-approved by email (affiliat
 - **Swappa** — ToS bans all automated access "except to the extent expressly permitted by … Swappa's API Terms of Use", implying a private API program; best structured source for carrier-lock/IMEI-clean/battery-health. Ask for written permission.
 - **Heritage Auctions** — permissive robots but DataDome-walled; ToS unread. 6M+ free searchable prices-realized records = best sold-price oracle in the auctions vertical. Ask for crawl permission / data agreement.
 
-## Open decisions (Adrian)
+## Adrian's rulings (2026-08-13)
 
-- **Poshmark**: `/vm-rest/posts` is fully open (no auth, not in robots.txt, rich structured JSON over ~80M listings — better than most official APIs) but ToS §4(b) bans automated collection. Recorded DEAD END under the contract-over-robots rule; session recommendation: keep it dead — cross-shop's identity is the Web Bot Auth-signed polite bot, and publishing a ToS-violating adapter undercuts that and creates publisher exposure.
+- **Poshmark: dead, final.** ToS §4(b) governs despite the open endpoint.
+- **RockAuto: build approved** under the narrow reading — the `ClaudeBot` robots line targets Anthropic's crawler product token; cross-shop's own UA falls under the permissive `*` group. Needs contract research (the `POST /catalog/catalogapi.php` shape) before an implementation plan.
+- **Target: skipped** (from the separate four-marketplace research) — redsky.target.com is `Disallow: /` and would be the tool's first robots-defying path; Amazon AOD, by contrast, is robots-clean.
+
+## Remaining open items
+
 - **Sotheby's spike**: most permissive major-auction robots (Crawl-delay 15, lot pages allowed), WAF and ToS unprobed. One lot-page probe + ToS read is cheap.
 - **Gazelle ToS read** before shipping the domain mapping.
+
+## Government surplus / liquidation vertical (dedicated follow-up, same date)
+
+**GSA Auctions — VIABLE, the clear winner.** Two independent working paths: (a) the official documented API `https://api.gsa.gov/assets/gsaauctions/v2/auctions?api_key=…` behind a free instant api.data.gov key (spec at github.com/GSA/auctions_api; verified live by differential probing — v2 keyless returns `API_KEY_MISSING`, v1 404s), **CC0/public-domain licensed** ("even for commercial purposes, all without asking permission"); (b) the anonymous keyless PPMS backend the gsaauctions.gov SPA uses — `POST https://www.ppms.gov/gw/auction/ppms/api/v1/auctions` (the verb matters; GET 401s) with search body, and `GET /gw/sales/ppms/api/v1/sales/preview/auctions/{lotId}` detail carrying make/model/FSC/condition code/odometer/geocoded location. 989 active lots, 365,613 including closed — the archive is a free comparables database for used equipment. gsaauctions.gov serves no robots.txt; GSA policy has no automated-access clause. Caveats: auction-shape (min/current bid + end date, no buy-now), local-pickup-only so `quote` must return the pickup address and decline, image URLs need a presigned-URL resolution call, and lot detail contains named federal employees' contact info — strip PII before caching.
+
+**Public Surplus — MARGINAL, one email from viable.** Cleanest HTML target found (server-rendered, no WAF, verified stable): search `GET /sms/browse/search?keyWord=…&region=…&zipCode=…`, detail `GET /sms/auction/view?auc=N` with buy-now, bids, and pickup address; robots.txt blocks 502 named bad bots but the `*` catch-all disallows only `/images/`. Blocked by the Buyer Agreement's no-automation clause — but that agreement is registration-triggered, is linked from no public page, and has an explicit written-permission carve-out. Email The Public Group, LLC (Henderson NV) describing a read-only rate-limited agent; all-50-states coverage if granted.
+
+**Dead ends, evidence on record:** HiBid (the painful one — anonymous GraphQL at hibid.com/graphql serving 1.3M lots incl. 1M with shipping offered and fr8Star freight quotes, but ToS bans "any other automated means to access our Sites" outright, no developer program); Municibid (ToS bars access "other than through a standard web browser"); GovDeals/AllSurplus/Liquidation.com (Akamai 403s the honest bot UA everywhere including robots.txt itself — while the robots policy a browser UA sees invites 5s-delay crawling; complying with the stated policy would require misrepresenting the client, i.e. evasion); GovPlanet/IronPlanet (Human-Verification 405 + robots-disallowed search); Proxibid (Imperva 403s even its own sitemaps); B-Stock (Cloudflare challenge; sitemap index emits localhost:3000 URLs); Purple Wave (no wall, but pure client-rendered SPA and the only data path, `/v1/*` REST incl. `/v1/shipping/estimate/`, is robots-disallowed). GSAXcess and DLA's disposition site no longer resolve in DNS (folded into PPMS / sam.gov respectively); SAM.gov's `ptype=g` surplus-sale notices are solicitation-level, wrong granularity. realestatesales.gov robots is `Disallow: /` in full.
 
 ## Never revisit (explicit bans on record)
 

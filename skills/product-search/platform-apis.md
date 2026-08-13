@@ -56,7 +56,7 @@ Homepage redirects establish the canonical storefront origin. The registry recor
 | Salesforce Commerce Cloud | Demandware routes, headers, or site ID | site-local search convention | customized SFRA flows are a browser boundary |
 | OpenCart | `/catalog/view/` assets and cart route | page-specific products/options | browser/site-specific boundary |
 
-A readable marker can classify a platform but cannot prove its cart API works. A challenge before positive platform evidence is a wall, not evidence of a platform.
+A readable marker can classify a platform but cannot prove its cart API works. A challenge before positive platform evidence is a wall, not evidence of a platform. Named wall systems are Cloudflare, Akamai, DataDome, PerimeterX, Kasada, Imperva, AWS WAF, and a generic captcha.
 
 ## Shopify
 
@@ -119,8 +119,13 @@ OpenCart options are page-specific. StepperOnline accepted a known product only 
 | `https://shopping.google.com` | SerpApi `google_shopping` | unverified cross-merchant leads |
 | `https://www.amazon.com` | SerpApi `amazon` organic results for search; All Offers Display hydration for exact-ASIN `product` | search gives listings only; `product` gives offer-panel evidence; no anonymous Amazon cart API |
 | `https://www.ebay.com` | Browse `item_summary/search`, `getItem`, and `getItemByLegacyId`; lazy OAuth client credentials; encoded contextual-location header | shipping appears in detail; checkout is restricted-tier |
+| `https://www.walmart.com` | SerpApi `walmart` organic results for search, because robots.txt disallows `/search`; anonymous `GET /ip/<us_item_id>` with `__NEXT_DATA__` hydration for `product` | search gives leads; `product` gives exact item facts; the delivery location follows the request IP, so no quote |
+| `https://www.bestbuy.com` | `api.bestbuy.com/v1/products((search=…))` for search and `products/<sku>.json` for detail, both with an explicit `show` field list | catalog facts including catalog-level `freeShipping` and `shippingCost`; no destination shipping computation |
+| `https://www.etsy.com` | Open API v3 `listings/active`, `listings/<id>` plus `/images`, and `listings/batch?includes=BuyerPrice` with `buyer_country`; `x-api-key: keystring:shared_secret` | exact listing facts; quote is a country-level buyer price, and a listing with variations prices its cheapest offering |
 
 Shopify Global Catalog models each merchant offer under that offer's seller storefront and API domains, preserves variant and checkout handoff links, and supports mixed merchant currencies without forcing product-level USD. It is the only marketplace source allowed to seed merchant origins into `vendors.json`, because its merchant identity is first-party platform data. AliExpress and SerpApi results never seed the registry.
+
+bestbuy.com itself is a hard Akamai wall; only the API is used. Best Buy issues keys to company-domain email addresses, caps caching at 72 hours, and forbids use "on behalf of … other retailers" for price analysis. Etsy keys come from the approval-gated, browser-only registration at etsy.com/developers/register; the key alone reaches public listings, while exact per-variation prices and product IDs need OAuth that anonymous keys cannot mint.
 
 ## Data hygiene and failures
 
