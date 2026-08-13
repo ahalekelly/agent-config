@@ -26,20 +26,18 @@ The destination defaults to 747 Howard St, San Francisco, CA 94103, US. Override
 
 ## Amazon ASIN hydration
 
-Amazon's undocumented All Offers Display endpoint provides useful primary-source data for a known US ASIN without an API credential. It does not search Amazon. Discover the product first, then pass its exact ASIN or US `/dp/` URL to the bounded helper:
+Amazon's undocumented All Offers Display endpoint provides useful primary-source data for a known US ASIN without an API credential. It does not search Amazon. Discover the product first, then pass its exact ASIN ref or US `/dp/` URL to `cross-shop` `product`:
 
 ```sh
-AMAZON_PRODUCT=scripts/amazon_product.py
-
-uv run "$AMAZON_PRODUCT" B0CZP3CDSZ
-uv run "$AMAZON_PRODUCT" 'https://www.amazon.com/dp/B0CZP3CDSZ'
+cross-shop product '["https://www.amazon.com/dp/B0CZP3CDSZ"]'
+cross-shop product '[{"platform":"amazon","store":"https://www.amazon.com","asin":"B0CZP3CDSZ"}]'
 ```
 
-The helper creates one anonymous session with `GET /`, then performs one read-only request to `GET /gp/product/ajax/aodAjaxMain/ref=auto_load_aod?asin=ASIN&pc=dp`. A successful result contains the title, product image, rating state, and an explicit offer state. Available offers contain condition, USD price, seller, shipper, and structured delivery promises. The `reported_other_offer_count` can exceed the offers embedded in the response; `other_offers_complete` makes that truncation explicit.
+The adapter creates one anonymous session with `GET /`, then performs one read-only request to `GET /gp/product/ajax/aodAjaxMain/ref=auto_load_aod?asin=ASIN&pc=dp`. A successful result contains the title, product image, rating state, and an explicit offer state. Available offers contain condition, USD price, seller, shipper, and structured delivery promises. The `reported_other_offer_count` can exceed the offers embedded in the response; `other_offers_complete` makes that truncation explicit.
 
 `delivery_scope:anonymous_default_location` means Amazon selected the location. Those promises are neither an SF quote nor evidence for the user's destination. An offer is current offer-panel evidence, not an inventory count. A response without reviews is `unrated`; no buyable offer is `no_offers`; no featured offer alongside marketplace offers is an available offer set with `featured.status:unavailable`.
 
-HTTP 404 is `aod_unavailable` because some valid products use a different offers interface. It is not evidence that the ASIN does not exist. Other non-200 responses and unexpected HTML are terminal errors: do not retry, rotate proxies, or add a challenge bypass. The helper discards cookies, add-to-cart values, CSRF tokens, and offer tokens and never mutates a cart.
+HTTP 404 is an `api_error` ("all-offers display is unavailable") because some valid products use a different offers interface. It is not evidence that the ASIN does not exist. Other non-200 responses and unexpected HTML are terminal errors: do not retry, rotate proxies, or add a challenge bypass. The adapter discards cookies, add-to-cart values, CSRF tokens, and offer tokens and never mutates a cart.
 
 This is unstable storefront plumbing, not a supported contract. Amazon's robots policy disallows its named AI crawler user agents, so use the helper only when Amazon is explicitly within the task's scope and keep each lookup bounded. For a supported production integration, prefer the official Amazon Business Product Search API when the required business onboarding, catalog role, customer identity, and access token are available.
 
@@ -119,7 +117,7 @@ OpenCart options are page-specific. StepperOnline accepted a known product only 
 | `https://shop.app` | Shopify `https://catalog.shopify.com/api/ucp/mcp`, JSON-RPC `tools/call` using `search_catalog` and `get_product`; every call carries the configured UCP agent profile in `arguments.meta.ucp-agent.profile` | first-party Shopify catalog facts; quote a concrete merchant offer |
 | `https://www.aliexpress.com` | Affiliate Product Query with TOP HMAC-MD5 signing | affiliate-promotable leads; no exact cart quote |
 | `https://shopping.google.com` | SerpApi `google_shopping` | unverified cross-merchant leads |
-| `https://www.amazon.com` | SerpApi `amazon` organic results | listings only; no anonymous Amazon cart API |
+| `https://www.amazon.com` | SerpApi `amazon` organic results for search; All Offers Display hydration for exact-ASIN `product` | search gives listings only; `product` gives offer-panel evidence; no anonymous Amazon cart API |
 | `https://www.ebay.com` | Browse `item_summary/search`, `getItem`, and `getItemByLegacyId`; lazy OAuth client credentials; encoded contextual-location header | shipping appears in detail; checkout is restricted-tier |
 
 Shopify Global Catalog models each merchant offer under that offer's seller storefront and API domains, preserves variant and checkout handoff links, and supports mixed merchant currencies without forcing product-level USD. It is the only marketplace source allowed to seed merchant origins into `vendors.json`, because its merchant identity is first-party platform data. AliExpress and SerpApi results never seed the registry.
