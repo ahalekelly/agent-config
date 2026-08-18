@@ -1,4 +1,5 @@
 {
+  "processWrapper": "/Users/akelly/.agents/claude-patching/process-wrapper.sh",
   "cleanupPeriodDays": 3650,
   "env": {
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
@@ -122,7 +123,6 @@
     "clangd-lsp@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
-    "opencairn@opencairn": true,
     "swift-lsp@claude-plugins-official": true,
     "mattpocock-skills@mattpocock": true
   },
@@ -175,6 +175,9 @@
       ]
     }
   },
+  "worktree": {
+    "baseRef": "head"
+  },
   "effortLevel": "high",
   "awaySummaryEnabled": false,
   "tui": "fullscreen",
@@ -192,5 +195,37 @@
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
+  "autoMode": {
+    "soft_deny": [
+      "$defaults",
+      "Bash(git push:*) against github.com/ahalekelly/agent-config main — public repo, treat as publication of tracked content"
+    ],
+    "environment": [
+      "### Org-wide",
+      "**Organization**: None configured",
+      "**Cloud provider(s)**: None configured",
+      "**Repository visibility**: PUBLIC — github.com/ahalekelly/agent-config (confirmed via gh)",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: local files excluded from tracking — `secrets.env` and `web-bot-auth/private.pem` are gitignored in this repo; `~/.secrets.env` is explicitly kept out of agent environments per repo docs",
+      "**Default / protected branches**: `main` is the default branch; no rulesets or protected-branch rules listed via gh (public repo — treat pushes to `main` as publishing)",
+      "**CI/CD deploy targets**: None configured",
+      "**Network posture**: None configured",
+      "**Source control**: The trusted repo (github.com/ahalekelly/agent-config) and its remote only — no additional orgs configured",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: None configured",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: `secrets.env` (agent-safe API keys, gitignored, never committed) and `web-bot-auth/private.pem` (gitignored private key) in this repo; `~/.secrets.env` outside the repo holds keys agents must not see at all — preserve exact paths and never expose or commit them",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development — maintaining this coding-agent configuration repo (~/.agents), including Claude/Codex/Pi dotfiles, hooks, and skills",
+      "**Trusted repo**: this repo (github.com/ahalekelly/agent-config) at ~/.agents, which is PUBLIC — only this repo's own work belongs here; confidential material (secrets.env, private.pem, anything under ~/.secrets.env) is never cleared for commit or push regardless of visibility",
+      "**Org-specific CLIs**: None configured — repo-local tools observed in usage: `trash`, `pi-run`, `pi-for-claude`, `agy` (routine under this repo's own tooling)",
+      "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi-for-claude`) are routine"
+    ]
+  },
   "voiceEnabled": true
 }
