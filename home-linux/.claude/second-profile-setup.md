@@ -1,0 +1,1 @@
+../../home/.claude/second-profile-setup.md

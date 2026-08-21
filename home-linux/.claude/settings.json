@@ -1,0 +1,96 @@
+{
+  "cleanupPeriodDays": 3650,
+  "env": {
+    "BASH_MAX_OUTPUT_LENGTH": "10000",
+    "CLAUDE_CODE_IMMEDIATE_TOOLS": "WebFetch,WebSearch"
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Bash(curl:*)"
+    ],
+    "deny": [
+      "Read(/home/akelly/.pi/agent/auth.json)",
+      "Read(/home/akelly/.agents/home/.pi/agent/auth.json)"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "claude-fable-5[1m]",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ~/.agents/hooks/prevent-rm.py"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ~/.agents/hooks/allow-mcp.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.agents/hooks/todo-capture.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.agents/hooks/usage-context.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh"
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowLocalBinding": true
+    },
+    "filesystem": {
+      "allowWrite": [
+        "~/.cache/uv",
+        "~/.local/share/Trash",
+        "~/.agents/.git",
+        "/home/akelly/.pi/agent/auth.json",
+        "/home/akelly/.pi/agent/auth.json.lock"
+      ],
+      "allowRead": [
+        "/home/akelly/.pi/agent/auth.json"
+      ]
+    }
+  },
+  "effortLevel": "high",
+  "awaySummaryEnabled": false,
+  "tui": "fullscreen",
+  "showThinkingSummaries": true,
+  "skipWorkflowUsageWarning": true,
+  "theme": "auto",
+  "verbose": false,
+  "preferredNotifChannel": "auto",
+  "autoCompactEnabled": true,
+  "switchModelsOnFlag": false,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true
+}

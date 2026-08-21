@@ -24,6 +24,13 @@ week_secs=$((7 * 24 * 3600))
 cache_dir="$HOME/.cache/claude-usage"
 ttl=900
 
+# macOS (BSD) vs Linux (GNU) stat
+if stat -f %m / >/dev/null 2>&1; then
+  file_mtime() { stat -f %m "$1"; }
+else
+  file_mtime() { stat -c %Y "$1"; }
+fi
+
 # usage_line <label> <used_pct> <resets_at_epoch> [window_secs]
 usage_line() {
   local label=$1 used=$2 resets=$3 window=${4:-$week_secs}
@@ -39,7 +46,7 @@ usage_line() {
 
 # cache_expired <file> — true when missing or older than the TTL
 cache_expired() {
-  [ ! -f "$1" ] || [ $(( now - $(stat -f %m "$1") )) -ge "$ttl" ]
+  [ ! -f "$1" ] || [ $(( now - $(file_mtime "$1") )) -ge "$ttl" ]
 }
 
 profile="personal"
@@ -48,11 +55,18 @@ claude_cache="$cache_dir/oauth-usage.$profile.json"
 
 refresh_claude() {
   local svc token ver tmp
-  svc="Claude Code-credentials"
-  [ -n "${CLAUDE_CONFIG_DIR:-}" ] &&
-    svc+="-$(printf %s "$CLAUDE_CONFIG_DIR" | shasum -a 256 | cut -c1-8)"
-  token=$(security find-generic-password -a "$USER" -s "$svc" -w 2>/dev/null |
-    jq -r '.claudeAiOauth.accessToken // empty')
+  if command -v security >/dev/null 2>&1; then
+    # macOS: the token is in the Keychain (see header comment).
+    svc="Claude Code-credentials"
+    [ -n "${CLAUDE_CONFIG_DIR:-}" ] &&
+      svc+="-$(printf %s "$CLAUDE_CONFIG_DIR" | shasum -a 256 | cut -c1-8)"
+    token=$(security find-generic-password -a "$USER" -s "$svc" -w 2>/dev/null |
+      jq -r '.claudeAiOauth.accessToken // empty')
+  else
+    # Linux: Claude Code keeps it in <config dir>/.credentials.json.
+    token=$(jq -r '.claudeAiOauth.accessToken // empty' \
+      "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json" 2>/dev/null)
+  fi
   [ -z "$token" ] && return
   # Without a claude-code User-Agent the endpoint rate-limits aggressively.
   ver=$(ls -t "$HOME/.local/share/claude/versions" 2>/dev/null | head -1)
