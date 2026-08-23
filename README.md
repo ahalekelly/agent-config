@@ -19,7 +19,7 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 
 The root `.gitignore` is a normal deny-list: everything is tracked by default except dependencies, logs, and agent runtime state. The exception is `home/`, `home-windows/`, and `home-linux/` — the live runtime dirs (`~/.claude` etc.) symlink or junction into them, so each carries its own deny-all (`*`) `.gitignore`, making leaking runtime state or credentials an opt-in mistake rather than a default one. Inside those folders, new curated config files must be added with `git add -f`, and `git add` on an already-tracked file exits nonzero with an ignore warning (while still staging) — use `git add -u` for tracked changes there. Everywhere else, git behaves normally.
 
-`home/.codex/config.toml` runs through a clean filter (`clean-codex-config.py`, wired in `.gitattributes`) that strips the machine-generated `[projects]` trust entries and marketplace timestamps Codex appends — activity history that must not be committed. The filter driver is per-clone git config; the setup lines below configure it and mark it required, so a clone missing the filter fails loudly instead of staging the file verbatim.
+`home/.codex/config.toml` runs through a clean filter (`clean-codex-config.py`, wired in `.gitattributes`) that strips the machine-generated `[projects]` trust entries and marketplace timestamps Codex appends — activity history that must not be committed. The filter driver is per-clone git config; the setup lines below configure it (with an identity smudge, since `required` makes git treat a missing smudge command as a failure on checkout) and mark it required, so a clone missing the filter fails loudly instead of staging the file verbatim.
 
 ## History
 
@@ -32,6 +32,7 @@ The bare repo `~/Git/agent-config.git.before-normal-repo-20260711-233133` (local
 ```sh
 git clone --recurse-submodules https://github.com/ahalekelly/agent-config.git ~/.agents
 git -C ~/.agents config filter.codex-config.clean 'uv run "$HOME/.agents/clean-codex-config.py"'
+git -C ~/.agents config filter.codex-config.smudge cat
 git -C ~/.agents config filter.codex-config.required true
 for f in .claude .claude-work .codex .pi .zprofile .zshrc; do ln -s ~/.agents/home/$f ~/$f; done
 (cd ~/.agents/pi-for-claude && npm install && npm link)   # builds dist/ and puts pi-for-claude on PATH

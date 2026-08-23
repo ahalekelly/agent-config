@@ -17,6 +17,7 @@ foreach ($name in 'claude', 'codex') {
 # filter, commits of .codex/config.toml would stage Codex's machine-generated
 # activity history verbatim. required=true makes a missing filter fail loudly.
 git -C $repo config filter.codex-config.clean 'uv run "$HOME/.agents/clean-codex-config.py"'
+git -C $repo config filter.codex-config.smudge cat
 git -C $repo config filter.codex-config.required true
 git -C $repo config core.symlinks true
 

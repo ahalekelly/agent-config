@@ -8,6 +8,7 @@ repo="$HOME/.agents"
 
 # Per-clone git config the .gitattributes clean filter depends on (see README).
 git -C "$repo" config filter.codex-config.clean 'uv run "$HOME/.agents/clean-codex-config.py"'
+git -C "$repo" config filter.codex-config.smudge cat
 git -C "$repo" config filter.codex-config.required true
 
 # Swap ~/.claude to a symlink into home-linux/. Existing runtime state moves
