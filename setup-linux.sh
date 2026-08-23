@@ -10,7 +10,7 @@ repo="$HOME/.agents"
 git -C "$repo" config filter.codex-config.clean 'uv run "$HOME/.agents/clean-codex-config.py"'
 git -C "$repo" config filter.codex-config.required true
 
-# Swap ~/.claude and ~/.codex to symlinks into home-linux/. Existing runtime state moves
+# Swap ~/.claude to a symlink into home-linux/. Existing runtime state moves
 # into the repo (it stays untracked: .gitignore is deny-all); where a file
 # already exists in the repo, the repo copy wins and the machine's old copy is
 # kept alongside as *.pre-agents-repo. Renames within one filesystem keep
@@ -35,7 +35,6 @@ swap() {
   echo "$live -> $target"
 }
 swap .claude
-swap .codex
 
 # Global git ignore (shared with macOS).
 mkdir -p "$HOME/.config/git"
