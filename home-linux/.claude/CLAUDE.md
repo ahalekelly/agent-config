@@ -32,4 +32,4 @@ When spawning a subagent, always set the model explicitly (e.g. `model: "opus"`)
 
 ## Linux Notes
 
-This is a headless Ubuntu machine (bash, no desktop, no zsh). `show-in-browser`, the Obsidian CLI, and `open` from AGENTS.md aren't available — to show me a file, give me its path. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. Codex and the interactive Pi CLI aren't installed here; pi-for-claude is.
+This is a headless Ubuntu machine (bash, no desktop, no zsh). `show-in-browser`, the Obsidian CLI, and `open` from AGENTS.md aren't available — to show me a file, give me its path. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
