@@ -1,7 +1,7 @@
 {
   "Profiles": [
     {
-      "Name": "Herdr on akelly-desktop",
+      "Name": "Herdr",
       "Guid": "113E6A3C-F517-4082-BE39-CF78E3F54F92",
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
