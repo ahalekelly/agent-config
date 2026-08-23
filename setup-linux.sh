@@ -51,4 +51,23 @@ grep -qF '.bashrc.agents' "$HOME/.bashrc" || printf '\n# Agent config (~/.agents
 # trash-cli: `trash` is what agents are told to use instead of rm.
 command -v trash >/dev/null || npm install -g trash-cli
 
+# Claude Remote Control as a user service (home-linux/.config/systemd/user/).
+# Linger keeps user services running at boot and after logout.
+mkdir -p "$HOME/.config/systemd/user"
+[ -L "$HOME/.config/systemd/user/claude-remote-control.service" ] || ln -s "$repo/home-linux/.config/systemd/user/claude-remote-control.service" "$HOME/.config/systemd/user/"
+systemctl --user daemon-reload
+sudo loginctl enable-linger "$USER"
+
+# Sandboxed Bash in remote sessions needs socat, and on Ubuntu an AppArmor
+# profile that lets bwrap create nested user namespaces (home-linux/apparmor.d/).
+command -v socat >/dev/null || sudo apt-get install -y socat
+if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
+  sudo cp "$repo/home-linux/apparmor.d/bwrap" /etc/apparmor.d/bwrap
+  sudo mkdir -p /etc/apparmor.d/disable
+  sudo ln -sf /etc/apparmor.d/bwrap-userns-restrict /etc/apparmor.d/disable/bwrap-userns-restrict
+  sudo apparmor_parser -R /etc/apparmor.d/bwrap-userns-restrict 2>/dev/null || true
+  sudo systemctl reload apparmor
+fi
+
 echo 'Done. Then: (cd ~/.agents/pi-for-claude && npm install && npm link) && pi-for-claude setup'
+echo 'Then run `claude` once in ~/Git, then `claude remote-control` once to accept its prompt, then: systemctl --user enable --now claude-remote-control'

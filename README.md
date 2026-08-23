@@ -64,6 +64,8 @@ bash ~/.agents/setup-linux.sh
 
 `setup-linux.sh` configures the clean filter, swaps `~/.claude` to a symlink into `home-linux/.claude` (moving existing runtime state into the repo, pre-existing config files kept as `*.pre-agents-repo`), links the global git ignore, and adds a line to `~/.bashrc` that sources `home-linux/.bashrc.agents`. Codex, the second Claude profile, and claude-patching are not set up on Linux.
 
+It also installs Claude Remote Control as a systemd user service (`home-linux/.config/systemd/user/claude-remote-control.service`, serving `~/Git`, stdout discarded and stderr in the journal), enables linger so it runs at boot, and sets up sandboxing for remote sessions: `socat`, plus on Ubuntu the `home-linux/apparmor.d/bwrap` AppArmor profile, which replaces the stock `bwrap-userns-restrict` so bwrap can create the nested user namespaces Claude's sandbox needs. The service starts only after two interactive one-offs: `claude` in `~/Git` to accept the trust dialog, and `claude remote-control` to accept its enable prompt (with stdin at `/dev/null` it otherwise exits silently in a restart loop). Manage with `systemctl --user {status,restart} claude-remote-control`; to see the TUI output during debugging, set `StandardOutput=journal` temporarily.
+
 ## Two Claude profiles
 
 `home/.claude-work` is a second Claude Code profile (work account) that symlinks everything except login state back into `home/.claude`. See `home/.claude/second-profile-setup.md`.

@@ -1,0 +1,19 @@
+[Unit]
+Description=Claude Code Remote Control in %h/Git
+Documentation=https://code.claude.com/docs/en/remote-control
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Git
+Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+ExecStart=%h/.local/bin/claude remote-control --name "akelly-desktop Git"
+Restart=always
+RestartSec=10
+StandardInput=null
+# The status display redraws continuously (~50 MB/day of journal if captured).
+# To debug, temporarily set this to journal, restart, and read the output.
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=default.target
