@@ -4,6 +4,15 @@
 
 input=$(cat)
 
+# date(1) differs between macOS (BSD) and Linux (GNU); wrap the two calls used.
+if date -j >/dev/null 2>&1; then
+  iso_to_epoch() { date -j -u -f "%Y-%m-%dT%H:%M:%S" "$1" +%s 2>/dev/null; }
+  epoch_to_hm() { date -r "$1" +%H:%M; }
+else
+  iso_to_epoch() { date -u -d "$1" +%s 2>/dev/null; }
+  epoch_to_hm() { date -d "@$1" +%H:%M; }
+fi
+
 model=$(echo "$input" | jq -r '.model.display_name')
 model="${model%% (*}"   # drop a "(1M context)"-style suffix
 dir=$(echo "$input" | jq -r '.workspace.current_dir // .cwd')
@@ -45,8 +54,8 @@ if [ -n "$tokens" ]; then
     ts=$(tail -n 500 "$transcript" | jq -r 'select(.type=="user") | .timestamp // empty' | sort | tail -1)
     if [ -n "$ts" ]; then
       t="${ts%Z}"; t="${t%%.*}"
-      epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%S" "$t" +%s 2>/dev/null)
-      [ -n "$epoch" ] && turn_time=" - $(date -r "$epoch" +%H:%M)"
+      epoch=$(iso_to_epoch "$t")
+      [ -n "$epoch" ] && turn_time=" - $(epoch_to_hm "$epoch")"
     fi
   fi
   # tokens_part="${count} tokens - ${cache}${turn_time}"
@@ -62,7 +71,7 @@ usage_part=""
 if [ -n "$usage" ]; then
   reset_epoch=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
   reset=""
-  [ -n "$reset_epoch" ] && reset=" $(date -r "$reset_epoch" +%H:%M)"
+  [ -n "$reset_epoch" ] && reset=" $(epoch_to_hm "$reset_epoch")"
   usage_part="5h: $(printf '%.0f' "$usage")%${reset}"
 fi
 

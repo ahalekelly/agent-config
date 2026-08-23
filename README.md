@@ -6,7 +6,8 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 
 - `AGENTS.md` — shared instructions for all agents. Claude loads it via `@` from its CLAUDE.md; Codex and Pi read it through symlinks (`home/.codex/AGENTS.md`, `home/.pi/agent/AGENTS.md`).
 - `home/` — the real dotfiles (macOS), symlinked from `$HOME`: `.claude`, `.claude-work`, `.codex`, `.pi`, `.zprofile`, `.zshrc`. Only the config worth versioning is tracked; runtime state (sessions, caches, credentials) stays untracked.
-- `home-windows/` — the Windows equivalent of `home/`: `.claude` and `.codex`, junction-linked from `$HOME`. The statusline is `statusline.py` there (the shell version needs jq and BSD date).
+- `home-windows/` — the Windows equivalent of `home/`: `.claude` and `.codex`, junction-linked from `$HOME`. The statusline is `statusline.py` there (the shell version needs jq).
+- `home-linux/` — the Linux equivalent: `.claude` (a Linux `settings.json` and `CLAUDE.md`; skills, statusline, and output styles symlink back into `home/`) plus `.bashrc.agents`, the bash port of the `.zshrc` agent wrappers, sourced from `~/.bashrc`.
 - `hooks/` — rm guards: `prevent-rm.py` (Claude and Codex PreToolUse hook) and `prevent-rm-pi.ts` (Pi extension) block `rm` and point agents at `trash`; `allow-mcp.py` auto-allows MCP tools from Claude's PreToolUse.
 - `bin/` — shims prepended to agents' PATH; `bin/rm` refuses to run as a last line of defense.
 - `skills/` — Claude skills, all tracked (third-party ones are vendored, with source and hash pinned in `.skill-lock.json`); `home/.claude/skills` symlinks here.
@@ -16,7 +17,7 @@ Versioned configuration for the coding agents on this machine: Claude Code, Code
 
 ## How tracking works
 
-The root `.gitignore` is a normal deny-list: everything is tracked by default except dependencies, logs, and agent runtime state. The exception is `home/` and `home-windows/` — the live runtime dirs (`~/.claude` etc.) symlink or junction into them, so each carries its own deny-all (`*`) `.gitignore`, making leaking runtime state or credentials an opt-in mistake rather than a default one. Inside those two folders, new curated config files must be added with `git add -f`, and `git add` on an already-tracked file exits nonzero with an ignore warning (while still staging) — use `git add -u` for tracked changes there. Everywhere else, git behaves normally.
+The root `.gitignore` is a normal deny-list: everything is tracked by default except dependencies, logs, and agent runtime state. The exception is `home/`, `home-windows/`, and `home-linux/` — the live runtime dirs (`~/.claude` etc.) symlink or junction into them, so each carries its own deny-all (`*`) `.gitignore`, making leaking runtime state or credentials an opt-in mistake rather than a default one. Inside those folders, new curated config files must be added with `git add -f`, and `git add` on an already-tracked file exits nonzero with an ignore warning (while still staging) — use `git add -u` for tracked changes there. Everywhere else, git behaves normally.
 
 `home/.codex/config.toml` runs through a clean filter (`clean-codex-config.py`, wired in `.gitattributes`) that strips the machine-generated `[projects]` trust entries and marketplace timestamps Codex appends — activity history that must not be committed. The filter driver is per-clone git config; the setup lines below configure it and mark it required, so a clone missing the filter fails loudly instead of staging the file verbatim.
 
@@ -50,6 +51,20 @@ npm install -g trash-cli
 ```
 
 `setup-windows.ps1` configures the clean filter, then swaps `~\.claude` and `~\.codex` to junctions into `home-windows\`, moving any existing runtime state into the repo (kept untracked by `home-windows/`'s deny-all `.gitignore`; pre-existing config files are preserved as `*.pre-agents-repo`). Pi, the second Claude profile, and the zsh secrets-scrubbing wrappers are macOS-only and not set up on Windows. Syncing is manual: `git -C $env:USERPROFILE\.agents` add/commit/pull/push as needed.
+
+## Setup on a new Linux machine
+
+Requires git, uv, node, and jq (`trash-cli` is installed from npm by the script). With Claude Code not running:
+
+```sh
+git clone --recurse-submodules https://github.com/ahalekelly/agent-config.git ~/.agents
+bash ~/.agents/setup-linux.sh
+(cd ~/.agents/pi-for-claude && npm install && npm link) && pi-for-claude setup
+```
+
+`setup-linux.sh` configures the clean filter, swaps `~/.claude` to a symlink into `home-linux/.claude` (moving existing runtime state into the repo, pre-existing config files kept as `*.pre-agents-repo`), links the global git ignore, and adds a line to `~/.bashrc` that sources `home-linux/.bashrc.agents`. Codex, the second Claude profile, and claude-patching are not set up on Linux.
+
+It also installs Claude Remote Control as a systemd user service (`home-linux/.config/systemd/user/claude-remote-control.service`, serving `~/Git`, stdout discarded and stderr in the journal), enables linger so it runs at boot, and sets up sandboxing for remote sessions: `socat`, plus on Ubuntu the `home-linux/apparmor.d/bwrap` AppArmor profile, which replaces the stock `bwrap-userns-restrict` so bwrap can create the nested user namespaces Claude's sandbox needs. The service starts only after two interactive one-offs: `claude` in `~/Git` to accept the trust dialog, and `claude remote-control` to accept its enable prompt (with stdin at `/dev/null` it otherwise exits silently in a restart loop). Manage with `systemctl --user {status,restart} claude-remote-control`; to see the TUI output during debugging, set `StandardOutput=journal` temporarily.
 
 ## Two Claude profiles
 
