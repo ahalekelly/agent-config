@@ -5,6 +5,8 @@
 #   Fable weekly: 61% used, 99% of week elapsed
 #   Codex weekly: 12% used, 30% of week elapsed
 #
+# A "System pressure" line is added only when the machine is struggling.
+#
 # Claude + Fable come from api.anthropic.com/api/oauth/usage: the flat
 # seven_day field is the all-models weekly limit, and the Fable-only limit is
 # the limits[] entry with kind "weekly_scoped" and scope.model.display_name
@@ -18,6 +20,32 @@
 # wait on the network.
 
 date '+Time: %A %Y-%m-%d %H:%M %Z'
+
+# System pressure: printed only when the machine is genuinely struggling, so a
+# healthy box costs nothing. Memory keys off PSI stall time rather than percent
+# used -- Linux sits at high utilization with page cache and feels fine.
+over() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a + 0 > b + 0) }'; }
+pressure=""
+note() { pressure="${pressure:+$pressure, }$1"; }
+
+if [ -r /proc/loadavg ]; then
+  cores=$(nproc)
+  read -r load1 _ < /proc/loadavg
+  stall=$(awk '/^some/ { sub(/avg10=/, "", $2); print $2; exit }' /proc/pressure/memory 2>/dev/null)
+  avail=$(awk '/^MemTotal:/ { t = $2 } /^MemAvailable:/ { a = $2 } END { if (t) printf "%d", a * 100 / t }' /proc/meminfo)
+  over "$load1" $((cores * 3 / 2)) && note "load $load1 on $cores cores"
+  over "$stall" 10 && note "memory stalled ${stall}% of the last 10s"
+  [ -n "$avail" ] && [ "$avail" -lt 10 ] && note "${avail}% memory available"
+else
+  cores=$(sysctl -n hw.ncpu)
+  load1=$(sysctl -n vm.loadavg | awk '{ print $2 }')
+  over "$load1" $((cores * 3 / 2)) && note "load $load1 on $cores cores"
+  case $(sysctl -n kern.memorystatus_vm_pressure_level 2>/dev/null) in
+    2) note "memory pressure warning" ;;
+    4) note "memory pressure critical" ;;
+  esac
+fi
+[ -n "$pressure" ] && echo "System pressure: $pressure"
 
 now=$(date +%s)
 week_secs=$((7 * 24 * 3600))
