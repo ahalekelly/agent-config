@@ -1,0 +1,69 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+# Linux port of home/.codex/config.toml for the headless Ubuntu machine: the
+# Codex CLI only, so the desktop app, plugins, node_repl, and computer-use
+# sections are omitted.
+
+personality = "pragmatic"
+model = "gpt-5.6-sol"
+plan_mode_reasoning_effort = "xhigh"
+
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+default_permissions = "workspace_sandbox"
+approvals_reviewer = "auto_review" # set this to "user" to disable auto-review
+analytics.enabled = false
+
+[permissions.workspace_sandbox.filesystem]
+":minimal" = "read" # minimal access required for codex to operate
+"~/.agents" = "read" # agent skills and secrets.env
+"~/.pi" = "read"
+"~/.bashrc" = "read" # sources ~/.agents/home-linux/.bashrc.agents
+":tmpdir" = "write"
+":slash_tmp" = "write"
+"~/.local/bin" = "read" # uv, herdr, and other user-installed tools
+"~/.npm-global" = "read" # node, npm, codex
+"~/.gitconfig" = "read" # required for git
+"~/.config/git" = "read" # required for git
+"~/.cache/uv" = "write" # required for uv
+"~/.npm/_logs" = "write" # required for npm
+"~/.npm/_cacache" = "write" # required for npm
+"~/.local/share/Trash" = "write" # trash-cli
+
+[permissions.workspace_sandbox.filesystem.":workspace_roots"]
+"." = "read"
+"./**" = "write"
+".git" = "write"
+
+[permissions.workspace_sandbox.network]
+enabled = true
+mode = "full"
+
+# Agent-ok keys (~/.agents/secrets.env) flow in from the launching environment.
+# Sensitive keys (~/.secrets.env) never reach that environment: the codex()
+# launcher in .bashrc.agents scrubs them.
+[shell_environment_policy]
+inherit = "all"
+ignore_default_excludes = true
+exclude = ["*_PASSWORD", "AWS_*"]
+
+[shell_environment_policy.set]
+PATH = "/home/akelly/.agents/bin:/home/akelly/.pi/agent/bin:/home/akelly/.local/bin:/home/akelly/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+
+[agents]
+max_threads = 10
+
+[features]
+hooks = true
+default_mode_request_user_input = true
+terminal_resize_reflow = true
+goals = true
+js_repl = false
+
+[[hooks.PreToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "/home/akelly/.local/bin/uv run /home/akelly/.agents/hooks/prevent-rm.py"
+timeout = 30
+statusMessage = "Checking for rm"
