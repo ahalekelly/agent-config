@@ -5,7 +5,7 @@
       "Guid": "113E6A3C-F517-4082-BE39-CF78E3F54F92",
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
-      "Command": "ssh -t akelly-desktop ~/.local/bin/herdr",
+      "Command": "ssh -t akelly-desktop '$HOME/.local/bin/herdr'",
       "Tags": ["ssh", "herdr"],
       "Custom Directory": "No"
     }
