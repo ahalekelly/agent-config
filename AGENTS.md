@@ -49,7 +49,7 @@ If you find a bug in one place in the code, look for other places where that sam
 
 ## Home Server
 
-The Linux home server is `akelly-desktop.tail37ccc3.ts.net`, reachable over Tailscale SSH as `akelly`: `ssh akelly-desktop.tail37ccc3.ts.net`. It is accessible only while Adrian's personal Tailscale profile is active; the work profile cannot reach it. Its hostname is `akelly-desktop`, architecture is x86_64, and Adrian's home directory is `/home/akelly`. The `akelly` account belongs to the `sudo` group.
+Connect to the Linux home server with `ssh akelly-desktop.tail37ccc3.ts.net`. If it fails, run `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list`; `*` marks the active profile. The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`). Switch with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch ACCOUNT`.
 
 ## Workflow
 
