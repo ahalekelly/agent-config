@@ -1,6 +1,7 @@
 
 # API keys that aren't costly to leak go in the agents secrets file so AI agents can access them: 
 eval "$(/opt/homebrew/bin/brew shellenv)"
+export CODEX_HOME="$HOME/.agents/home/.codex"
 
 if [ -n "$AGENT_LAUNCH$CLAUDECODE$AI_AGENT$CODEX_SANDBOX$PI_CODING_AGENT" ]; then
   export PATH="$HOME/.agents/bin:$PATH"
