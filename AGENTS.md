@@ -49,7 +49,7 @@ If you find a bug in one place in the code, look for other places where that sam
 
 ## Home Server
 
-Connect to the Linux home server with `ssh akelly-desktop.tail37ccc3.ts.net`. If it fails, run `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list`; `*` marks the active profile. The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`). Switch with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch ACCOUNT`.
+Connect to the Linux home server with `ssh akelly-desktop.tail37ccc3.ts.net`. If it fails, run `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list`; `*` marks the active profile. The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`). Switch to personal with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch c085`.
 
 ## Workflow
 
