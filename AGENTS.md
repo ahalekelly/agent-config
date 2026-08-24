@@ -47,6 +47,10 @@ If you find a bug in one place in the code, look for other places where that sam
 
 `~/.agents` is a git repo holding shared configuration for all coding agents; `~/.claude`, `~/.claude-work`, and `~/.codex` are symlinks into `~/.agents/home/`. `~/.agents/AGENTS.md` (this file) holds the shared instructions; `~/.agents/home/.claude/CLAUDE.md` adds Claude-specific sections on top. Skills are shared across projects via the `~/.claude/skills` symlink (real path `~/.agents/skills`). When editing any of these files, use the real `~/.agents/` paths — some tools refuse to write through the symlinks.
 
+## Home Server
+
+The Linux home server is `akelly-desktop.tail37ccc3.ts.net`, reachable over Tailscale SSH as `akelly`: `ssh akelly-desktop.tail37ccc3.ts.net`. Its hostname is `akelly-desktop`, architecture is x86_64, and Adrian's home directory is `/home/akelly`. The `akelly` account belongs to the `sudo` group.
+
 ## Workflow
 
 There are often multiple agents working on different tasks in the same project, don't interfere with the other agents' work. Sometimes I will also edit files while you're working.
