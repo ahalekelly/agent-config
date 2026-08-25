@@ -67,3 +67,12 @@ type = "command"
 command = "/home/akelly/.local/bin/uv run /home/akelly/.agents/hooks/prevent-rm.py"
 timeout = 30
 statusMessage = "Checking for rm"
+
+[hooks.state]
+
+[hooks.state."/home/akelly/.agents/home-linux/.codex/config.toml:pre_tool_use:0:0"]
+trusted_hash = "sha256:f6d42c820a179d3cd7ec122079b2bd90e96213e3cd548f7d054caa9d7ae620de"
+enabled = true
+
+[hooks.state."/home/akelly/.agents/home-linux/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:56c95bc3e6b5a9d610b49ebdb467f1b2a11b73564def25f7ed0761cf6f643c28"
