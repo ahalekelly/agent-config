@@ -53,27 +53,19 @@ Identify the machine by hostname. Notes specific to each:
 
 ### akelly-desktop (Linux, headless)
 
-This is a headless Ubuntu machine (bash, no desktop, no zsh). `~/Git/show-in-browser/show-in-browser.sh` works as described in AGENTS.md: it opens the file in my Mac's Vivaldi over the tailnet, live reload included — run it with `dangerouslyDisableSandbox` (it needs the tailscaled socket, ssh, and its file server). The Obsidian CLI and `open` aren't available — to show me a Markdown file, give me its path. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
+Headless Ubuntu: bash, no desktop, no zsh. `show-in-browser.sh` opens files in my Mac's Vivaldi over the tailnet, live reload included — run it with `dangerouslyDisableSandbox` (it needs the tailscaled socket, ssh, and its file server). The Obsidian CLI and `open` aren't available — to show me a Markdown file, give me its path. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
 
-### Mac
+### adrians-macbook-air (macOS)
 
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
-To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` outside the sandbox. It opens the file, dedupes tabs, and live-reloads it. `focus` brings it forward; `last` moves its tab to the end. Default to `last` without `focus` unless I say otherwise. Pages with scripts get a full reload.
-
-To show me a Markdown file, open it with Vivaldi, or use `open "obsidian://open?path=/absolute/path/Note.md"` for an Obsidian vault. Run `open` outside the sandbox. Obsidian and Vivaldi auto-reload Markdown files.
-
-The Obsidian CLI supports vault operations including read, create, append, search, properties, tasks, and backlinks (`obsidian help`). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must run outside the sandbox.
+Connect to the Linux machine with `ssh akelly-desktop.tail37ccc3.ts.net`. If it fails, run `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list`; `*` marks the active profile. The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`). Switch to personal with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch c085`.
 
 ### Windows
 
 Don't run bash commands with long output because the whole output enters the chat. Use the Read tool instead of `cat` for files.
 
 `show-in-browser`, the Obsidian CLI, and `open` aren't installed. Show an HTML or Markdown file with `Start-Process <absolute-path>` from PowerShell. `trash` is npm's trash-cli and moves files to the Recycle Bin.
-
-## Home Server
-
-Connect to the Linux home server with `ssh akelly-desktop.tail37ccc3.ts.net`. If it fails, run `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list`; `*` marks the active profile. The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`). Switch to personal with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch c085`.
 
 ## Workflow
 
@@ -108,6 +100,14 @@ If I ask a question with a question mark, it is an actual question where I'm loo
 If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me and do not implement until I approve those.
 
 If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file, and make your final response just be a link to the file.
+
+To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` (outside the sandbox): it opens the file (deduping tabs), `focus` brings it forward, `last` moves its tab to the end to highlight it to me. Default to `last` but not `focus`, but if I tell you to do otherwise, make that the new default for the rest of that conversation. The extension live-reloads the visible page in place with zero flicker whenever you edit the file — no need to re-run the script to refresh. Pages with `<script>`s get a full (flashing) reload instead of the flicker-free swap.
+
+To show me a Markdown file, open it with Vivaldi, or if it's in an Obsidian vault use `open "obsidian://open?path=/absolute/path/Note.md"` instead. `open` must run outside the sandbox (it needs LaunchServices access, which the sandbox blocks).
+
+Obsidian and Vivaldi both auto-reload .md files. Vivaldi does this with the [markdown-viewer extension](https://github.com/simov/markdown-viewer); if we run into issues, let me know and we can try installing [md-reader](https://github.com/md-reader/md-reader) instead.
+
+The Obsidian CLI is also installed for richer vault operations — read/create/append, search, properties, tasks, backlinks (`obsidian help` for the full list). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must also run outside the sandbox.
 
 ## Errors in My Tools
 
