@@ -29,7 +29,19 @@ codex() { _scrub_secrets codex "$@"; }
 pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
 
 _claude_with_profile() {
-  CLAUDE_CONFIG_DIR="$1" _scrub_secrets claude "${@:2}"
+  # Launch the best available patched binary (~/.agents/claude-patching), which
+  # names it in the target file; a new version is reconciled in the background,
+  # so a launch never waits on an unpack/repack. An empty target file falls back
+  # to `claude` on PATH. Nonzero exit = the check printed something worth
+  # reading; hold for an Enter before the TUI takes over the screen.
+  local target="$(mktemp "${TMPDIR:-/tmp}/claude-launch-target.XXXXXX")" bin=claude
+  if ! "$HOME/.agents/claude-patching/check-and-apply.sh" "$target" && [[ -t 0 && -t 1 ]]; then
+    printf 'Press Enter to launch Claude Code... '
+    read -r
+  fi
+  [[ -s "$target" ]] && bin="$(<"$target")"
+  rm -f "$target"
+  CLAUDE_CONFIG_DIR="$1" _scrub_secrets "$bin" "${@:2}"
 }
 # Personal profile (default)
 claude() { _claude_with_profile "$HOME/.claude" "$@"; }
