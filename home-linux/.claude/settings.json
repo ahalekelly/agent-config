@@ -55,6 +55,18 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/home/akelly/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
@@ -71,9 +83,11 @@
       "allowWrite": [
         "~/.cache/uv",
         "~/.local/share/Trash",
+        "/tmp/.Trash-1000",
         "~/.agents/.git",
         "/home/akelly/.pi/agent/auth.json",
-        "/home/akelly/.pi/agent/auth.json.lock"
+        "/home/akelly/.pi/agent/auth.json.lock",
+        "/home/akelly/.pi/agent"
       ],
       "allowRead": [
         "/home/akelly/.pi/agent/auth.json"
