@@ -1,7 +1,4 @@
-# Everything is tracked by default except dependencies, runtime state, and
-# machine-local files. home/ and home-windows/ are the exception: the live
-# agent runtime dirs (~/.claude etc.) symlink or junction into them, so each
-# has its own allowlist .gitignore — only curated config is tracked there.
+# Dependencies, runtime state, and machine-local files.
 .DS_Store
 secrets.env
 web-bot-auth/private.pem
@@ -16,10 +13,10 @@ node_modules/
 sessions/
 .playwright-mcp/
 
-# Python runtime caches for the product-search helpers.
+# Python runtime caches.
+__pycache__/
 .pytest_cache/
 .ruff_cache/
-skills/product-search/**/__pycache__/
 
 # Claude Code sandbox masks these names in the cwd with /dev/null devices
 /.bash_profile

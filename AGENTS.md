@@ -45,7 +45,31 @@ If you find a bug in one place in the code, look for other places where that sam
 
 ## Config Layout
 
-`~/.agents` is a git repo holding shared configuration for all coding agents; `~/.claude`, `~/.claude-work`, and `~/.codex` are symlinks into `~/.agents/home/`. `~/.agents/AGENTS.md` (this file) holds the shared instructions; `~/.agents/home/.claude/CLAUDE.md` adds Claude-specific sections on top. Skills are shared across projects via the `~/.claude/skills` symlink (real path `~/.agents/skills`). When editing any of these files, use the real `~/.agents/` paths — some tools refuse to write through the symlinks.
+`~/.agents` is the git repo for shared coding-agent configuration. Agent runtime directories in `$HOME` are real directories containing links to files under `~/.agents/claude/`, `~/.agents/codex/`, and `~/.agents/pi/`. Edit the repo files, then run `uv run ~/.agents/sync.py`. `~/.agents/AGENTS.md` (this file) holds shared instructions, `~/.agents/claude/CLAUDE.md` adds Claude-specific instructions, and `~/.agents/skills/` holds shared skills.
+
+## Machines
+
+Identify the machine by hostname. Notes specific to each:
+
+### akelly-desktop (Linux, headless)
+
+This is a headless Ubuntu machine (bash, no desktop, no zsh). `~/Git/show-in-browser/show-in-browser.sh` works as described in AGENTS.md: it opens the file in my Mac's Vivaldi over the tailnet, live reload included — run it with `dangerouslyDisableSandbox` (it needs the tailscaled socket, ssh, and its file server). The Obsidian CLI and `open` aren't available — to show me a Markdown file, give me its path. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
+
+### Mac
+
+macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
+
+To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` outside the sandbox. It opens the file, dedupes tabs, and live-reloads it. `focus` brings it forward; `last` moves its tab to the end. Default to `last` without `focus` unless I say otherwise. Pages with scripts get a full reload.
+
+To show me a Markdown file, open it with Vivaldi, or use `open "obsidian://open?path=/absolute/path/Note.md"` for an Obsidian vault. Run `open` outside the sandbox. Obsidian and Vivaldi auto-reload Markdown files.
+
+The Obsidian CLI supports vault operations including read, create, append, search, properties, tasks, and backlinks (`obsidian help`). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must run outside the sandbox.
+
+### Windows
+
+Don't run bash commands with long output because the whole output enters the chat. Use the Read tool instead of `cat` for files.
+
+`show-in-browser`, the Obsidian CLI, and `open` aren't installed. Show an HTML or Markdown file with `Start-Process <absolute-path>` from PowerShell. `trash` is npm's trash-cli and moves files to the Recycle Bin.
 
 ## Home Server
 
@@ -64,8 +88,6 @@ Never use `rm` to delete files or directories, use the `trash` command instead s
 Python, TypeScript, and Rust are the preferred languages when starting a greenfield project.
 
 When creating Python scripts, always use `uv run` and put PEP 723 headers at the top. Never use pip.
-
-macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
 Do not interrupt the user by using computer-use or playwright-mcp with an on-screen app unless specifically directed. To interact with web pages, spawn `browser-swarm` subagents — every invocation gets its own MCP session and isolated context in the shared headless Chrome browser daemon (Playwright MCP over CDP port 9377), each context costs 100–200 MB so keep fan-outs to about 10, up to 2 tabs each. For sites that block Chrome, `browser-swarm-firefox` gets an isolated context on one shared Firefox process the same way.
 
@@ -86,14 +108,6 @@ If I ask a question with a question mark, it is an actual question where I'm loo
 If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me and do not implement until I approve those.
 
 If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file, and make your final response just be a link to the file.
-
-To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` (outside the sandbox): it opens the file (deduping tabs), `focus` brings it forward, `last` moves its tab to the end to highlight it to me. Default to `last` but not `focus`, but if I tell you to do otherwise, make that the new default for the rest of that conversation. The extension live-reloads the visible page in place with zero flicker whenever you edit the file — no need to re-run the script to refresh. Pages with `<script>`s get a full (flashing) reload instead of the flicker-free swap.
-
-To show me a Markdown file, open it with Vivaldi, or if it's in an Obsidian vault use `open "obsidian://open?path=/absolute/path/Note.md"` instead. `open` must run outside the sandbox (it needs LaunchServices access, which the sandbox blocks).
-
-Obsidian and Vivaldi both auto-reload .md files. Vivaldi does this with the [markdown-viewer extension](https://github.com/simov/markdown-viewer); if we run into issues, let me know and we can try installing [md-reader](https://github.com/md-reader/md-reader) instead.
-
-The Obsidian CLI is also installed for richer vault operations — read/create/append, search, properties, tasks, backlinks (`obsidian help` for the full list). File names resolve like wikilinks: `obsidian open file="Note Name" vault="Repo"`. It talks to the running Obsidian app and must also run outside the sandbox.
 
 ## Errors in My Tools
 

@@ -1,1 +1,0 @@
-/Users/akelly/.agents/hooks/prevent-rm-pi.ts

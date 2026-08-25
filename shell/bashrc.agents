@@ -1,0 +1,42 @@
+# Sourced from ~/.bashrc by linux/setup.sh. Bash port of the agent wrappers in
+# shell/zshrc.
+
+# Agent launches get the rm-refusing shims first on PATH.
+if [ -n "$AGENT_LAUNCH$CLAUDECODE$AI_AGENT$CODEX_SANDBOX$PI_CODING_AGENT" ]; then
+  export PATH="$HOME/.agents/bin:$PATH"
+fi
+
+# API keys that aren't costly to leak, available to agents.
+[ -f "$HOME/.agents/secrets.env" ] && . "$HOME/.agents/secrets.env"
+
+# Keys agents must not see. Only real user terminals (not agent-spawned shells,
+# which carry a marker) source them; the launchers below scrub them again.
+if [ -f "$HOME/.secrets.env" ] && [ -z "$AGENT_LAUNCH$CLAUDECODE$AI_AGENT$CODEX_SANDBOX$PI_CODING_AGENT" ]; then
+  . "$HOME/.secrets.env"
+fi
+
+_scrub_secrets() {
+  local scrub=() name
+  if [ -f "$HOME/.secrets.env" ]; then
+    for name in $(grep -oE '^export [A-Z_]+' "$HOME/.secrets.env" | cut -d' ' -f2); do
+      scrub+=(-u "$name")
+    done
+  fi
+  env "${scrub[@]}" AGENT_LAUNCH=1 "$@"
+}
+
+codex() { _scrub_secrets codex "$@"; }
+pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
+
+_claude_with_profile() {
+  CLAUDE_CONFIG_DIR="$1" _scrub_secrets claude "${@:2}"
+}
+# Personal profile (default)
+claude() { _claude_with_profile "$HOME/.claude" "$@"; }
+# Work profile (see claude/second-profile-setup.md); auto-update stays
+# off so only the personal profile updates the shared version store.
+claudew() { DISABLE_AUTOUPDATER=1 _claude_with_profile "$HOME/.claude-work" "$@"; }
+ca() { claude agents "$@"; }
+caw() { claudew agents "$@"; }
+
+alias git-agent-cfg='git -C "$HOME/.agents"'

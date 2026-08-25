@@ -1,0 +1,46 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+personality = "pragmatic"
+model = "gpt-5.6-sol"
+plan_mode_reasoning_effort = "xhigh"
+
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+default_permissions = "workspace_sandbox"
+approvals_reviewer = "auto_review"
+analytics.enabled = false
+
+[permissions.workspace_sandbox.filesystem.":workspace_roots"]
+"." = "read"
+"./**" = "write"
+".git" = "write"
+
+[permissions.workspace_sandbox.network]
+enabled = true
+mode = "full"
+
+# Agent-safe keys flow in from ~/.agents/secrets.env. Shell wrappers keep
+# sensitive keys from ~/.secrets.env out of agent environments.
+[shell_environment_policy]
+inherit = "all"
+ignore_default_excludes = true
+exclude = ["*_PASSWORD", "AWS_*"]
+
+[agents]
+max_threads = 10
+
+[features]
+hooks = true
+default_mode_request_user_input = true
+terminal_resize_reflow = true
+goals = true
+js_repl = false
+
+[[hooks.PreToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "uv run ~/.agents/hooks/prevent-rm.py"
+timeout = 30
+statusMessage = "Checking for rm"

@@ -1,0 +1,18 @@
+[permissions.workspace_sandbox.filesystem]
+":minimal" = "read"
+"~/.agents" = "read"
+"~/.pi" = "read"
+"~/.bashrc" = "read"
+":tmpdir" = "write"
+":slash_tmp" = "write"
+"~/.local/bin" = "read"
+"~/.npm-global" = "read"
+"~/.gitconfig" = "read"
+"~/.config/git" = "read"
+"~/.cache/uv" = "write"
+"~/.npm/_logs" = "write"
+"~/.npm/_cacache" = "write"
+"~/.local/share/Trash" = "write"
+
+[shell_environment_policy.set]
+PATH = "/home/akelly/.agents/bin:/home/akelly/.pi/agent/bin:/home/akelly/.local/bin:/home/akelly/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
