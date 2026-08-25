@@ -332,8 +332,38 @@ def render_codex(platform: str) -> None:
     write_if_changed(rendered_path, content, "recorded")
 
 
+GIT_HOOK = """#!/bin/sh
+# Installed by sync.py: keep the live agent config in step with the repo.
+exec uv run --quiet sync.py
+"""
+
+
+def install_git_hooks() -> None:
+    hooks = Path(
+        subprocess.run(
+            ["git", "-C", str(REPO), "rev-parse", "--git-path", "hooks"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    )
+    if not hooks.is_absolute():
+        hooks = REPO / hooks
+    for name in ("post-merge", "post-checkout", "post-commit", "post-rewrite"):
+        hook = hooks / name
+        if hook.exists() and hook.read_text() == GIT_HOOK:
+            continue
+        hook.parent.mkdir(parents=True, exist_ok=True)
+        hook.write_text(GIT_HOOK)
+        hook.chmod(0o755)
+        print(f"installed git hook {hook}")
+
+
 def main() -> None:
+    if REPO != HOME / ".agents":
+        raise SyncError(f"sync only runs from {HOME / '.agents'}, not a worktree or other clone ({REPO})")
     platform = platform_name()
+    install_git_hooks()
     migrated = set()
     migrations = (
         (HOME / ".claude", (("home", ".claude"), ("home-linux", ".claude"), ("home-windows", ".claude"))),

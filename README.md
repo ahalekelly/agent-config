@@ -22,7 +22,7 @@ Edit the source under `claude/`, `codex/`, or `pi/`, then run:
 uv run ~/.agents/sync.py
 ```
 
-Commit and push the repo changes. On another machine, pull and run the same command. Restart open shells after shell config changes.
+Sync also installs git hooks in the clone that rerun it after every commit, merge, checkout, and rebase, so after the first run a `git pull` or commit keeps the live config current on its own. Restart open shells after shell config changes.
 
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
