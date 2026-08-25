@@ -25,11 +25,14 @@ _scrub_secrets() {
   env "${scrub[@]}" AGENT_LAUNCH=1 "$@"
 }
 
+# Codex's bubblewrap sandbox refuses a symlinked ~/.codex, so the config dir
+# lives in the repo and CODEX_HOME points at it instead.
+export CODEX_HOME="$HOME/.agents/home-linux/.codex"
 codex() { _scrub_secrets codex "$@"; }
 pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
 
 _claude_with_profile() {
-  CLAUDE_CONFIG_DIR="$1" _scrub_secrets command claude "${@:2}"
+  CLAUDE_CONFIG_DIR="$1" _scrub_secrets claude "${@:2}"
 }
 # Personal profile (default)
 claude() { _claude_with_profile "$HOME/.claude" "$@"; }
