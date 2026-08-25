@@ -1,0 +1,6 @@
+[Unit]
+Description=Pull and push the ~/.agents config repo
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/uv run --quiet %h/.agents/sync.py pull

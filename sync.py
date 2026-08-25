@@ -359,11 +359,55 @@ def install_git_hooks() -> None:
         print(f"installed git hook {hook}")
 
 
+def git(*args: str) -> str:
+    result = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise SyncError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def pull() -> None:
+    """Bring this clone level with origin: fast-forward, then push unpushed commits."""
+    git("pull", "--quiet", "--ff-only", "--autostash")
+    if git("rev-list", "--count", "@{upstream}..HEAD") != "0":
+        git("push", "--quiet")
+        print("pushed local commits")
+
+
+def install_pull_schedule(platform: str) -> None:
+    if platform == "linux":
+        units = HOME / ".config" / "systemd" / "user"
+        for name in ("agent-config-pull.service", "agent-config-pull.timer"):
+            link(units / name, REPO / "linux" / name)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+        subprocess.run(
+            ["systemctl", "--user", "enable", "--quiet", "--now", "agent-config-pull.timer"],
+            check=True,
+        )
+    elif platform == "macos":
+        name = "com.akelly.agent-config-pull.plist"
+        plist = HOME / "Library" / "LaunchAgents" / name
+        source = REPO / "macos" / "Library" / "LaunchAgents" / name
+        if plist.exists() and plist.read_text() == source.read_text():
+            return
+        # launchd refuses symlinked plists, so install a copy and (re)load it.
+        subprocess.run(["launchctl", "bootout", f"gui/{os.getuid()}/com.akelly.agent-config-pull"], capture_output=True)
+        plist.write_text(source.read_text())
+        subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True)
+        print(f"installed launchd agent {plist}")
+
+
 def main() -> None:
     if REPO != HOME / ".agents":
         raise SyncError(f"sync only runs from {HOME / '.agents'}, not a worktree or other clone ({REPO})")
+    if sys.argv[1:] == ["pull"]:
+        pull()
+        return
+    if sys.argv[1:]:
+        raise SyncError("usage: sync.py [pull]")
     platform = platform_name()
     install_git_hooks()
+    install_pull_schedule(platform)
     migrated = set()
     migrations = (
         (HOME / ".claude", (("home", ".claude"), ("home-linux", ".claude"), ("home-windows", ".claude"))),
