@@ -18,7 +18,7 @@ from pathlib import Path
 import tomlkit
 
 REPO = Path(__file__).resolve().parent
-HOME = Path(os.environ["HOME"]).resolve()
+HOME = Path.home().resolve()
 WORK_PROFILE_ENTRIES = (
     "agents",
     "backups",
