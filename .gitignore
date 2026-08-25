@@ -20,3 +20,15 @@ sessions/
 .pytest_cache/
 .ruff_cache/
 skills/product-search/**/__pycache__/
+
+# Claude Code sandbox masks these names in the cwd with /dev/null devices
+/.bash_profile
+/.bashrc
+/.profile
+/.zprofile
+/.zshrc
+/.gitconfig
+/.ripgreprc
+/.mcp.json
+/.idea
+/.vscode
