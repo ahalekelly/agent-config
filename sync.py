@@ -235,10 +235,10 @@ def render_codex(platform: str) -> None:
     overlay = tomlkit.parse(overlay_path.read_text())
     local = {}
     if live_path.exists():
-        live, local = split_local(tomlkit.parse(live_path.read_text()).unwrap())
+        shared, local = split_local(tomlkit.parse(live_path.read_text()).unwrap())
         if rendered_path.exists():
-            previous, _ = split_local(tomlkit.parse(rendered_path.read_text()).unwrap())
-            drift = list(changed_values(live, previous))
+            previous = tomlkit.parse(rendered_path.read_text()).unwrap()
+            drift = list(changed_values(shared, previous))
             for path, value in drift:
                 destination = overlay if has_path(overlay, path) else base
                 set_path(destination, path, value)
