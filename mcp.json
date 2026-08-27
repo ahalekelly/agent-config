@@ -2,7 +2,8 @@
   "mcpServers": {
     "cross-shop": {
       "command": "uv",
-      "args": ["run", "--project", "~/.agents/skills/product-search/cross-shop", "cross-shop", "mcp"]
+      "args": ["run", "cross-shop", "mcp"],
+      "cwd": "~/.agents/skills/product-search/cross-shop"
     }
   }
 }
