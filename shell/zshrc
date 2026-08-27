@@ -9,52 +9,7 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 export PATH="$HOME/.local/bin:$PATH"
 
-# Secrets in ~/.secrets.env must not reach AI agents; the terminal env has
-# them (via ~/.zprofile), so agent launchers scrub every var named there.
-# For Claude this also keeps ANTHROPIC_API_KEY from overriding claude.ai login.
-_scrub_secrets() {
-  local scrub=() name
-  for name in $(grep -oE '^export [A-Z_]+' ~/.secrets.env | cut -d' ' -f2); do
-    scrub+=(-u "$name")
-  done
-  env "${scrub[@]}" AGENT_LAUNCH=1 "$@"
-}
-
-codex() { _scrub_secrets codex "$@"; }
-# pi comes from pi-for-claude's node_modules so the interactive CLI and the
-# pi-for-claude wrapper are always the same version (update via npm there).
-pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
-
-_claude_with_profile() {
-  # Launch the best available patched binary (~/.agents/claude-patching), which
-  # returns its path; a new version is reconciled in the background, so a launch
-  # never waits on an unpack/repack. An empty result falls back to `claude` on
-  # PATH. Nonzero exit = the check printed something worth
-  # reading; hold for an Enter before the TUI takes over the screen.
-  local target bin=claude
-  if ! target="$("$HOME/.agents/claude-patching/check-and-apply.sh")" && [[ -t 0 && -t 1 ]]; then
-    printf 'Press Enter to launch Claude Code... '
-    read -r
-  fi
-  [[ -n "$target" ]] && bin="$target"
-  CLAUDE_CONFIG_DIR="$1" _scrub_secrets "$bin" "${@:2}"
-}
-
-# Personal profile (default)
-claude() {
-  _claude_with_profile "$HOME/.claude" "$@"
-}
-
-# Work profile. Auto-update stays off here: both profiles share one version
-# store, so the personal profile keeps it updated and a second updater only
-# adds a failure-prone race.
-claudew() {
-  DISABLE_AUTOUPDATER=1 _claude_with_profile "$HOME/.claude-work" "$@"
-}
-
-# Agent view (background-session dispatch UI) per profile.
-ca() { claude agents "$@"; }
-caw() { claudew agents "$@"; }
+. "$HOME/.agents/shell/agent-wrappers.sh"
 
 # Claude Code on GPT via CLIProxyAPI (brew service, 127.0.0.1:8317).
 # CLIPROXYAPI_KEY comes from ~/.agents/secrets.env; the config lives at
