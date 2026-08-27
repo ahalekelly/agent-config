@@ -53,7 +53,7 @@ Identify the machine by hostname. Notes specific to each:
 
 ### akelly-desktop (Linux, headless)
 
-Headless Ubuntu: bash, no desktop, no zsh. `show-in-browser.sh` opens files in my Mac's Vivaldi over the tailnet, live reload included — run it with `dangerouslyDisableSandbox` (it needs the tailscaled socket, ssh, and its file server). The Obsidian CLI and `open` aren't available — to show me a Markdown file, give me its path. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
+Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi over the tailnet; run it with `dangerouslyDisableSandbox` because it needs the tailscaled socket, user service, and ssh. The Obsidian CLI and `open` aren't available. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
 
 ### adrians-macbook-air (macOS)
 
@@ -101,9 +101,9 @@ If I ask for something that would add a lot more complexity than you think I wou
 
 If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file, and make your final response just be a link to the file.
 
-To show me an .html file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` (outside the sandbox): it opens the file (deduping tabs), `focus` brings it forward, `last` moves its tab to the end to highlight it to me. Default to `last` but not `focus`, but if I tell you to do otherwise, make that the new default for the rest of that conversation. The extension live-reloads the visible page in place with zero flicker whenever you edit the file — no need to re-run the script to refresh. Pages with `<script>`s get a full (flashing) reload instead of the flicker-free swap.
+When I ask to see a local file, use `~/Git/show-in-browser/show-in-browser.sh <absolute-path> [focus] [last]` outside the sandbox. It opens or deduplicates the tab; `focus` brings it forward and `last` moves it to the end. Default to `last` without `focus`, and keep any preference I give for the rest of the conversation. HTML pages live-reload in place; pages with `<script>`s reload normally.
 
-To show me a Markdown file, open it with Vivaldi, or if it's in an Obsidian vault use `open "obsidian://open?path=/absolute/path/Note.md"` instead. `open` must run outside the sandbox (it needs LaunchServices access, which the sandbox blocks).
+For Markdown in an Obsidian vault on macOS, use `open "obsidian://open?path=/absolute/path/Note.md"` instead. `open` must run outside the sandbox because it needs LaunchServices.
 
 Obsidian and Vivaldi both auto-reload .md files. Vivaldi does this with the [markdown-viewer extension](https://github.com/simov/markdown-viewer); if we run into issues, let me know and we can try installing [md-reader](https://github.com/md-reader/md-reader) instead.
 
