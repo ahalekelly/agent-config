@@ -22,11 +22,11 @@ Edit the source under `claude/`, `codex/`, or `pi/`, then run:
 uv run ~/.agents/sync.py
 ```
 
-Sync also installs git hooks in the clone that rerun it after every commit, merge, checkout, and rebase, and a scheduled job (systemd user timer on Linux, launchd agent on macOS) that runs `sync.py pull` every 10 minutes: a fast-forward pull, then a push if the clone has unpushed commits. So a commit on one machine reaches the others within minutes; only committing stays manual. Restart open shells after shell config changes.
+Sync installs a scheduled job (systemd user timer on Linux, launchd agent on macOS) that runs every 10 minutes. It fast-forwards from origin, pushes unpushed commits, and installs the resulting config. A commit on one machine reaches the others within minutes; only committing stays manual. Restart open shells after shell config changes.
 
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
-Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the live config with `~/.codex/config.toml.rendered`; Codex-added or changed keys move into the shared base and appear in `git status`. Move platform-specific imports into the relevant overlay before committing. Project trust entries, marketplace refresh timestamps, and the machine-local model reasoning preference are not imported.
+Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the shared part of the live config with `~/.codex/config.toml.rendered`. Changed keys update their existing OS overlay key or enter the shared base. Project trust, hook trust hashes, marketplace timestamps, and reasoning effort stay only in the live file and are never imported.
 
 ## Setup
 
