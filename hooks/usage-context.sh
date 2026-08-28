@@ -156,7 +156,7 @@ if [ -r /proc/pressure/memory ]; then
       if (total && avail * 100 / total < 10) note(int(avail * 100 / total) "% memory available")
       if (out) print "System pressure: " out
     }'
-else
+elif [[ $OSTYPE == darwin* ]]; then
   # macOS has no PSI; kern.memorystatus_vm_pressure_level is 1 normal, 2 warn,
   # 4 critical. vm.loadavg reads "{ 1.85 2.05 2.11 }".
   sysctl -n hw.ncpu vm.loadavg kern.memorystatus_vm_pressure_level | awk '
