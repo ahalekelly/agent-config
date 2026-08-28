@@ -1,5 +1,4 @@
 {
-  "processWrapper": "~/.agents/claude-patching/process-wrapper.sh",
   "cleanupPeriodDays": 3650,
   "env": {
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
@@ -89,16 +88,6 @@
           {
             "type": "command",
             "command": "uv run ~/.claude/tab-title.py"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/herdr-agent-state.sh session",
-            "timeout": 10
           }
         ]
       }
