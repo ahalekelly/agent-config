@@ -9,6 +9,7 @@ approval_policy = "on-request"
 default_permissions = "workspace_sandbox"
 approvals_reviewer = "auto_review"
 analytics.enabled = false
+service_tier = "default"
 
 [permissions.workspace_sandbox.filesystem.":workspace_roots"]
 "." = "read"
