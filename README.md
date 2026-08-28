@@ -26,7 +26,7 @@ Sync installs a scheduled job (systemd user timer on Linux, launchd agent on mac
 
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
-Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the shared part of the live config with `~/.codex/config.toml.rendered`. Changed keys update their existing OS overlay key or enter the shared base. Project trust, hook trust hashes, marketplace timestamps, and reasoning effort stay only in the live file and are never imported.
+Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the shared part of the live config with `~/.codex/config.toml.rendered`. Changed keys enter the OS overlay; the shared base changes only by hand. Project trust, hook trust hashes, marketplace timestamps, and reasoning effort stay only in the live file and are never imported.
 
 ## Setup
 

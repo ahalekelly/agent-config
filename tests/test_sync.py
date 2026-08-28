@@ -91,7 +91,8 @@ def test_codex_round_trip_keeps_local_state_and_routes_drift(fake_home):
 
     live.write_text('test_shared = "live"\n' + live.read_text())
     run_sync(repo, environment)
-    assert load_toml(repo / "codex" / "config.toml")["test_shared"] == "live"
+    assert load_toml(repo / "codex" / "config.linux.toml")["test_shared"] == "live"
+    assert "test_shared" not in load_toml(repo / "codex" / "config.toml")
 
     live.write_text(live.read_text().replace('":tmpdir" = "write"', '":tmpdir" = "read"'))
     run_sync(repo, environment)

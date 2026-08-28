@@ -199,15 +199,6 @@ def changed_values(live: Mapping, previous: Mapping, path: tuple[str, ...] = ())
             yield current_path, value
 
 
-def has_path(document: Mapping, path: tuple[str, ...]) -> bool:
-    value = document
-    for key in path:
-        if not isinstance(value, Mapping) or key not in value:
-            return False
-        value = value[key]
-    return True
-
-
 def set_path(document: MutableMapping, path: tuple[str, ...], value) -> None:
     table = document
     for key in path[:-1]:
@@ -240,11 +231,9 @@ def render_codex(platform: str) -> None:
             previous = tomlkit.parse(rendered_path.read_text()).unwrap()
             drift = list(changed_values(shared, previous))
             for path, value in drift:
-                destination = overlay if has_path(overlay, path) else base
-                set_path(destination, path, value)
-                print(f"imported Codex drift: {'.'.join(path)} = {value!r}")
+                set_path(overlay, path, value)
+                print(f"imported Codex drift into {overlay_path.name}: {'.'.join(path)} = {value!r}")
             if drift:
-                base_path.write_text(tomlkit.dumps(base))
                 overlay_path.write_text(tomlkit.dumps(overlay))
 
     rendered = copy.deepcopy(base)
