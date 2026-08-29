@@ -14,7 +14,7 @@ codex() { _scrub_secrets codex "$@"; }
 # Keep the interactive Pi CLI at the version used by pi-for-claude.
 pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
 
-_claude_with_profile() {
+_patched_claude() {
   # The patcher returns the best available binary while reconciling updates in
   # the background. Pause after a visible error before the TUI clears it.
   local target bin=claude
@@ -23,11 +23,14 @@ _claude_with_profile() {
     read -r
   fi
   [[ -n "$target" ]] && bin="$target"
-  CLAUDE_CONFIG_DIR="$1" _scrub_secrets "$bin" "${@:2}"
+  _scrub_secrets "$bin" "$@"
 }
 
-claude() { _claude_with_profile "$HOME/.claude" "$@"; }
+# The personal profile must leave CLAUDE_CONFIG_DIR unset: Claude Code keys its
+# macOS Keychain entry on whether the variable is set, so setting it even to the
+# default ~/.claude would split credentials from tools that launch `claude` bare.
+claude() { _patched_claude "$@"; }
 # Both profiles share one version store, so only the personal profile updates it.
-claudew() { DISABLE_AUTOUPDATER=1 _claude_with_profile "$HOME/.claude-work" "$@"; }
+claudew() { CLAUDE_CONFIG_DIR="$HOME/.claude-work" DISABLE_AUTOUPDATER=1 _patched_claude "$@"; }
 ca() { claude agents "$@"; }
 caw() { claudew agents "$@"; }
