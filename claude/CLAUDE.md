@@ -16,7 +16,7 @@ Memory dirs are per project (`~/.claude/projects/<cwd-slug>/memory/`), and yours
 
 ## Long-Running Commands
 
-Bash's `timeout` caps at 60 minutes and applies only to foreground calls; a call that hits it is moved to the background rather than killed, and `run_in_background` has no cap. Run long jobs with `run_in_background` (you're notified on completion) and never wrap them in `timeout`. For a job that must outlive the session use a transient unit, which needs `dangerouslyDisableSandbox`:
+Bash's 10-minute `timeout` applies only to foreground calls, and a call that hits it is moved to the background rather than killed; `run_in_background` has no cap. Run long jobs with `run_in_background` (you're notified on completion) and never wrap them in `timeout`. For a job that must outlive the session use a transient unit, which needs `dangerouslyDisableSandbox`:
 
 ```bash
 systemd-run --user --unit=job-<name> --working-directory="$PWD" bash -lc '<command>'
