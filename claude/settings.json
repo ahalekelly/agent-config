@@ -17,6 +17,7 @@
     "defaultMode": "auto"
   },
   "model": "claude-fable-5[1m]",
+  "enableArtifact": false,
   "hooks": {
     "PreToolUse": [
       {
@@ -113,6 +114,9 @@
       }
     ]
   },
+  "worktree": {
+    "baseRef": "head"
+  },
   "statusLine": {
     "type": "command",
     "command": "uv run ~/.claude/statusline.py"
@@ -174,9 +178,6 @@
         "~/.pi/agent/auth.json"
       ]
     }
-  },
-  "worktree": {
-    "baseRef": "head"
   },
   "effortLevel": "high",
   "awaySummaryEnabled": false,
