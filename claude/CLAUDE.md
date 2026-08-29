@@ -16,11 +16,12 @@ Memory dirs are per project (`~/.claude/projects/<cwd-slug>/memory/`), and yours
 
 ## Long-Running Commands
 
-Bash kills commands after 10 minutes, even with `run_in_background`. Launch anything that might run longer detached and watch the log:
+Bash's 10-minute `timeout` applies only to foreground calls, and a call that hits it is moved to the background rather than killed; `run_in_background` has no cap. Run long jobs with `run_in_background` (you're notified on completion) and never wrap them in `timeout`. For a job that must outlive the session use a transient unit, which needs `dangerouslyDisableSandbox`:
 
-```js
-Bash({ command: "nohup <command> > /tmp/claude/<name>.log 2>&1 &", dangerouslyDisableSandbox: true })
-Monitor({ command: "until grep -qE 'DONE|Traceback|Error' /tmp/claude/<name>.log; do sleep 15; done; tail -3 /tmp/claude/<name>.log", timeout_ms: 1800000, ... })
+```bash
+systemd-run --user --unit=job-<name> --working-directory="$PWD" bash -lc '<command>'
+journalctl --user -u job-<name> -f                                             # logs
+systemctl --user show job-<name> -p ActiveState -p Result -p ExecMainStatus    # status; don't pass --collect, it discards the exit status
 ```
 
 Check `ps` before relaunching a run you think died.
