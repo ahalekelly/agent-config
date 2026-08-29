@@ -23,7 +23,7 @@ Bash({ command: "nohup <command> > /tmp/claude/<name>.log 2>&1 &", dangerouslyDi
 Monitor({ command: "until grep -qE 'DONE|Traceback|Error' /tmp/claude/<name>.log; do sleep 15; done; tail -3 /tmp/claude/<name>.log", timeout_ms: 1800000, ... })
 ```
 
-Check `ps` before relaunching a run you think died — a duplicate metered job double-bills.
+Check `ps` before relaunching a run you think died.
 
 ## Model Routing
 
