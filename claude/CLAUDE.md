@@ -16,14 +16,14 @@ Memory dirs are per project (`~/.claude/projects/<cwd-slug>/memory/`), and yours
 
 ## Long-Running Commands
 
-The Bash tool kills a command after 10 minutes (`timeout` max 600000 ms), including `run_in_background` ones, and a killed run loses its work. For anything that might take longer — builds, backfills, backtests, data fetches — launch it detached and watch for completion instead:
+Bash kills commands after 10 minutes, even with `run_in_background`. Launch anything that might run longer detached and watch the log:
 
 ```js
-Bash({ command: "cd <dir> && nohup <command> > /tmp/claude/<name>.log 2>&1 &", dangerouslyDisableSandbox: true })
-Monitor({ command: "until grep -qE 'DONE_MARKER|Traceback|Error' /tmp/claude/<name>.log; do sleep 15; done; tail -3 /tmp/claude/<name>.log", timeout_ms: 1800000, ... })
+Bash({ command: "nohup <command> > /tmp/claude/<name>.log 2>&1 &", dangerouslyDisableSandbox: true })
+Monitor({ command: "until grep -qE 'DONE|Traceback|Error' /tmp/claude/<name>.log; do sleep 15; done; tail -3 /tmp/claude/<name>.log", timeout_ms: 1800000, ... })
 ```
 
-Before relaunching a run you think died, confirm with `ps` that no copy is still running — a second copy of a metered job (Databento, paid APIs) double-bills.
+Check `ps` before relaunching a run you think died — a duplicate metered job double-bills.
 
 ## Model Routing
 
