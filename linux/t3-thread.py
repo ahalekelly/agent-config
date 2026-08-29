@@ -1,9 +1,12 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Start a new T3 Code thread in a project and send it a prompt.
+"""Send a prompt to T3 Code, either in a new thread or into an existing one.
 
-Usage: t3-thread.py <project-dir> <title> <model> <prompt-file>
+Usage: t3-thread.py new <project-dir> <title> <model> <prompt-file>
+       t3-thread.py resume <thread-id> <prompt-file>
+
+Thread ids are listed by GET /api/orchestration/snapshot.
 
 Auth: mint a short-lived pairing token with `t3 pair`, exchange it for an
 access token, then dispatch commands to the local T3 server.
@@ -47,10 +50,16 @@ def mint_access_token(origin: str, label: str) -> str:
 
 
 def main() -> None:
-    if len(sys.argv) != 5:
+    args = sys.argv[1:]
+    if args[:1] == ["new"] and len(args) == 5:
+        _, project_dir, title, model, prompt_file = args
+        thread_id = None
+    elif args[:1] == ["resume"] and len(args) == 3:
+        _, thread_id, prompt_file = args
+        project_dir = model = None
+        title = f"resume {thread_id[:8]}"
+    else:
         raise SystemExit(__doc__)
-    project_dir, title, model, prompt_file = sys.argv[1:]
-    project_dir = str(Path(project_dir).resolve())
     origin = json.loads((T3 / "userdata/server-runtime.json").read_text())["origin"]
     headers = {"authorization": f"Bearer {mint_access_token(origin, title)}", "content-type": "application/json"}
 
@@ -63,20 +72,22 @@ def main() -> None:
         with urllib.request.urlopen(urllib.request.Request(f"{origin}/api/orchestration/dispatch", data=body, headers=headers)) as r:
             return json.load(r)
 
-    projects = {p["workspaceRoot"]: p["id"] for p in get("/api/orchestration/snapshot")["projects"]}
-    project_id = projects.get(project_dir)
-    if project_id is None:
-        project_id = str(uuid.uuid4())
-        dispatch({"type": "project.create", "projectId": project_id, "title": Path(project_dir).name, "workspaceRoot": project_dir})
-    thread_id = str(uuid.uuid4())
-    dispatch({"type": "thread.create", "threadId": thread_id, "projectId": project_id,
-              "title": title, "modelSelection": {"instanceId": "claudeAgent", "model": model},
-              "runtimeMode": "full-access", "branch": "main", "worktreePath": None})
+    if thread_id is None:
+        project_dir = str(Path(project_dir).resolve())
+        projects = {p["workspaceRoot"]: p["id"] for p in get("/api/orchestration/snapshot")["projects"]}
+        project_id = projects.get(project_dir)
+        if project_id is None:
+            project_id = str(uuid.uuid4())
+            dispatch({"type": "project.create", "projectId": project_id, "title": Path(project_dir).name, "workspaceRoot": project_dir})
+        thread_id = str(uuid.uuid4())
+        dispatch({"type": "thread.create", "threadId": thread_id, "projectId": project_id,
+                  "title": title, "modelSelection": {"instanceId": "claudeAgent", "model": model},
+                  "runtimeMode": "full-access", "branch": "main", "worktreePath": None})
     dispatch({"type": "thread.turn.start", "threadId": thread_id,
               "runtimeMode": "full-access", "interactionMode": "default",
               "message": {"messageId": str(uuid.uuid4()), "role": "user",
                           "text": Path(prompt_file).read_text(), "attachments": []}})
-    print(f"started thread {thread_id}: {title}")
+    print(f"sent prompt to thread {thread_id}: {title}")
 
 
 if __name__ == "__main__":
