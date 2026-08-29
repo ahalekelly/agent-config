@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Work-profile Claude Code launcher: a real executable so tools that spawn a
+# binary (T3 Code, the Agent SDK) get the same profile as the shell.
+# Auto-update stays off because both profiles share one version store; two
+# updaters installing the same version race and corrupt the install.
+source "$HOME/.agents/shell/agent-wrappers.sh"
+CLAUDE_CONFIG_DIR="$HOME/.claude-work" DISABLE_AUTOUPDATER=1 _patched_claude "$@"

@@ -30,7 +30,6 @@ _patched_claude() {
 # macOS Keychain entry on whether the variable is set, so setting it even to the
 # default ~/.claude would split credentials from tools that launch `claude` bare.
 claude() { _patched_claude "$@"; }
-# Both profiles share one version store, so only the personal profile updates it.
-claudew() { CLAUDE_CONFIG_DIR="$HOME/.claude-work" DISABLE_AUTOUPDATER=1 _patched_claude "$@"; }
+# The work profile is ~/.agents/bin/claudew, an executable so T3 can spawn it too.
 ca() { claude agents "$@"; }
 caw() { claudew agents "$@"; }
