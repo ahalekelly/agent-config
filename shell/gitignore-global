@@ -1,4 +1,5 @@
-.claude/
+.claude/settings.local.json
+.claude/worktrees/
 .cc-writes/
 .agents/scratchpad/
 .agents/sessions/
@@ -25,3 +26,5 @@ ehthumbs.db
 *~
 *.swp
 *.swo
+
+**/.claude/.cc-writes/
