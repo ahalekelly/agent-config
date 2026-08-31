@@ -1,7 +1,7 @@
 [submodule "pi-for-claude"]
 	path = pi-for-claude
 	url = https://github.com/ahalekelly/pi-for-claude.git
-[submodule "browser-leaf"]
+[submodule "browser-swarm"]
 	path = browser-swarm
 	url = https://github.com/ahalekelly/browser-swarm.git
 [submodule "claude-patching"]
