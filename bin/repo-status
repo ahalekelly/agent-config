@@ -1,0 +1,153 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+
+import json
+import re
+import subprocess
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def run(command: list[str], cwd: Path | None = None) -> str:
+    return subprocess.run(
+        command,
+        cwd=cwd,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    ).stdout.strip()
+
+
+def open_github_items() -> list[dict]:
+    fields = "author,number,repository,title,updatedAt"
+    items = []
+    for kind, command in (
+        ("issue", "issues"),
+        ("PR", "prs"),
+    ):
+        results = json.loads(
+            run(
+                [
+                    "gh",
+                    "search",
+                    command,
+                    "--owner",
+                    "ahalekelly",
+                    "--state",
+                    "open",
+                    "--limit",
+                    "1000",
+                    "--json",
+                    fields,
+                ]
+            )
+        )
+        for item in results:
+            item["kind"] = kind
+            items.append(item)
+    return items
+
+
+def print_github_items() -> None:
+    print("Open issues and PRs")
+    items = open_github_items()
+    if not items:
+        print("  none")
+        return
+
+    for item in sorted(
+        items,
+        key=lambda item: (
+            item["repository"]["name"].casefold(),
+            item["kind"],
+            item["number"],
+        ),
+    ):
+        author = item["author"]["login"] if item["author"] else "ghost"
+        title = json.dumps(item["title"], ensure_ascii=False)
+        updated = item["updatedAt"][:10]
+        print(
+            f'  {item["repository"]["name"]}#{item["number"]} '
+            f'{item["kind"]} {title} ({author}, updated {updated})'
+        )
+
+
+def repositories() -> list[tuple[str, Path]]:
+    output = run(["git", "-C", str(ROOT), "submodule", "status"])
+    repos = [(ROOT.name, ROOT)]
+    for line in output.splitlines():
+        match = re.fullmatch(r"[-+ U]?[0-9a-f]+ (.*?)(?: \(.+\))?", line)
+        if not match:
+            raise ValueError(f"Cannot parse git submodule status line: {line!r}")
+        path = match.group(1)
+        repos.append((path, ROOT / path))
+    return repos
+
+
+def repo_state(repo: Path) -> tuple[list[str], str, list[str]]:
+    git = ["git", "-C", str(repo)]
+    run([*git, "fetch", "--quiet", "origin"])
+
+    branch_result = subprocess.run(
+        [*git, "symbolic-ref", "--quiet", "--short", "HEAD"],
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+    if branch_result.returncode not in (0, 1):
+        branch_result.check_returncode()
+    branch = branch_result.stdout.strip()
+    if branch:
+        upstream = run(
+            [*git, "for-each-ref", "--format=%(upstream)", f"refs/heads/{branch}"]
+        )
+        comparison = upstream or "origin/HEAD"
+        note = "" if upstream else "no upstream"
+    else:
+        comparison = "origin/HEAD"
+        note = "detached HEAD"
+
+    behind, ahead = map(
+        int,
+        run([*git, "rev-list", "--left-right", "--count", f"{comparison}...HEAD"]).split(),
+    )
+    counts = []
+    if ahead:
+        counts.append(f"ahead {ahead}")
+    if behind:
+        counts.append(f"behind {behind}")
+
+    changes = run([*git, "status", "--porcelain"]).splitlines()
+    return counts, note, changes
+
+
+def print_repo_status() -> None:
+    print("\nLocal vs origin")
+    dirty_repos = []
+    for name, repo in repositories():
+        counts, note, changes = repo_state(repo)
+        if counts or changes:
+            dirty_repos.append((name, counts, note, changes))
+
+    if not dirty_repos:
+        print("  all repos in sync with origin")
+        return
+
+    for name, counts, note, changes in dirty_repos:
+        details = f": {', '.join(counts)}" if counts else ""
+        comparison = f" (compared with origin/HEAD: {note})" if note else ""
+        print(f"  {name}{comparison}{details}")
+        for change in changes:
+            print(f"    {change}")
+
+
+def main() -> None:
+    print_github_items()
+    print_repo_status()
+
+
+if __name__ == "__main__":
+    main()
