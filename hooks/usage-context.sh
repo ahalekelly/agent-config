@@ -1,6 +1,6 @@
 #!/bin/bash
 # UserPromptSubmit hook: inject time, weekly usage, and system pressure.
-#   Time: Wednesday 2026-08-05 14:10 PDT
+#   Time: Wednesday 2026-08-05 14:10:32 PDT
 #   Claude weekly: 52% used, 99% of week elapsed
 #   Fable weekly: 61% used, 99% of week elapsed
 #   Codex weekly: 12% used, 30% of week elapsed
@@ -120,7 +120,7 @@ lines=$(jq -rn --argjson ttl "$ttl" --argjson week "$week_secs" \
   | $codex[0] as $x
   | ($c.limits // [] | map(select(.kind == "weekly_scoped"
       and .scope.model.display_name == "Fable")) | first) as $fable
-  | "Time: \($now | strflocaltime("%A %Y-%m-%d %H:%M %Z"))",
+  | "Time: \($now | strflocaltime("%A %Y-%m-%d %H:%M:%S %Z"))",
     (if stale($c) then "@claude" else empty end),
     (if stale($x) then "@codex" else empty end),
     usage("Claude weekly"; $c.seven_day.utilization; ($c.seven_day.resets_at | epoch); $week),
