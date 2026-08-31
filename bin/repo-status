@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+IGNORED_REPOS = {"dettlaff"}
 
 
 def run(command: list[str], cwd: Path | None = None) -> str:
@@ -47,6 +48,8 @@ def open_github_items() -> list[dict]:
             )
         )
         for item in results:
+            if item["repository"]["name"].casefold() in IGNORED_REPOS:
+                continue
             item["kind"] = kind
             items.append(item)
     return items
