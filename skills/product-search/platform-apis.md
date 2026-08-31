@@ -18,6 +18,8 @@ uv run --project cross-shop cross-shop quote '[{"store":"https://example.com","l
 uv run --project cross-shop cross-shop images r1.1.1 1:3
 ```
 
+Sandboxes that mount the skill directory read-only block uv's default `.venv` location, and the default data directory (`~/.local/share/cross-shop`) is often unwritable too. Pointing `UV_PROJECT_ENVIRONMENT` and `CROSS_SHOP_DATA_DIR` at writable paths (for example under `$TMPDIR`) avoids escalating.
+
 `search`, `product`, and `quote` are batch commands. They group work by canonical store, run up to five stores concurrently, keep one session per store, consult the vendor registry before detection, and preserve input order. `--redetect` refreshes registry facts. `--debug` adds detection and request evidence omitted from token-lean default output.
 
 Search emits product-level handles, never variant refs. Product detail emits strict readable refs per variant. Handles are seven-day conveniences tied to a monotonic run ID; refs are durable exact identities and are reverified against the live store. Product URLs containing queries or fragments are rejected rather than dropping possible identity components; use a durable ref instead.
