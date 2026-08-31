@@ -45,3 +45,27 @@ type = "command"
 command = "uv run ~/.agents/hooks/prevent-rm.py"
 timeout = 30
 statusMessage = "Checking for rm"
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "uv run ~/.agents/hooks/timestamp.py"
+timeout = 10
+statusMessage = "Stamping time"
+
+# Hook trust: Codex skips hooks until their hash is trusted (normally via /hooks
+# in the TUI). Hashes cover the normalized hook config, not the machine, but the
+# key embeds the layer path, so each hook needs a key per $HOME layout. Recompute
+# after editing a hook: `codex app-server` RPC `hooks/list` reports currentHash.
+[hooks.state."/home/akelly/.codex/config.toml:pre_tool_use:0:0"]
+trusted_hash = "sha256:b840e4cee5b87e51cdf7a73f73284f671208fe5aaaf0942207abaab7f7e9a289"
+
+[hooks.state."/Users/akelly/.codex/config.toml:pre_tool_use:0:0"]
+trusted_hash = "sha256:b840e4cee5b87e51cdf7a73f73284f671208fe5aaaf0942207abaab7f7e9a289"
+
+[hooks.state."/home/akelly/.codex/config.toml:user_prompt_submit:0:0"]
+trusted_hash = "sha256:304f1d566a912c02e986c1a7741e5d4dde51edd599ef53b09152d937839a8e22"
+
+[hooks.state."/Users/akelly/.codex/config.toml:user_prompt_submit:0:0"]
+trusted_hash = "sha256:304f1d566a912c02e986c1a7741e5d4dde51edd599ef53b09152d937839a8e22"

@@ -132,6 +132,7 @@ def install_links(platform: str) -> None:
         pi / "AGENTS.md": REPO / "AGENTS.md",
         pi / "settings.json": REPO / "pi" / "settings.json",
         pi / "extensions" / "prevent-rm.ts": REPO / "hooks" / "prevent-rm-pi.ts",
+        pi / "extensions" / "timestamp.ts": REPO / "hooks" / "timestamp-pi.ts",
         git / "ignore": REPO / "shell" / "gitignore-global",
     }
     if platform == "linux":

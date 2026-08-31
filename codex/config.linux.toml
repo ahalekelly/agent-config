@@ -16,3 +16,7 @@
 
 [shell_environment_policy.set]
 PATH = "/home/akelly/.agents/bin:/home/akelly/.pi/agent/bin:/home/akelly/.local/bin:/home/akelly/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+
+# Trust for the machine-local herdr SessionStart hook in ~/.codex/hooks.json.
+[hooks.state."/home/akelly/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:a95d5f6e9d2868148dc5ec6f99d14eff44008bde4f7f5f35c7d201aa98528737"
