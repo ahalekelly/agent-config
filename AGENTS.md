@@ -95,7 +95,7 @@ Split distinct logical changes into separate commits. After making changes, you 
 
 Typically commit at file granularity, don't stage part of a file. If one file ends up containing multiple different changes you made, just commit them together. If the work is unfinished or tests are failing, flag these and don't commit. If a file you're working on also has edits that you didn't make, flag this and don't commit until I explicitly ask you to.
 
-On repos I (ahalekelly) own, don't open pull requests for changes I asked for: commit to main and push. The one exception is the Burnbot/Burnbot monorepo — never push to main there. If you are running in /goal or a similar mode without me in the loop and come up with ideas for improvements to my repos, try them and submit them as PRs if they work and seem good.
+Repos I (ahalekelly) own: don't open pull requests for changes I asked for — commit to main and push. Repos in the Burnbot GitHub organization (github.com/Burnbot/*, e.g. the Burnbot monorepo and RCaMS): commit locally, but never push to any branch, including main, unless I explicitly tell you to push in that conversation. If you are running in /goal or a similar mode without me in the loop and come up with ideas for improvements to my repos, try them and submit them as PRs if they work and seem good.
 
 Keep docs up to date whenever something changes, and keep user-facing docs very succinct. Any time you write to a doc, do a second concision pass afterwards on anything you added to remove any extraneous words or info that wouldn't be relevant to the user. If you notice a doc doesn't match committed or untracked changes, update it, even if you're not the one who made it out of date. If the doc doesn't match *uncommitted* changes, no need to update it.
 
