@@ -24,6 +24,10 @@
 # one jq that renders the clock and every usage line, and one awk that reads
 # the kernel's load and memory counters.
 
+# Windows jq writes CRLF unless told to use binary mode. A stray \r would break
+# the @claude/@codex sentinel match below and leak into the bearer tokens.
+jq() { command jq -b "$@"; }
+
 cache_dir="$HOME/.cache/claude-usage"
 ttl=900
 week_secs=$((7 * 24 * 3600))
