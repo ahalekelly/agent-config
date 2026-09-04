@@ -19,6 +19,7 @@ import argparse
 import glob
 import gzip
 import json
+import math
 import os
 import statistics
 import time
@@ -59,14 +60,17 @@ class Span:
 
 @dataclass
 class Connect:
-    ws: Span
+    config: Span
+    ws: Span | None = None  # absent while the socket is still open
     steps: dict[str, Span] = field(default_factory=dict)  # kind -> span
     threads: list[Span] = field(default_factory=list)
 
     @property
     def start(self) -> float:
-        firsts = [s.start for s in self.steps.values()] + [self.ws.start]
-        return min(firsts)
+        return min(s.start for s in self.all_steps())
+
+    def all_steps(self) -> list[Span]:
+        return [s for s in (self.ws, *self.steps.values(), self.config) if s is not None]
 
     @property
     def synced_at(self) -> float | None:
@@ -82,12 +86,11 @@ class Connect:
 
     @property
     def server_ms(self) -> float:
-        return sum(s.dur_ms for s in self.steps.values()) + self.ws_auth_ms
-
-    ws_auth_ms = 1.0  # upgrade auth is ~1ms; the /ws span itself measures socket lifetime
+        # The /ws span measures socket lifetime, not work; its auth check is ~1ms.
+        return sum(s.dur_ms for s in self.steps.values()) + self.config.dur_ms + 1.0
 
     def client(self) -> str:
-        ua = next((s.ua for s in self.steps.values() if s.ua), self.ws.ua)
+        ua = next((s.ua for s in self.all_steps() if s.ua), "")
         if "Darwin" in ua or "CFNetwork" in ua:
             return "ios"
         if "okhttp" in ua:
@@ -99,7 +102,7 @@ class Connect:
         return "unknown"
 
     def via(self) -> str:
-        host = next((s.host for s in list(self.steps.values()) + [self.ws] if s.host), "")
+        host = next((s.host for s in self.all_steps() if s.host), "")
         return "relay" if "t3coderelay" in host else "direct"
 
 
@@ -175,16 +178,17 @@ def claim_after(spans: list[Span], kind: str, after: float, anchor: Span, window
 
 def build_connects(spans: list[Span]) -> list[Connect]:
     connects = []
-    for ws in (s for s in spans if s.kind == "ws"):
-        c = Connect(ws=ws)
-        cfg = next(
-            (s for s in spans if s.kind == "getConfig" and not s.claimed and s.trace_id == ws.trace_id),
+    for cfg in (s for s in spans if s.kind == "getConfig"):
+        cfg.claimed = True
+        c = Connect(config=cfg)
+        ws = next(
+            (s for s in spans if s.kind == "ws" and not s.claimed and s.trace_id == cfg.trace_id),
             None,
-        ) or claim_after(spans, "getConfig", ws.start, ws, POST_CONNECT_WINDOW_S)
-        if cfg:
-            cfg.claimed = True
-            c.steps["getConfig"] = cfg
-        ticket = claim_before(spans, "ticket", ws.start, ws)
+        ) or claim_before(spans, "ws", cfg.start, cfg)
+        if ws:
+            ws.claimed = True
+            c.ws = ws
+        ticket = claim_before(spans, "ticket", (ws or cfg).start, ws or cfg)
         if ticket:
             c.steps["ticket"] = ticket
             token = claim_before(spans, "token", ticket.start, ticket)
@@ -193,9 +197,8 @@ def build_connects(spans: list[Span]) -> list[Connect]:
                 desc = claim_before(spans, "descriptor", token.start, token)
                 if desc:
                     c.steps["descriptor"] = desc
-        anchor = ticket or ws
-        after = (cfg.start + cfg.dur_ms / 1000) if cfg else ws.start
-        shell = claim_after(spans, "shell", after, anchor, POST_CONNECT_WINDOW_S)
+        anchor = ticket or ws or cfg
+        shell = claim_after(spans, "shell", cfg.start + cfg.dur_ms / 1000, anchor, POST_CONNECT_WINDOW_S)
         if shell:
             c.steps["shell"] = shell
             while t := claim_after(spans, "thread", shell.start, anchor, POST_CONNECT_WINDOW_S):
@@ -211,17 +214,18 @@ def print_connect(c: Connect, verbose: bool) -> None:
     when = f"{c.start:.0f}"
     total = c.total_ms
     total_s = f"{total:7.0f}ms" if total is not None else "   no-sync"
-    life = c.ws.dur_ms / 1000
+    socket = f"{c.ws.dur_ms / 1000:7.1f}s" if c.ws else "   open "
+    deflate = "?" if c.ws is None else ("y" if c.ws.deflate else "n")
+    present = [k for k in STEP_ORDER if k in c.steps or (k == "ws" and c.ws) or k == "getConfig"]
     print(
         f"{when}  {c.client():8s} {c.via():6s} total={total_s} server={c.server_ms:5.0f}ms "
-        f"socket={life:7.1f}s deflate={'y' if c.ws.deflate else 'n'} "
-        f"steps={'/'.join(k for k in STEP_ORDER if k in c.steps or k == 'ws')} threads={len(c.threads)}"
+        f"socket={socket} deflate={deflate} steps={'/'.join(present)} threads={len(c.threads)}"
     )
     if not verbose:
         return
     prev_end = None
     for kind in STEP_ORDER:
-        s = c.ws if kind == "ws" else c.steps.get(kind)
+        s = c.ws if kind == "ws" else c.config if kind == "getConfig" else c.steps.get(kind)
         if s is None:
             continue
         gap = "" if prev_end is None else f"gap={((s.start - prev_end) * 1000):6.0f}ms"
@@ -237,12 +241,13 @@ def print_aggregates(connects: list[Connect]) -> None:
     print("\n=== Aggregates by client ===")
     for client, group in sorted(by_client.items()):
         totals = [c.total_ms for c in group if c.total_ms is not None]
-        churn = sum(1 for c in group if c.ws.dur_ms < 60_000)
-        line = f"{client:8s} connects={len(group):3d} short-lived(<60s)={churn:3d}"
+        churn = sum(1 for c in group if c.ws and c.ws.dur_ms < 60_000)
+        still_open = sum(1 for c in group if c.ws is None)
+        line = f"{client:8s} connects={len(group):3d} short-lived(<60s)={churn:3d} open={still_open:2d}"
         if totals:
             line += (
                 f" synced={len(totals):3d} total median={statistics.median(totals):6.0f}ms"
-                f" p90={sorted(totals)[max(0, int(len(totals) * 0.9) - 1)]:6.0f}ms"
+                f" p90={sorted(totals)[math.ceil(len(totals) * 0.9) - 1]:6.0f}ms"
                 f" max={max(totals):6.0f}ms"
             )
             server = [c.server_ms for c in group if c.total_ms is not None]
@@ -269,7 +274,8 @@ def main() -> None:
     connects = sorted(build_connects(spans), key=lambda c: c.start)
     span_min = min(s.start for s in spans)
     span_max = max(s.start for s in spans)
-    print(f"{len(paths)} files, {len(spans)} relevant spans, window {(span_max - span_min) / 3600:.1f}h")
+    kinds = {k: sum(1 for s in spans if s.kind == k) for k in ("descriptor", "token", "ticket", "ws", "getConfig", "shell", "thread")}
+    print(f"{len(paths)} files, window {(span_max - span_min) / 3600:.1f}h, spans by kind: {kinds}")
     print(f"\n=== Connects ({len(connects)}) ===")
     for c in connects:
         print_connect(c, args.verbose)
