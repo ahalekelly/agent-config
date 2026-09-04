@@ -53,7 +53,7 @@ Identify the machine by hostname. Notes specific to each:
 
 ### akelly-desktop (Linux, headless)
 
-Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi over the tailnet; run it with `dangerouslyDisableSandbox` because it needs the tailscaled socket, user service, and ssh. The Obsidian CLI and `open` aren't available. `trash` is `trash-cli` (XDG trash in `~/.local/share/Trash`). `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
+Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi over the tailnet; run it with `dangerouslyDisableSandbox` because it needs the tailscaled socket, user service, and ssh. The Obsidian CLI and `open` aren't available. `trash` is npm's `trash-cli` in `~/.npm-global/bin` (XDG trash in `~/.local/share/Trash`). `~/.config/environment.d/path.conf` puts `~/.local/bin` and `~/.npm-global/bin` on PATH for systemd user services, so `claude`, `uv`, and `trash` resolve there without per-unit `Environment=PATH`. `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
 
 The Mac's local hostname is `Mac.local`.
 
