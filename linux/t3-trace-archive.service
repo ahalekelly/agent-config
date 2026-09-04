@@ -1,0 +1,6 @@
+[Unit]
+Description=Archive T3 server trace logs before rotation discards them
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/uv run --quiet %h/.agents/linux/t3-trace-archive.py

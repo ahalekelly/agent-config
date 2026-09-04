@@ -140,6 +140,8 @@ def install_links(platform: str) -> None:
         static |= {
             units / "agent-config-pull.service": REPO / "linux" / "agent-config-pull.service",
             units / "agent-config-pull.timer": REPO / "linux" / "agent-config-pull.timer",
+            units / "t3-trace-archive.service": REPO / "linux" / "t3-trace-archive.service",
+            units / "t3-trace-archive.timer": REPO / "linux" / "t3-trace-archive.timer",
             units / "claude-remote-control.service": REPO / "linux" / "claude-remote-control.service",
             units / "claude-patching-autoport.path": REPO / "claude-patching" / "claude-patching-autoport.path",
             units / "claude-patching-autoport.service": REPO / "claude-patching" / "claude-patching-autoport.service",
