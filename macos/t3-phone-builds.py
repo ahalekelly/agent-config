@@ -15,7 +15,7 @@ days after the first successful build.
 State and logs live in ~/Library/Application Support/t3-phone-builds. One
 DerivedData directory holds the current artifact. Profile expiration is read
 from the signed app so notifications describe the actual signature lifetime.
-T3 notifications use bin/t3-thread.py and the service selected by T3CODE_HOME.
+T3 notifications use bin/t3-thread.py against the service in ~/.t3-service.
 Run manually only while the launchd job is unloaded; launchd serializes its
 own runs. The checkout must have no tracked edits before a release build.
 """
@@ -78,6 +78,7 @@ class Runner:
         self.env = {
             **os.environ,
             "APP_VARIANT": "production",
+            "T3CODE_HOME": str(Path.home() / ".t3-service"),
             "T3CODE_IOS_PERSONAL_TEAM": "1",
             "T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID": BUNDLE_ID,
             "EXPO_NO_GIT_STATUS": "1",
