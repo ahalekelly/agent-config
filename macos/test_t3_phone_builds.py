@@ -35,7 +35,7 @@ class RunTests(unittest.TestCase):
         self.events = []
         self.builds = 0
         self.installs = 0
-        self.connected = False
+        self.blocker = "not connected"
         self.fail_build = False
         self.fail_install = False
         self.power = "Now drawing from 'AC Power'"
@@ -68,7 +68,7 @@ class RunTests(unittest.TestCase):
         with patch.object(phone.Runner, "capture", capture), \
              patch.object(phone.Runner, "build", build), \
              patch.object(phone.Runner, "install", install), \
-             patch.object(phone.Runner, "phone_connected", lambda _: self.connected), \
+             patch.object(phone.Runner, "phone_blocker", lambda _: self.blocker), \
              patch.object(phone.Runner, "notify", lambda _, title, body: self.events.append((title, body))):
             return phone.main()
 
@@ -121,7 +121,7 @@ class RunTests(unittest.TestCase):
         self.assertEqual(self.builds, 1)
 
     def test_install_renews_without_rebuilding_after_five_days(self):
-        self.connected = True
+        self.blocker = None
         self.save({"built": record(6), "installed": record(5), "overdue_notified_at": NOW.isoformat()})
         self.run_service()
         self.run_service()
@@ -130,7 +130,7 @@ class RunTests(unittest.TestCase):
         self.assertNotIn("overdue_notified_at", json.loads((self.root / "state.json").read_text()))
 
     def test_failed_install_does_not_rebuild_or_retry_same_day(self):
-        self.connected = self.fail_install = True
+        self.blocker, self.fail_install = None, True
         self.save({"built": record()})
         self.assertEqual(self.run_service(), 1)
         self.assertEqual(self.run_service(), 0)
@@ -138,11 +138,52 @@ class RunTests(unittest.TestCase):
         self.assertEqual(self.installs, 1)
         self.assertEqual(len(self.events), 1)
 
+    def test_locked_phone_waits_without_backoff(self):
+        self.blocker = "locked"
+        self.save({"built": record(6)})
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.installs, 0)
+        self.assertEqual(self.events[0][0], "iPhone: first install overdue")
+        self.assertIn("The phone is locked.", self.events[0][1])
+        self.assertNotIn("install_failure", json.loads((self.root / "state.json").read_text()))
+        self.blocker = None
+        self.run_service()
+        self.assertEqual(self.installs, 1)
+
     def test_new_release_installs_immediately(self):
-        self.connected = True
+        self.blocker = None
         self.save({"built": record(tag="v0.0.37"), "installed": record(tag="v0.0.37")})
         self.run_service()
         self.assertEqual((self.builds, self.installs), (1, 1))
+
+
+class PhoneBlockerTests(unittest.TestCase):
+    def blocker(self, udids, ddi_error):
+        def command(runner, *args, cwd=phone.REPO):
+            Path(args[-1]).write_text(json.dumps(
+                {"result": {"devices": [{"hardwareProperties": {"udid": udid}} for udid in udids]}}))
+
+        def attempt(runner, *args, cwd=phone.REPO):
+            Path(args[-1]).write_text(json.dumps(ddi_error or {}))
+            return subprocess.CompletedProcess(args, 1 if ddi_error else 0)
+
+        with patch.object(phone.Runner, "command", command), patch.object(phone.Runner, "attempt", attempt):
+            return phone.Runner().phone_blocker()
+
+    def test_absent_phone(self):
+        self.assertEqual(self.blocker(["00008140-other"], None), "not connected")
+
+    def test_mounted_image_clears_the_phone_for_install(self):
+        self.assertIsNone(self.blocker([phone.DEVICE], None))
+
+    def test_locked_phone_from_nested_mount_error(self):
+        error = {"error": {"code": 12040, "userInfo": {"NSUnderlyingError": {
+            "error": {"code": phone.DEVICE_LOCKED}}}}}
+        self.assertEqual(self.blocker([phone.DEVICE], error), "locked")
+
+    def test_other_mount_failure_is_a_real_failure(self):
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.blocker([phone.DEVICE], {"error": {"code": 12040}})
 
 
 if __name__ == "__main__":

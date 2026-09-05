@@ -7,10 +7,10 @@
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Every half
 hour on AC power, build the newest stable upstream tag with FORK_BRANCHES
-merged in. Re-sign and install on a connected phone every five days. Failed
-builds and installs back off for a day; an unreachable phone gets a daily
-reminder once renewal is due. Before the first install, reminders begin five
-days after the first successful build.
+merged in. Re-sign and install on a connected, unlocked phone every five days.
+Failed builds and installs back off for a day; a phone that is disconnected or
+locked gets a daily reminder once renewal is due. Before the first install,
+reminders begin five days after the first successful build.
 
 State and logs live in ~/Library/Application Support/t3-phone-builds. One
 DerivedData directory holds the current artifact. Profile expiration is read
@@ -41,6 +41,7 @@ DEVICE = "00008140-000809E90402201C"
 TEAM = "T3TBGN4UX7"
 BUNDLE_ID = "com.akelly.t3code"
 MODEL = "claude-opus-5"
+DEVICE_LOCKED = -402652958  # kAMDMobileImageMounterDeviceLocked, as reported in devicectl JSON
 DAY = timedelta(days=1)
 RENEW_AFTER = timedelta(days=5)
 
@@ -86,11 +87,15 @@ class Runner:
         }
 
     def command(self, *args, cwd=REPO):
+        self.attempt(*args, cwd=cwd).check_returncode()
+
+    def attempt(self, *args, cwd=REPO):
+        """Run a logged command and hand back its result to callers that tolerate failure."""
         with self.log.open("a") as output:
             output.write(f"\n$ {shlex.join(map(str, args))}\n")
             output.flush()
-            subprocess.run(list(map(str, args)), cwd=cwd, env=self.env,
-                           stdout=output, stderr=subprocess.STDOUT, check=True)
+            return subprocess.run(list(map(str, args)), cwd=cwd, env=self.env,
+                                  stdout=output, stderr=subprocess.STDOUT)
 
     def capture(self, *args):
         result = subprocess.run(list(map(str, args)), cwd=REPO, env=self.env,
@@ -160,16 +165,29 @@ class Runner:
         self.state.pop("build_failure", None)
         self.save()
 
-    def phone_connected(self):
+    def phone_blocker(self):
+        """Report why the phone cannot take an install, or None when it can.
+
+        Mounting the developer disk image needs an unlocked phone, and the mount
+        lasts until the phone reboots, so this probe also leaves later installs
+        working while the phone is locked.
+        """
         with tempfile.TemporaryDirectory(prefix="t3-phone-device-") as folder:
             devices = Path(folder) / "devices.json"
             self.command("xcrun", "devicectl", "list", "devices", "--filter",
                          "State == 'connected' OR State == 'available (paired)'",
                          "--json-output", devices)
-            for device in json.loads(devices.read_text())["result"]["devices"]:
-                if device["hardwareProperties"]["udid"] == DEVICE:
-                    return True
-        return False
+            if not any(device["hardwareProperties"]["udid"] == DEVICE
+                       for device in json.loads(devices.read_text())["result"]["devices"]):
+                return "not connected"
+            report = Path(folder) / "ddi.json"
+            services = self.attempt("xcrun", "devicectl", "device", "info", "ddiServices",
+                                    "--device", DEVICE, "--json-output", report)
+            if services.returncode:
+                if str(DEVICE_LOCKED) not in re.findall(r'"code"\s*:\s*(-?\d+)', report.read_text()):
+                    services.check_returncode()
+                return "locked"
+        return None
 
     def profile(self, path):
         return plistlib.loads(self.capture("security", "cms", "-D", "-i", path).encode())
@@ -233,15 +251,17 @@ class Runner:
             self.outcome = "install failure cooldown"
             return
         self.step = "phone reachability"
-        if not self.phone_connected():
-            self.outcome = "phone not connected"
+        blocker = self.phone_blocker()
+        if blocker:
+            self.outcome = f"phone {blocker}"
             due = elapsed((installed or self.state["built"])["at"]) >= RENEW_AFTER
             notified = self.state.get("overdue_notified_at")
             if due and (notified is None or elapsed(notified) >= DAY):
                 expiry = installed["expires_at"] if installed else "No app installed yet"
                 title = f"iPhone build expires {expiry[:10]}" if installed else "iPhone: first install overdue"
-                self.notify(title, "The phone has not been reachable.\n"
-                            f"Signature expiry: {expiry}.\nConnect the phone to the Mac; this is the only action needed.")
+                self.notify(title, f"The phone is {blocker}.\n"
+                            f"Signature expiry: {expiry}.\nConnect the phone to the Mac and unlock it; "
+                            "this is the only action needed.")
                 self.state["overdue_notified_at"] = now().isoformat()
                 self.save()
                 self.outcome = "overdue notification"
