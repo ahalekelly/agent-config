@@ -163,10 +163,12 @@ class Runner:
     def phone_connected(self):
         with tempfile.TemporaryDirectory(prefix="t3-phone-device-") as folder:
             devices = Path(folder) / "devices.json"
-            self.command("xcrun", "devicectl", "list", "devices", "--json-output", devices)
+            self.command("xcrun", "devicectl", "list", "devices", "--filter",
+                         "State == 'connected' OR State == 'available (paired)'",
+                         "--json-output", devices)
             for device in json.loads(devices.read_text())["result"]["devices"]:
                 if device["hardwareProperties"]["udid"] == DEVICE:
-                    return device["connectionProperties"]["tunnelState"] == "connected"
+                    return True
         return False
 
     def profile(self, path):
