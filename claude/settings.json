@@ -16,8 +16,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-fable-5[1m]",
-  "enableArtifact": false,
+  "model": "fable[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -117,6 +116,7 @@
   "worktree": {
     "baseRef": "head"
   },
+  "enableArtifact": false,
   "statusLine": {
     "type": "command",
     "command": "uv run ~/.claude/statusline.py"
