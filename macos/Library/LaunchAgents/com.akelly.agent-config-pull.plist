@@ -18,5 +18,7 @@
   <true/>
   <key>StandardErrorPath</key>
   <string>/tmp/com.akelly.agent-config-pull.err</string>
+  <key>StandardOutPath</key>
+  <string>/tmp/com.akelly.agent-config-pull.log</string>
 </dict>
 </plist>

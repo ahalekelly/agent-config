@@ -1,4 +1,5 @@
 import json
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -17,12 +18,12 @@ linux_only = pytest.mark.skipif(PLATFORM != "linux", reason="systemd units are L
 def fake_home(tmp_path):
     home = tmp_path / "home"
     repo = home / ".agents"
-    shutil.copytree(
-        ROOT,
-        repo,
-        symlinks=True,
-        ignore=shutil.ignore_patterns(".*", "__pycache__", "node_modules"),
-    )
+    repo.mkdir(parents=True)
+    shutil.copy2(ROOT / "sync.py", repo / "sync.py")
+    for name in ("claude", "codex", "pi", "shell", "linux", "macos"):
+        shutil.copytree(ROOT / name, repo / name, symlinks=True)
+    for name in ("skills", "hooks", "claude-patching"):
+        (repo / name).mkdir()
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     systemctl = bin_dir / "systemctl"
@@ -205,3 +206,93 @@ def test_regular_config_file_prints_diff_and_stops(fake_home):
     assert f"--- {settings}" in result.stdout
     assert f"+++ {repo / 'claude' / 'settings.json'}" in result.stdout
     assert "move these changes into" in result.stderr
+
+
+@pytest.fixture
+def sync_module():
+    spec = importlib.util.spec_from_file_location("agent_sync", ROOT / "sync.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def repositories(tmp_path, sync_module):
+    git = sync_module.git
+    origin = tmp_path / "origin.git"
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    git(tmp_path, "init", "--bare", "--initial-branch=main", str(origin))
+    git(tmp_path, "clone", str(origin), str(first))
+    git(first, "config", "user.name", "Sync test")
+    git(first, "config", "user.email", "sync@example.test")
+    (first / "config.txt").write_text("initial\n")
+    git(first, "add", ".")
+    git(first, "commit", "-m", "Initial configuration")
+    git(first, "push", "-u", "origin", "main")
+    git(first, "remote", "set-head", "origin", "-a")
+    git(tmp_path, "clone", str(origin), str(second))
+    git(second, "config", "user.name", "Sync test")
+    git(second, "config", "user.email", "sync@example.test")
+    return first, second
+
+
+def test_auto_sync_commits_new_files_and_merges_both_machines(repositories, sync_module):
+    first, second = repositories
+    (first / ".gitignore").write_text("secret.txt\n")
+    (first / "secret.txt").write_text("private\n")
+    (first / "linux.txt").write_text("linux\n")
+    (second / "mac.txt").write_text("mac\n")
+    sync_module.sync_repository(first)
+    sync_module.sync_repository(second)
+    sync_module.sync_repository(first)
+    assert (first / "mac.txt").read_text() == "mac\n"
+    assert (second / "linux.txt").read_text() == "linux\n"
+    assert not (second / "secret.txt").exists()
+    assert sync_module.git(first, "rev-parse", "HEAD") == sync_module.git(second, "rev-parse", "HEAD")
+    before = sync_module.git(first, "rev-parse", "HEAD")
+    sync_module.sync_repository(first)
+    assert sync_module.git(first, "rev-parse", "HEAD") == before
+
+
+def test_auto_sync_stops_on_conflict_and_preserves_work(repositories, sync_module):
+    first, second = repositories
+    (first / "config.txt").write_text("linux\n")
+    (second / "config.txt").write_text("mac\n")
+    sync_module.sync_repository(first)
+    with pytest.raises(sync_module.SyncError, match="CONFLICT"):
+        sync_module.sync_repository(second)
+    with pytest.raises(sync_module.SyncError, match="finish or abort"):
+        sync_module.sync_repository(second)
+    assert sync_module.git(second, "show", "HEAD:config.txt") == "mac"
+    assert sync_module.git(first, "show", "HEAD:config.txt") == "linux"
+
+
+def test_auto_sync_leaves_feature_branches_untouched(repositories, sync_module):
+    first, _ = repositories
+    sync_module.git(first, "switch", "-c", "feature", "--track", "origin/main")
+    (first / "config.txt").write_text("unfinished\n")
+    with pytest.raises(sync_module.SyncError, match="default branch"):
+        sync_module.sync_repository(first)
+    assert sync_module.git(first, "diff", "--name-only") == "config.txt"
+
+
+def test_sync_initializes_submodules_and_publishes_edits(repositories, sync_module, tmp_path, monkeypatch):
+    first, second = repositories
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    git = sync_module.git
+    git(parent, "init", "--initial-branch=main")
+    (parent / ".gitmodules").write_text(f'[submodule "child"]\npath = child\nurl = {tmp_path / "origin.git"}\n')
+    git(parent, "add", ".gitmodules")
+    git(parent, "update-index", "--add", "--cacheinfo", "160000", git(first, "rev-parse", "HEAD"), "child")
+    monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "file")
+    monkeypatch.setattr(sync_module, "REPO", parent)
+    sync_module.sync_submodules()
+    child = parent / "child"
+    git(child, "config", "user.name", "Sync test")
+    git(child, "config", "user.email", "sync@example.test")
+    (child / "new.txt").write_text("shared\n")
+    sync_module.sync_submodules()
+    sync_module.sync_repository(second)
+    assert (second / "new.txt").read_text() == "shared\n"

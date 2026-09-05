@@ -11,6 +11,7 @@ node_modules/
 .cc-writes/
 .agents/
 sessions/
+/home/
 .playwright-mcp/
 
 # Python runtime caches.

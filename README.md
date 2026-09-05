@@ -22,7 +22,7 @@ Edit the source under `claude/`, `codex/`, or `pi/`, then run:
 uv run ~/.agents/sync.py
 ```
 
-Sync installs a scheduled job (systemd user timer on Linux, launchd agent on macOS) that runs every 10 minutes. It fast-forwards from origin, pushes unpushed commits, and installs the resulting config. A commit on one machine reaches the others within minutes; only committing stays manual. Restart open shells after shell config changes.
+Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. Restart open shells after shell config changes.
 
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
