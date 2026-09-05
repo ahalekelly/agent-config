@@ -159,9 +159,6 @@ def install_links(platform: str) -> None:
     for target, source in static.items():
         link(target, str(source), source.is_dir())
 
-    for source in sorted((REPO / "codex" / "skills").iterdir()):
-        link(codex / "skills" / source.name, str(source), True)
-
     for name in WORK_PROFILE_ENTRIES:
         link(
             work / name,
@@ -368,6 +365,29 @@ def sync_submodules() -> None:
         sync_repository(repo)
 
 
+def sync_mattpocock_skills() -> None:
+    skills = REPO / "skills"
+    upstream = skills / ".mattpocock"
+    if not upstream.exists():
+        git(skills, "clone", "https://github.com/mattpocock/skills.git", str(upstream))
+    if git(upstream, "status", "--porcelain"):
+        raise SyncError(f"{upstream}: upstream skills have local edits; resolve them before syncing")
+    git(upstream, "pull", "--ff-only")
+    manifest = json.loads((upstream / ".claude-plugin" / "plugin.json").read_text())
+    sources = [upstream / path for path in manifest["skills"]]
+    names = {source.name for source in sources}
+    if len(names) != len(sources):
+        raise SyncError(f"{upstream}: duplicate skill names in plugin manifest")
+    for source in sources:
+        if not (source / "SKILL.md").is_file():
+            raise SyncError(f"{source}: missing SKILL.md")
+        link(skills / source.name, source.relative_to(skills).as_posix(), True)
+    for target in skills.iterdir():
+        if target.is_symlink() and read_link(target).startswith(".mattpocock/") and target.name not in names:
+            target.unlink()
+            print(f"removed upstream skill link {target}")
+
+
 def install_pull_schedule(platform: str) -> None:
     if platform == "linux":
         subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
@@ -413,6 +433,7 @@ def main() -> None:
         raise SyncError("usage: sync.py [pull]")
 
     platform = platform_name()
+    sync_mattpocock_skills()
     for directory in (
         HOME / ".claude",
         HOME / ".claude-work",

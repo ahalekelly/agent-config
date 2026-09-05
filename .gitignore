@@ -12,6 +12,7 @@ node_modules/
 .agents/
 sessions/
 /home/
+/skills/.mattpocock/
 .playwright-mcp/
 
 # Python runtime caches.
