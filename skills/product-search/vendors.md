@@ -28,7 +28,7 @@ Platform labels are a scan aid. The cross-shop tool's `vendors.json` registry ho
 | Zoro / Grainger | MRO/industrial | decent | Zoro is largely Grainger stock at lower prices with frequent coupons — always check Zoro pricing before recommending a Grainger part | listings reliable | custom | Both DataDome-walled to all automated fetch/browser routes (2026-08-07, challenge canvas renders height=0, unsolvable; one attempt drew an IP-level block) — price checks need a human or the user |
 | GoBilda / ServoCity | robotics mechanicals | decent | robotics-mechanical ecosystem, premium vs raw imports; same parent company | listings reliable | BigCommerce | — |
 | StepperOnline (OMC) | steppers, servos | decent | cheap-but-documented motors | verify key specs | OpenCart | — |
-| Lowes / Home Depot | hardware-store goods | decent | on the commute — bulky items that would be expensive to ship; also online orders | listings reliable | custom | — |
+| Lowes / Home Depot | hardware-store goods | decent | on the commute — bulky items that would be expensive to ship; also online orders | listings reliable | custom | Home Depot product (`/p/`) and search (`/s/`) pages return Akamai 403 to all automated fetch and headless-Chromium routes (2026-08-30, homepage renders fine) — price checks need a human or a Firefox retry |
 | Target | consumer goods | decent | nearby big-box, easy pickup | listings reliable | custom | — |
 | JLCMC | mechanical parts | decent | cheap parts but expensive shipping | listings reliable | custom | — |
 | LCSC | electronics | last-resort | slower and more expensive shipping than AliExpress | listings reliable | custom | — |

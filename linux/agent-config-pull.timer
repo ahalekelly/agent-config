@@ -1,5 +1,5 @@
 [Unit]
-Description=Pull the ~/.agents config repo every 10 minutes
+Description=Synchronize agent configuration every 10 minutes
 
 [Timer]
 OnBootSec=2min

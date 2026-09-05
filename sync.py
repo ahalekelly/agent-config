@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["tomlkit>=0.13"]
+# dependencies = ["tomlkit>=0.13", "filelock>=3.16"]
 # ///
 """Install this repository's agent configuration and synchronize it on request."""
 
@@ -11,12 +11,15 @@ import copy
 import difflib
 import json
 import os
+import shutil
+import socket
 import subprocess
 import sys
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 import tomlkit
+from filelock import FileLock
 
 REPO = Path(__file__).resolve().parent
 HOME = Path.home().resolve()
@@ -280,7 +283,7 @@ def render_codex(platform: str) -> None:
         shared, local = split_local(tomlkit.parse(live_path.read_text()))
         changed = False
         if rendered_path.exists():
-            previous = tomlkit.parse(rendered_path.read_text())
+            previous, _ = split_local(tomlkit.parse(rendered_path.read_text()))
             for path in removed_paths(shared, previous):
                 key = ".".join(path)
                 if delete_path(overlay, path):
@@ -322,19 +325,47 @@ def install_process_wrapper(platform: str) -> None:
     print(f"set processWrapper in {path}")
 
 
-def git(*args: str) -> str:
-    result = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True)
+def git(repo: Path, *args: str) -> str:
+    result = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
-        raise SyncError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
+        raise SyncError(f"{repo}: git {' '.join(args)} failed:\n{result.stdout}{result.stderr}")
     return result.stdout.strip()
 
 
-def pull() -> None:
-    """Fast-forward from origin, then push unpushed commits."""
-    git("pull", "--quiet", "--ff-only", "--autostash")
-    if git("rev-list", "--count", "@{upstream}..HEAD") != "0":
-        git("push", "--quiet")
-        print("pushed local commits")
+def sync_repository(repo: Path) -> None:
+    """Commit local edits, merge upstream, and publish without rewriting history."""
+    for name in ("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD", "sequencer"):
+        if Path(git(repo, "rev-parse", "--path-format=absolute", "--git-path", name)).exists():
+            raise SyncError(f"{repo}: finish or abort the Git operation before syncing")
+    default = git(repo, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+    branch = git(repo, "branch", "--show-current")
+    if not branch:
+        git(repo, "fetch", "origin")
+        git(repo, "merge-base", "--is-ancestor", "HEAD", default)
+        branch = default.removeprefix("origin/")
+        git(repo, "switch", branch)
+    upstream = git(repo, "rev-parse", "--abbrev-ref", "@{upstream}")
+    if upstream != default or branch != default.removeprefix("origin/"):
+        raise SyncError(f"{repo}: auto-sync requires the default branch {default}")
+    git(repo, "add", "--all")
+    if git(repo, "diff", "--cached", "--name-only"):
+        git(repo, "commit", "-m", f"Sync configuration from {socket.gethostname()}")
+        print(f"committed {repo}", flush=True)
+    git(repo, "-c", "submodule.recurse=false", "pull", "--no-rebase", "--no-edit")
+    if git(repo, "rev-list", "--count", "@{upstream}..HEAD") != "0":
+        git(repo, "push")
+        print(f"pushed {repo}", flush=True)
+
+
+def sync_submodules() -> None:
+    paths = git(REPO, "config", "--file", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$")
+    for entry in paths.splitlines():
+        key, path = entry.split(" ", 1)
+        repo = REPO / path
+        if not (repo / ".git").exists():
+            git(REPO, "submodule", "update", "--init", "--remote", "--", path)
+        git(REPO, "config", key.removesuffix(".path") + ".active", "true")
+        sync_repository(repo)
 
 
 def install_pull_schedule(platform: str) -> None:
@@ -348,7 +379,11 @@ def install_pull_schedule(platform: str) -> None:
         name = "com.akelly.agent-config-pull.plist"
         plist = HOME / "Library" / "LaunchAgents" / name
         source = REPO / "macos" / "Library" / "LaunchAgents" / name
-        if plist.exists() and plist.read_text() == source.read_text():
+        loaded = subprocess.run(
+            ["launchctl", "print", f"gui/{os.getuid()}/com.akelly.agent-config-pull"],
+            capture_output=True,
+        )
+        if loaded.returncode == 0 and plist.exists() and plist.read_text() == source.read_text():
             return
         # launchd refuses symlinked plists, so install a copy and (re)load it.
         subprocess.run(
@@ -360,6 +395,12 @@ def install_pull_schedule(platform: str) -> None:
             ["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True
         )
         print(f"installed launchd agent {plist}")
+    elif platform == "windows":
+        command = subprocess.list2cmdline([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"])
+        subprocess.run(
+            ["schtasks", "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/TR", command],
+            check=True,
+        )
 
 
 def main() -> None:
@@ -368,9 +409,7 @@ def main() -> None:
             f"sync only runs from {HOME / '.agents'}, not a worktree or other clone ({REPO})"
         )
     args = sys.argv[1:]
-    if args == ["pull"]:
-        pull()
-    elif args:
+    if args not in ([], ["pull"]):
         raise SyncError("usage: sync.py [pull]")
 
     platform = platform_name()
@@ -385,12 +424,20 @@ def main() -> None:
     install_links(platform)
     install_process_wrapper(platform)
     render_codex(platform)
-    install_pull_schedule(platform)
+    if args == ["pull"]:
+        sync_submodules()
+        sync_repository(REPO)
+        install_links(platform)
+        install_process_wrapper(platform)
+        render_codex(platform)
+    else:
+        install_pull_schedule(platform)
 
 
 if __name__ == "__main__":
     try:
-        main()
+        with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
+            main()
     except SyncError as error:
         print(error, file=sys.stderr)
         raise SystemExit(1)
