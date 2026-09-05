@@ -8,7 +8,7 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 - `claude/`, `codex/`, `pi/` — tool configuration. Codex has a shared base plus one OS overlay.
 - `shell/` — shell startup files and the global git ignore.
 - `linux/`, `macos/` — OS-specific service and application files.
-- `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills.
+- `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills. `bin/t3-thread.py` sends prompts to the local T3 service.
 - `sync.py` — cross-platform config installer.
 - `pi-for-claude/`, `claude-patching/`, `browser-swarm/` — submodules.
 

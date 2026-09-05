@@ -13,6 +13,7 @@ access token, then dispatch commands to the local T3 server.
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -22,7 +23,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-T3 = Path.home() / ".t3"
+T3 = Path(os.environ.get("T3CODE_HOME", Path.home() / ".t3"))
 
 
 def now() -> str:
@@ -33,7 +34,7 @@ def mint_access_token(origin: str, label: str) -> str:
     version = json.loads((T3 / "runtime/service-state.json").read_text())["activeVersion"]
     bin_mjs = T3 / "runtime/versions" / version / "node_modules/t3/dist/bin.mjs"
     out = subprocess.run(
-        ["node", str(bin_mjs), "pair", "--ttl", "5m", "--label", label],
+        ["node", str(bin_mjs), "pair", "--base-dir", str(T3), "--ttl", "5m", "--label", label],
         capture_output=True, text=True, check=True, cwd=Path.home(),
     ).stdout
     pairing_token = re.search(r"^Token: (\S+)$", out, re.M).group(1)

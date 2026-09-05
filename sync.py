@@ -396,25 +396,18 @@ def install_pull_schedule(platform: str) -> None:
             check=True,
         )
     elif platform == "macos":
-        name = "com.akelly.agent-config-pull.plist"
-        plist = HOME / "Library" / "LaunchAgents" / name
-        source = REPO / "macos" / "Library" / "LaunchAgents" / name
-        loaded = subprocess.run(
-            ["launchctl", "print", f"gui/{os.getuid()}/com.akelly.agent-config-pull"],
-            capture_output=True,
-        )
-        if loaded.returncode == 0 and plist.exists() and plist.read_text() == source.read_text():
-            return
-        # launchd refuses symlinked plists, so install a copy and (re)load it.
-        subprocess.run(
-            ["launchctl", "bootout", f"gui/{os.getuid()}/com.akelly.agent-config-pull"],
-            capture_output=True,
-        )
-        plist.write_text(source.read_text())
-        subprocess.run(
-            ["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True
-        )
-        print(f"installed launchd agent {plist}")
+        for source in sorted((REPO / "macos/Library/LaunchAgents").glob("*.plist")):
+            plist = HOME / "Library/LaunchAgents" / source.name
+            label = f"gui/{os.getuid()}/{source.stem}"
+            loaded = subprocess.run(["launchctl", "print", label], capture_output=True)
+            if loaded.returncode == 0 and plist.exists() and plist.read_bytes() == source.read_bytes():
+                continue
+            # launchd requires a regular plist file.
+            subprocess.run(["launchctl", "bootout", label], capture_output=True)
+            plist.parent.mkdir(parents=True, exist_ok=True)
+            plist.write_bytes(source.read_bytes())
+            subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True)
+            print(f"installed launchd agent {plist}")
     elif platform == "windows":
         command = subprocess.list2cmdline([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"])
         subprocess.run(
