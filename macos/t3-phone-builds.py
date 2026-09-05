@@ -145,8 +145,10 @@ class Runner:
         # Prebuild and xcodebuild replace the one artifact this state describes.
         self.state.pop("built", None)
         self.save()
-        self.command("npx", "expo", "prebuild", "--clean", "--platform", "ios",
+        self.command("npx", "expo", "prebuild", "--clean", "--platform", "ios", "--no-install",
                      cwd=REPO / "apps/mobile")
+        self.step = "CocoaPods"
+        self.command("pod", "install", cwd=REPO / "apps/mobile/ios")
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
         info = workspace.parent / workspace.stem / "Info.plist"
         self.command("/usr/libexec/PlistBuddy", "-c",
