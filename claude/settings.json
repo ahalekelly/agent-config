@@ -125,8 +125,7 @@
     "clangd-lsp@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true,
-    "mattpocock-skills@mattpocock": true
+    "swift-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "obsidian-skills": {
@@ -140,13 +139,6 @@
       "source": {
         "source": "github",
         "repo": "OpenCairn/OpenCairn"
-      },
-      "autoUpdate": true
-    },
-    "mattpocock": {
-      "source": {
-        "source": "github",
-        "repo": "mattpocock/skills"
       },
       "autoUpdate": true
     },
