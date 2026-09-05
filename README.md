@@ -8,11 +8,13 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 - `claude/`, `codex/`, `pi/` — tool configuration. Codex has a shared base plus one OS overlay.
 - `shell/` — shell startup files and the global git ignore.
 - `linux/`, `macos/` — OS-specific service and application files.
-- `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills. `bin/t3-thread.py` sends prompts to the local T3 service.
+- `hooks/`, `bin/`, `skills/` — shared hooks, commands, and skills. `bin/t3-thread.py` sends prompts to the local T3 service.
 - `sync.py` — cross-platform config installer.
 - `pi-for-claude/`, `claude-patching/`, `browser-swarm/` — submodules.
 
 Runtime state, credentials, caches, and `~/.codex/config.toml.rendered` remain outside the repo.
+
+Deletion guards run at the agent tool boundary: Claude and Codex use `hooks/prevent-rm.py`, and Pi uses `hooks/prevent-rm-pi.ts`. They reject direct `rm` commands with a reminder to use `trash`. Prefer tool hooks for agent-specific restrictions; PATH wrappers also affect dependency scripts, including build cleanup.
 
 ## Syncing
 
