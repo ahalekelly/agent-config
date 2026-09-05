@@ -156,6 +156,9 @@ def install_links(platform: str) -> None:
     for target, source in static.items():
         link(target, str(source), source.is_dir())
 
+    for source in sorted((REPO / "codex" / "skills").iterdir()):
+        link(codex / "skills" / source.name, str(source), True)
+
     for name in WORK_PROFILE_ENTRIES:
         link(
             work / name,

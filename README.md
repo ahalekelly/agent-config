@@ -5,7 +5,7 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 ## Layout
 
 - `AGENTS.md` — shared instructions for every agent.
-- `claude/`, `codex/`, `pi/` — tool configuration. Codex has a shared base plus one OS overlay.
+- `claude/`, `codex/`, `pi/` — tool configuration. Codex has a shared base, one OS overlay, and Codex-only skills.
 - `shell/` — shell startup files and the global git ignore.
 - `linux/`, `macos/` — OS-specific service and application files.
 - `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills.
