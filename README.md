@@ -5,7 +5,7 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 ## Layout
 
 - `AGENTS.md` — shared instructions for every agent.
-- `claude/`, `codex/`, `pi/` — tool configuration. Codex has a shared base, one OS overlay, and Codex-only skills.
+- `claude/`, `codex/`, `pi/` — tool configuration. Codex has a shared base plus one OS overlay.
 - `shell/` — shell startup files and the global git ignore.
 - `linux/`, `macos/` — OS-specific service and application files.
 - `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills.
@@ -25,6 +25,8 @@ uv run ~/.agents/sync.py
 Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. Restart open shells after shell config changes.
 
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
+
+Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream checkout lives in `skills/.mattpocock/`, outside version control; links in `skills/` expose its skills to all agents. Keep upstream files unmodified so updates can fast-forward.
 
 Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the shared part of the live config with `~/.codex/config.toml.rendered`, or with the fresh render on a machine that has none, so an existing Codex config survives the first sync. Changed keys enter the OS overlay and keys Codex removed leave it; the shared base changes only by hand. Project trust, hook trust hashes, marketplace timestamps, and reasoning effort stay only in the live file and are never imported.
 

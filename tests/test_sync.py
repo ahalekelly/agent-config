@@ -24,6 +24,18 @@ def fake_home(tmp_path):
         shutil.copytree(ROOT / name, repo / name, symlinks=True)
     for name in ("skills", "hooks", "claude-patching"):
         (repo / name).mkdir()
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    subprocess.run(["git", "init", "--initial-branch=main", str(upstream)], check=True, capture_output=True)
+    for key, value in (("user.name", "Sync test"), ("user.email", "sync@example.test")):
+        subprocess.run(["git", "-C", str(upstream), "config", key, value], check=True)
+    (upstream / ".claude-plugin").mkdir()
+    (upstream / ".claude-plugin" / "plugin.json").write_text('{"skills": ["skills/example"]}')
+    (upstream / "skills" / "example").mkdir(parents=True)
+    (upstream / "skills" / "example" / "SKILL.md").write_text("# Example\n")
+    subprocess.run(["git", "-C", str(upstream), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(upstream), "commit", "-m", "Initial skill"], check=True, capture_output=True)
+    subprocess.run(["git", "clone", str(upstream), str(repo / "skills" / ".mattpocock")], check=True, capture_output=True)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     systemctl = bin_dir / "systemctl"
@@ -206,6 +218,23 @@ def test_regular_config_file_prints_diff_and_stops(fake_home):
     assert f"--- {settings}" in result.stdout
     assert f"+++ {repo / 'claude' / 'settings.json'}" in result.stdout
     assert "move these changes into" in result.stderr
+
+
+def test_upstream_skill_updates_and_removals(fake_home):
+    _, repo, environment = fake_home
+    run_sync(repo, environment)
+    target = repo / "skills" / "example"
+    assert target.is_symlink()
+    assert (target / "SKILL.md").read_text() == "# Example\n"
+    upstream = repo.parents[1] / "upstream"
+    (upstream / "skills" / "example").rename(upstream / "skills" / "renamed")
+    (upstream / "skills" / "renamed" / "SKILL.md").write_text("# Updated\n")
+    (upstream / ".claude-plugin" / "plugin.json").write_text('{"skills": ["skills/renamed"]}')
+    subprocess.run(["git", "-C", str(upstream), "add", "--all"], check=True)
+    subprocess.run(["git", "-C", str(upstream), "commit", "-m", "Rename skill"], check=True, capture_output=True)
+    run_sync(repo, environment)
+    assert not target.is_symlink()
+    assert (repo / "skills" / "renamed" / "SKILL.md").read_text() == "# Updated\n"
 
 
 @pytest.fixture
