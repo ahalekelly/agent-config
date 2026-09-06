@@ -1,0 +1,7 @@
+[Unit]
+Description=Delete trashed items older than 30 days, or 2 days in the /tmp trash
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/trash-empty -f 30
+ExecStart=/usr/bin/trash-empty -f --trash-dir /tmp/.Trash-1000 2
