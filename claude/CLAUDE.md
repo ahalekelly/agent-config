@@ -32,11 +32,11 @@ Check `ps` before relaunching a run you think died.
 
 Any task that requires taste or complicated thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, and non-code reasoning. If you are not Fable and I tell you to do any of these things, flag this to me. Fable should delegate all other tasks that take more than a minute to another model: writing code, doing research, mechanical work, and any work they don't feel like doing.
 
-GPT is cheaper and faster than Claude, so default to GPT with pi-for-claude whenever you would otherwise use Opus/Sonnet/Haiku. GPT models come in 3 classes: Sol (Fable/Opus class), Terra (Opus/Sonnet class), and Luna (Sonnet/Haiku class). If pi-for-claude doesn't work for some reason, fall back to Opus for most tasks or Sonnet for repetitive tasks, and let me know so we can fix it. Never use Haiku. All production code should be written by Sol, Opus, or Fable, never Sonnet, Terra, or Luna.
+GPT is cheaper and faster than Claude, so default to GPT with pi-for-claude whenever you would otherwise use Opus/Sonnet/Haiku. GPT models come in 4 classes: Astra (Fable class, for second opinions only), Sol (Fable/Opus class), Terra (Opus/Sonnet class), and Luna (Sonnet/Haiku class). If pi-for-claude doesn't work for some reason, fall back to Opus for most tasks or Sonnet for repetitive tasks, and let me know so we can fix it. Never use Haiku. All production code should be written by Sol, Opus, or Fable, never Sonnet, Terra, or Luna.
 
 GPT uses a different search engine from Claude, so for thorough web research tasks, delegate to both Sol and Opus, and have them surface the most promising links for you to review, quoting the relevant sections of their sources exactly in their responses.
 
-You can consult GPT Sol for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review.
+You can consult GPT Astra for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review. Implementation still goes to Sol.
 
 Fable should be careful about reading very large files — input tokens are usually the majority of inference cost. Set the Read tool's line limit to a reasonable number, a few hundred max, and instead of reading large files, use `rg`, the Explore tool, or a Sonnet or Opus subagent to find where the relevant info is.
 
