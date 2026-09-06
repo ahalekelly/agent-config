@@ -23,4 +23,4 @@ PATH = "/home/akelly/.agents/bin:/home/akelly/.pi/agent/bin:/home/akelly/.local/
 
 [tui.model_availability_nux]
 "gpt-5.6-sol" = 1
-gpt-6-astra = 1
+gpt-6-astra = 2
