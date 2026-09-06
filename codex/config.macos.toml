@@ -64,11 +64,11 @@ NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = ""
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = ""
 NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = ""
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.901.41600"
+BROWSER_USE_CODEX_APP_VERSION = "26.901.51231"
 SKY_CUA_SERVICE_PATH = "/Users/akelly/.codex/computer-use/Codex Computer Use.app"
 CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
 BROWSER_USE_TINYSKY_ENABLED = "1"
-NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/akelly/.codex/plugins/cache/openai-bundled/browser/26.901.41600/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/akelly/.codex/plugins/cache/openai-bundled/browser/26.901.51231/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
 
 [mcp_servers.digikey]
 command = "sh"
@@ -131,6 +131,7 @@ enabled = false
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 "gpt-5.6-sol" = 1
+gpt-6-astra = 1
 
 [marketplaces.openai-bundled]
 source_type = "local"
