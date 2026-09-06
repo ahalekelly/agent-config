@@ -172,7 +172,6 @@
     }
   },
   "effortLevel": "high",
-  "awaySummaryEnabled": false,
   "tui": "fullscreen",
   "voice": {
     "enabled": true,
@@ -185,6 +184,7 @@
   "preferredNotifChannel": "auto",
   "autoCompactEnabled": true,
   "switchModelsOnFlag": false,
+  "autoContinueAtUsageLimit": false,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
@@ -220,5 +220,6 @@
       "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi-for-claude`) are routine"
     ]
   },
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "awaySummaryEnabled": false
 }
