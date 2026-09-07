@@ -51,7 +51,7 @@ On Linux, run the system setup after sync:
 bash ~/.agents/linux/setup.sh
 ```
 
-It installs the sandbox and trash dependencies, configures AppArmor when needed, enables the Claude Remote Control and claude-patching autoport user units, enables linger, and sources `shell/bashrc.agents` from `~/.bashrc`. Install claude-patching's dependency with `(cd ~/.agents/claude-patching && npm ci)`. Run `claude` once in `~/Git` to accept trust, then `claude remote-control` once to enable remote control.
+It installs the sandbox and trash dependencies, configures AppArmor for Bubblewrap and cached Playwright Chromium, enables the Claude Remote Control and claude-patching autoport user units, enables linger, and sources `shell/bashrc.agents` from `~/.bashrc`. Install claude-patching's dependency with `(cd ~/.agents/claude-patching && npm ci)`. Run `claude` once in `~/Git` to accept trust, then `claude remote-control` once to enable remote control.
 
 On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile. On Windows, rerun sync after enabling Developer Mode if symlink creation fails, and install `jq` (`winget install jqlang.jq`) for the prompt hooks. Windows paths and native Codex settings live in `codex/config.windows.toml`.
 
