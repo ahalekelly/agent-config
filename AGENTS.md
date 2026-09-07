@@ -53,7 +53,7 @@ Identify the machine by hostname. Notes specific to each:
 
 ### akelly-desktop (Linux, headless)
 
-Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi over the tailnet; run it with `dangerouslyDisableSandbox` because it needs the tailscaled socket, user service, and ssh. The Obsidian CLI and `open` aren't available. `trash` is npm's `trash-cli` in `~/.npm-global/bin` (XDG trash in `~/.local/share/Trash`). `trash-empty.timer` deletes trashed items daily after 30 days. `/tmp` is on the root filesystem (`tmp.mount` masked); systemd-tmpfiles removes entries untouched for 10 days. `~/.config/environment.d/path.conf` puts `~/.local/bin` and `~/.npm-global/bin` on PATH for systemd user services, so `claude`, `uv`, and `trash` resolve there without per-unit `Environment=PATH`. `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are.
+Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi over the tailnet; run it with `dangerouslyDisableSandbox` because it needs the tailscaled socket, user service, and ssh. The Obsidian CLI and `open` aren't available. `trash` is npm's `trash-cli` in `~/.npm-global/bin` (XDG trash in `~/.local/share/Trash`). `trash-empty.timer` deletes trashed items daily after 30 days. `/tmp` is on the root filesystem (`tmp.mount` masked); systemd-tmpfiles removes entries untouched for 10 days. `~/.config/environment.d/path.conf` puts `~/.local/bin` and `~/.npm-global/bin` on PATH for systemd user services, so `claude`, `uv`, and `trash` resolve there without per-unit `Environment=PATH`. `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands with `dangerouslyDisableSandbox`. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are. The NTFS drives under `/mnt` are slow to crawl, so they are hidden from sandboxed commands and excluded from the `plocate` index.
 
 The Mac's local hostname is `Mac.local`.
 
@@ -82,6 +82,8 @@ If I ask a question mid task, always answer my question first, before resuming w
 Sometimes I miss an earlier message of yours, especially one buried in a long run of tool calls. Don't assume I read everything: repeat anything still relevant — open questions, warnings, key findings — in your latest reply.
 
 Never use `rm` to delete files or directories, use the `trash` command instead so deleted items can be recovered.
+
+To find a file by name anywhere on the machine, use `plocate`; its index is rebuilt on a timer, so it misses files created since the last run. Never run `find`, `rg`, or `grep` from `/`, `~`, or `/mnt` (a hook blocks these); look in the directory a tool said it wrote to, or search a specific directory.
 
 Python, TypeScript, and Rust are the preferred languages when starting a greenfield project.
 
