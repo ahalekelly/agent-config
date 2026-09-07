@@ -3,11 +3,12 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Keep Adrian's iPhone signed and running the latest stable T3 release.
+"""Keep Adrian's iPhone signed and running his T3 Code fork.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Every half
-hour on AC power, build the newest stable upstream tag with FORK_BRANCHES
-merged in. Re-sign and install on a connected, unlocked phone every five days.
+hour on AC power, build the fork's main branch, which integrates the stable
+upstream release with Adrian's feature branches. Re-sign and install on a
+connected, unlocked phone every five days.
 Failed builds and installs back off for a day; a phone that is disconnected or
 locked gets a daily reminder once renewal is due. Before the first install,
 reminders begin five days after the first successful build.
@@ -36,7 +37,7 @@ from pathlib import Path
 REPO = Path.home() / "Git/t3code"
 STATE_DIR = Path.home() / "Library/Application Support/t3-phone-builds"
 THREAD_HELPER = Path.home() / ".agents/bin/t3-thread.py"
-FORK_BRANCHES = ("feat/environment-voice-transcription",)
+BRANCH = "main"
 DEVICE = "00008140-000809E90402201C"
 TEAM = "T3TBGN4UX7"
 BUNDLE_ID = "com.akelly.t3code"
@@ -57,21 +58,15 @@ def elapsed(at):
     return now() - timestamp
 
 
-def latest_tag(refs):
-    tags = re.findall(r"refs/tags/(v\d+\.\d+\.\d+)$", refs, re.MULTILINE)
-    if not tags:
-        raise ValueError("Upstream has no stable release tags")
-    return max(tags, key=lambda tag: tuple(map(int, tag[1:].split("."))))
-
-
-def cooling_down(record, tag):
-    return record is not None and record["tag"] == tag and elapsed(record["at"]) < DAY
+def cooling_down(record, revision):
+    return record is not None and record["revision"] == revision and elapsed(record["at"]) < DAY
 
 
 class Runner:
     def __init__(self):
         self.state = {}
-        self.tag = "unknown"
+        self.revision = "unknown"
+        self.version = "unknown"
         self.step = "startup"
         self.phase = None
         self.outcome = "failed"
@@ -106,6 +101,13 @@ class Runner:
             result.check_returncode()
         return result.stdout
 
+    @property
+    def short(self):
+        return self.revision[:9]
+
+    def record(self):
+        return {"revision": self.revision, "version": self.version, "at": now().isoformat()}
+
     def save(self):
         path = STATE_DIR / "state.json"
         temporary = path.with_suffix(".tmp")
@@ -131,20 +133,7 @@ class Runner:
         self.step = "checkout"
         if self.capture("git", "status", "--porcelain", "--untracked-files=no").strip():
             raise RuntimeError("Build checkout has tracked edits; preserve them before building")
-        self.command("git", "fetch", "--quiet", "upstream", "--tags")
-        for branch in FORK_BRANCHES:
-            self.command("git", "fetch", "--quiet", "origin",
-                         f"refs/heads/{branch}:refs/remotes/origin/{branch}")
-        self.command("git", "checkout", "--detach", self.tag)
-        for branch in FORK_BRANCHES:
-            self.step = f"merge {branch}"
-            try:
-                self.command("git", "merge", "--no-edit", f"origin/{branch}")
-            except subprocess.CalledProcessError:
-                merge_head = self.capture("git", "rev-parse", "--git-path", "MERGE_HEAD").strip()
-                if (REPO / merge_head).exists():
-                    self.command("git", "merge", "--abort")
-                raise
+        self.command("git", "checkout", "--detach", self.revision)
         self.step = "dependencies"
         self.command("npx", "--yes", "corepack", "pnpm", "install", "--frozen-lockfile")
         self.step = "prebuild"
@@ -158,10 +147,10 @@ class Runner:
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
         info = workspace.parent / workspace.stem / "Info.plist"
         self.command("/usr/libexec/PlistBuddy", "-c",
-                     f"Set :CFBundleVersion {self.tag[1:]}", info)
+                     f"Set :CFBundleVersion {self.version}", info)
         self.step = "xcodebuild"
         self.xcodebuild()
-        self.state["built"] = {"tag": self.tag, "at": now().isoformat()}
+        self.state["built"] = self.record()
         self.state.pop("build_failure", None)
         self.save()
 
@@ -206,14 +195,14 @@ class Runner:
             raise RuntimeError(f"Xcode did not issue a fresh profile; it expires {expires.isoformat()}")
         self.step = "install app"
         self.command("xcrun", "devicectl", "device", "install", "app", "--device", DEVICE, app)
-        self.state["installed"] = {"tag": self.tag, "at": now().isoformat(), "expires_at": expires.isoformat()}
+        self.state["installed"] = {**self.record(), "expires_at": expires.isoformat()}
         self.state.pop("install_failure", None)
         self.state.pop("overdue_notified_at", None)
         self.save()
         self.outcome = "installed"
         self.phase = None
-        self.notify(f"iPhone: installed {self.tag}",
-                    f"Installed {self.tag} with {', '.join(FORK_BRANCHES)} merged in.\n"
+        self.notify(f"iPhone: installed {self.version} ({self.short})",
+                    f"Installed {BRANCH} at {self.short}, based on v{self.version}.\n"
                     f"Install time: {self.state['installed']['at']}.\n"
                     f"Signature expires: {expires.isoformat()}.\n"
                     "No action is needed beyond a one-line acknowledgement.")
@@ -228,14 +217,21 @@ class Runner:
         for key in ("built", "installed", "build_failure", "install_failure"):
             if key in self.state:
                 record = self.state[key]
-                if not re.fullmatch(r"v\d+\.\d+\.\d+", record["tag"]):
-                    raise ValueError(f"Invalid {key} tag: {record['tag']}")
+                if not re.fullmatch(r"[0-9a-f]{7,40}", record["revision"]):
+                    raise ValueError(f"Invalid {key} revision: {record['revision']}")
                 elapsed(record["at"])
-        self.step = "latest release"
-        self.tag = latest_tag(self.capture("git", "ls-remote", "--tags", "upstream"))
+        self.step = "fetch branch"
+        self.command("git", "fetch", "--quiet", "upstream", "--tags")
+        self.command("git", "fetch", "--quiet", "origin",
+                     f"refs/heads/{BRANCH}:refs/remotes/origin/{BRANCH}")
+        self.revision = self.capture("git", "rev-parse", f"origin/{BRANCH}").strip()
+        # Release tags reach the branch through the upstream release it
+        # integrates, so this names the release the build is based on.
+        self.version = self.capture("git", "describe", "--tags", "--abbrev=0", "--exclude", "*-*",
+                                    "--match", "v[0-9]*.[0-9]*.[0-9]*", self.revision).strip()[1:]
         built = self.state.get("built")
-        if built is None or built["tag"] != self.tag:
-            if cooling_down(self.state.get("build_failure"), self.tag):
+        if built is None or built["revision"] != self.revision:
+            if cooling_down(self.state.get("build_failure"), self.revision):
                 self.outcome = "build failure cooldown"
                 return
             self.phase = "build_failure"
@@ -244,10 +240,10 @@ class Runner:
             self.outcome = "built"
         self.phase = "install_failure"
         installed = self.state.get("installed")
-        if installed and installed["tag"] == self.tag and elapsed(installed["at"]) < RENEW_AFTER:
+        if installed and installed["revision"] == self.revision and elapsed(installed["at"]) < RENEW_AFTER:
             self.outcome = "up to date"
             return
-        if cooling_down(self.state.get("install_failure"), self.tag):
+        if cooling_down(self.state.get("install_failure"), self.revision):
             self.outcome = "install failure cooldown"
             return
         self.step = "phone reachability"
@@ -278,23 +274,23 @@ def main():
         failure = traceback.format_exc()
         runner.outcome = f"failed at {runner.step}"
         if runner.phase:
-            runner.state[runner.phase] = {"tag": runner.tag, "at": now().isoformat()}
+            runner.state[runner.phase] = runner.record()
             runner.save()
         print(failure, file=sys.stderr)
         tail = ""
         if runner.log.exists():
             with runner.log.open() as output:
                 tail = "".join(deque(output, maxlen=80))
-        runner.notify(f"iPhone build failed: {runner.tag} {runner.step}",
+        runner.notify(f"iPhone build failed: {runner.short} {runner.step}",
                       f"Step: {runner.step}\n\n{failure}\nLast 80 log lines:\n{tail}\n"
                       f"Logs: {runner.log}, {STATE_DIR / 'log.txt'}.\n"
                       f"Diagnose in {REPO} and {Path(__file__).resolve()}. Fix causes in our script "
-                      "or fork branches; only report upstream causes. The build checkout is service-owned; "
-                      "work on fixes in a separate worktree and preserve the configured fork branches.")
+                      f"or in the fork's {BRANCH}; only report upstream causes. The build checkout is "
+                      "service-owned; work on fixes in a separate worktree.")
         return 1
     finally:
         with (STATE_DIR / "log.txt").open("a") as output:
-            output.write(f"{now().isoformat()} {runner.outcome} {runner.tag}\n")
+            output.write(f"{now().isoformat()} {runner.outcome} {runner.short}\n")
     return 0
 
 
