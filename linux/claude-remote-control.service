@@ -6,7 +6,7 @@ Documentation=https://code.claude.com/docs/en/remote-control
 Type=simple
 WorkingDirectory=%h/Git
 Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-ExecStart=%h/.local/bin/claude remote-control --name "akelly-desktop Git"
+ExecStart=%h/.local/bin/claude remote-control --name "%H Git"
 Restart=always
 RestartSec=10
 StandardInput=null
