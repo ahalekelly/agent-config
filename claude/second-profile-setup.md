@@ -4,4 +4,4 @@ The `claude` shell function uses the default `~/.claude`; `claudew` (`~/.agents/
 
 `uv run ~/.agents/sync.py` creates `~/.claude-work` as a real directory. It links shared configuration directly to this repo and shared runtime entries to the matching entry under `~/.claude`. Files that Claude creates only in `~/.claude-work`, including `.claude.json`, remain specific to the work account.
 
-Run `claudew` and log in with the work account after syncing. It disables its auto-updater because both profiles use one Claude installation and two updaters race. In T3 Code, add a second Claude provider with binary path `~/.agents/bin/claudew` (absolute path) and home path `~/.claude-work`.
+On macOS and Linux, syncing links `claudew` into `~/.local/bin` for normal terminal use. Run `claudew` and log in with the work account after syncing. It disables its auto-updater because both profiles use one Claude installation and two updaters race. In T3 Code, add a second Claude provider with binary path `~/.agents/bin/claudew` (absolute path) and home path `~/.claude-work`.

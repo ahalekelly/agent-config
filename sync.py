@@ -138,6 +138,8 @@ def install_links(platform: str) -> None:
         pi / "extensions" / "timestamp.ts": REPO / "hooks" / "timestamp-pi.ts",
         git / "ignore": REPO / "shell" / "gitignore-global",
     }
+    if platform in {"linux", "macos"}:
+        static[HOME / ".local" / "bin" / "claudew"] = REPO / "bin" / "claudew"
     if platform == "linux":
         units = HOME / ".config" / "systemd" / "user"
         static |= {
