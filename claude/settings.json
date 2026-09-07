@@ -171,17 +171,18 @@
         "~/.pi/agent/auth.json.lock",
         "/var/lib/plocate"
       ],
-      "allowRead": [
-        "~/.pi/agent/auth.json"
-      ],
       "denyRead": [
         "/mnt/960PRO",
         "/mnt/WD20EZRZ",
         "/mnt/ST4000DX001"
+      ],
+      "allowRead": [
+        "~/.pi/agent/auth.json"
       ]
     }
   },
   "effortLevel": "high",
+  "awaySummaryEnabled": false,
   "tui": "fullscreen",
   "voice": {
     "enabled": true,
@@ -230,6 +231,5 @@
       "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi-for-claude`) are routine"
     ]
   },
-  "voiceEnabled": true,
-  "awaySummaryEnabled": false
+  "voiceEnabled": true
 }
