@@ -9,9 +9,11 @@
 # The last line appears only when the machine is struggling.
 #
 # Opus/Sonnet + Fable come from api.anthropic.com/api/oauth/usage: the flat
-# seven_day field is the Opus/Sonnet weekly limit, and the Fable-only limit is
-# the limits[] entry with kind "weekly_scoped" and scope.model.display_name
-# "Fable". The OAuth token lives in the macOS Keychain under a service name
+# seven_day field is the all-models weekly limit, and the Fable cap is the
+# limits[] entry with kind "weekly_scoped" and scope.model.display_name
+# "Fable", measured against half the all-models budget. Opus/Sonnet gets the
+# other half, so its usage is 2 * all-models - Fable, as a percent of that half.
+# The OAuth token lives in the macOS Keychain under a service name
 # scoped to the profile: "Claude Code-credentials" plus, when
 # CLAUDE_CONFIG_DIR is set, "-" + the first 8 hex chars of its sha256.
 # Codex comes from GET chatgpt.com/backend-api/wham/usage (the same zero-token
@@ -124,10 +126,12 @@ lines=$(jq -rn --argjson ttl "$ttl" --argjson week "$week_secs" \
   | $codex[0] as $x
   | ($c.limits // [] | map(select(.kind == "weekly_scoped"
       and .scope.model.display_name == "Fable")) | first) as $fable
+  | (if $c.seven_day.utilization != null and $fable != null
+     then 2 * $c.seven_day.utilization - $fable.percent else null end) as $opus
   | "Time: \($now | strflocaltime("%A %Y-%m-%d %H:%M:%S %Z"))",
     (if stale($c) then "@claude" else empty end),
     (if stale($x) then "@codex" else empty end),
-    usage("Opus/Sonnet weekly"; $c.seven_day.utilization; ($c.seven_day.resets_at | epoch); $week),
+    usage("Opus/Sonnet weekly"; $opus; ($c.seven_day.resets_at | epoch); $week),
     usage("Fable weekly"; $fable.percent; ($fable.resets_at | epoch); $week),
     usage("Codex weekly"; $x.used_percent; $x.resets_at;
           (if ($x.window_secs // 0) > 0 then $x.window_secs else $week end))')
