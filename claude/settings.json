@@ -168,7 +168,8 @@
         "~/.agents/.git",
         "~/.agents/claude-patching",
         "~/.pi/agent/auth.json",
-        "~/.pi/agent/auth.json.lock"
+        "~/.pi/agent/auth.json.lock",
+        "/var/lib/plocate"
       ],
       "allowRead": [
         "~/.pi/agent/auth.json"

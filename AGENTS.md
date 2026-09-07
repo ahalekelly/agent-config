@@ -83,7 +83,7 @@ Sometimes I miss an earlier message of yours, especially one buried in a long ru
 
 Never use `rm` to delete files or directories, use the `trash` command instead so deleted items can be recovered.
 
-To find a file by name anywhere on the machine, use `plocate`; its index is rebuilt on a timer, so it misses files created since the last run. Never run `find`, `rg`, or `grep` from `/`, `~`, or `/mnt` (a hook blocks these); look in the directory a tool said it wrote to, or search a specific directory.
+To find a file by name anywhere on the machine, use `plocate`; its index is rebuilt daily, so run `updatedb --require-visibility no` first (about 20 seconds, no sudo needed) if the file may be newer than that. Never run `find`, `rg`, or `grep` from `/`, `~`, or `/mnt` (a hook blocks these); look in the directory a tool said it wrote to, or search a specific directory.
 
 Python, TypeScript, and Rust are the preferred languages when starting a greenfield project.
 
