@@ -1,15 +1,15 @@
 #!/bin/bash
 # UserPromptSubmit hook: inject time, weekly usage, and system pressure.
 #   Time: Wednesday 2026-08-05 14:10:32 PDT
-#   Claude weekly: 52% used, 99% of week elapsed
+#   Opus/Sonnet weekly: 52% used, 99% of week elapsed
 #   Fable weekly: 61% used, 99% of week elapsed
 #   Codex weekly: 12% used, 30% of week elapsed
 #   System pressure: load 21.3 on 12 cores
 #
 # The last line appears only when the machine is struggling.
 #
-# Claude + Fable come from api.anthropic.com/api/oauth/usage: the flat
-# seven_day field is the all-models weekly limit, and the Fable-only limit is
+# Opus/Sonnet + Fable come from api.anthropic.com/api/oauth/usage: the flat
+# seven_day field is the Opus/Sonnet weekly limit, and the Fable-only limit is
 # the limits[] entry with kind "weekly_scoped" and scope.model.display_name
 # "Fable". The OAuth token lives in the macOS Keychain under a service name
 # scoped to the profile: "Claude Code-credentials" plus, when
@@ -127,7 +127,7 @@ lines=$(jq -rn --argjson ttl "$ttl" --argjson week "$week_secs" \
   | "Time: \($now | strflocaltime("%A %Y-%m-%d %H:%M:%S %Z"))",
     (if stale($c) then "@claude" else empty end),
     (if stale($x) then "@codex" else empty end),
-    usage("Claude weekly"; $c.seven_day.utilization; ($c.seven_day.resets_at | epoch); $week),
+    usage("Opus/Sonnet weekly"; $c.seven_day.utilization; ($c.seven_day.resets_at | epoch); $week),
     usage("Fable weekly"; $fable.percent; ($fable.resets_at | epoch); $week),
     usage("Codex weekly"; $x.used_percent; $x.resets_at;
           (if ($x.window_secs // 0) > 0 then $x.window_secs else $week end))')
