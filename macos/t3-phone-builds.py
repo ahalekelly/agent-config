@@ -123,7 +123,8 @@ class Runner:
 
     def xcodebuild(self):
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
-        self.command("xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
+        # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
+        self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                      "-configuration", "Release", "-destination", "generic/platform=iOS",
                      "-derivedDataPath", STATE_DIR / "DerivedData",
                      "-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration",
