@@ -157,6 +157,24 @@ class RunTests(unittest.TestCase):
         self.assertEqual((self.builds, self.installs), (1, 1))
 
 
+class XcodebuildTests(unittest.TestCase):
+    def test_xcodebuild_resets_metro_cache_without_changing_runner_ci(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            workspace = root / "apps/mobile/ios/T3Code.xcworkspace"
+            workspace.mkdir(parents=True)
+            executable = root / "xcodebuild"
+            executable.write_text('#!/bin/sh\nprintf "CI=%s\\n" "$CI"\n')
+            executable.chmod(0o755)
+            runner = phone.Runner()
+            runner.log = root / "build.log"
+            runner.env["PATH"] = f"{root}:{runner.env['PATH']}"
+            with patch.object(phone, "REPO", root):
+                runner.xcodebuild()
+            self.assertEqual(runner.log.read_text().splitlines()[-1], "CI=0")
+            self.assertEqual(runner.env["CI"], "1")
+
+
 class PhoneBlockerTests(unittest.TestCase):
     def blocker(self, udids, ddi_error):
         def command(runner, *args, cwd=phone.REPO):
