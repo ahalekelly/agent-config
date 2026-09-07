@@ -172,6 +172,11 @@
       ],
       "allowRead": [
         "~/.pi/agent/auth.json"
+      ],
+      "denyRead": [
+        "/mnt/960PRO",
+        "/mnt/WD20EZRZ",
+        "/mnt/ST4000DX001"
       ]
     }
   },

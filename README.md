@@ -30,7 +30,7 @@ Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream
 
 Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the shared part of the live config with `~/.codex/config.toml.rendered`, or with the fresh render on a machine that has none, so an existing Codex config survives the first sync. Changed keys enter the OS overlay and keys Codex removed leave it; the shared base changes only by hand. Project trust, hook trust hashes, marketplace timestamps, and reasoning effort stay only in the live file and are never imported.
 
-`claude/settings.json` holds only portable settings. Machine-specific ones go in `~/.claude/settings.local.json`, which Claude Code layers on top: sync writes `processWrapper` there on Linux and macOS, and hooks for tools installed on one machine (Herdr's session-start hook on akelly-desktop) belong there too.
+`claude/settings.json` holds only portable settings. Machine-specific ones go in `~/.claude/settings.local.json`, which Claude Code layers on top: sync writes `processWrapper` there on Linux and macOS, and hooks for tools installed on one machine (Herdr's session-start hook on akelly-desktop) belong there too. Sandbox filesystem rules are the exception: Claude Code ignores `sandbox` in the local file, so machine-specific entries such as akelly-desktop's NTFS mounts in `denyRead` live in `claude/settings.json`; the sandbox skips paths that don't exist on a machine.
 
 ## Setup
 
