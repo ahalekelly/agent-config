@@ -34,7 +34,7 @@ def test_setup_renders_home_and_installs_sandbox_dependencies(tmp_path, home_nam
         "trash-empty": "exit 0",
         "sysctl": "printf '1\\n'",
         "systemctl": "exit 0",
-        "sudo": 'printf "%s\\n" "$*" >> "$SETUP_COMMANDS"\nif [ "$1" = install ]; then /bin/cat > "$SETUP_PROFILE"; fi',
+        "sudo": 'printf "%s\\n" "$*" >> "$SETUP_COMMANDS"\nif [ "$1" = tee ]; then /usr/bin/tee "$SETUP_PROFILE"; fi',
     }
     if missing_command:
         del commands[missing_command]
@@ -52,7 +52,8 @@ def test_setup_renders_home_and_installs_sandbox_dependencies(tmp_path, home_nam
         "SETUP_COMMANDS": str(log),
     }
 
-    subprocess.run(["/bin/bash", str(repo / "linux/setup.sh")], env=environment, check=True, capture_output=True, text=True)
+    for _ in range(2):
+        subprocess.run(["/bin/bash", str(repo / "linux/setup.sh")], env=environment, check=True, capture_output=True, text=True)
 
     rendered = profile.read_text()
     assert f'"{home}/.cache/ms-playwright/' in rendered

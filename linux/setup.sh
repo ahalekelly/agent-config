@@ -16,7 +16,8 @@ fi
 if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
   sudo cp "$repo/linux/apparmor.d/bwrap" /etc/apparmor.d/bwrap
   chromium_profile=$(<"$repo/linux/apparmor.d/playwright-chromium")
-  printf '%s\n' "${chromium_profile//@@HOME@@/"$HOME"}" | sudo install -m 644 /dev/stdin /etc/apparmor.d/playwright-chromium
+  printf '%s\n' "${chromium_profile//@@HOME@@/"$HOME"}" | sudo tee /etc/apparmor.d/playwright-chromium > /dev/null
+  sudo chmod 644 /etc/apparmor.d/playwright-chromium
   sudo mkdir -p /etc/apparmor.d/disable
   sudo ln -sf /etc/apparmor.d/bwrap-userns-restrict /etc/apparmor.d/disable/bwrap-userns-restrict
   sudo apparmor_parser -R /etc/apparmor.d/bwrap-userns-restrict 2>/dev/null || true
