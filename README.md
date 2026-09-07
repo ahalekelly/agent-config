@@ -51,9 +51,9 @@ On Debian/Ubuntu with systemd, run the system setup after sync:
 bash ~/.agents/linux/setup.sh
 ```
 
-It installs the sandbox and trash dependencies, configures AppArmor for Bubblewrap and Playwright Chromium in the current user's cache, enables the Claude Remote Control and claude-patching autoport user units, enables linger, and sources `shell/bashrc.agents` from `~/.bashrc`. Install claude-patching's dependency with `(cd ~/.agents/claude-patching && npm ci)`. Run `claude` once in `~/Git` to accept trust, then `claude remote-control` once to enable remote control.
+It installs the sandbox and trash dependencies, configures AppArmor for Bubblewrap and cached Chromium, enables the Claude Remote Control and claude-patching autoport user units, enables linger, and sources `shell/bashrc.agents` from `~/.bashrc`. Install claude-patching's dependency with `(cd ~/.agents/claude-patching && npm ci)`. Run `claude` once in `~/Git` to accept trust, then `claude remote-control` once to enable remote control.
 
-The browser AppArmor rule covers the default Playwright cache. Other browser locations need a matching rule. On Linux ARM64, install Chromium through the system package manager.
+The browser AppArmor rule covers the current user's standard agent-browser, Playwright, and Puppeteer caches. Custom browser locations need a matching rule. On Linux ARM64, install Chromium through the system package manager.
 
 On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile. On Windows, rerun sync after enabling Developer Mode if symlink creation fails, and install `jq` (`winget install jqlang.jq`) for the prompt hooks. Windows paths and native Codex settings live in `codex/config.windows.toml`.
 

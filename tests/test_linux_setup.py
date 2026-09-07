@@ -56,7 +56,8 @@ def test_setup_renders_home_and_installs_sandbox_dependencies(tmp_path, home_nam
         subprocess.run(["/bin/bash", str(repo / "linux/setup.sh")], env=environment, check=True, capture_output=True, text=True)
 
     rendered = profile.read_text()
-    assert f'"{home}/.cache/ms-playwright/' in rendered
+    for cache in (".agent-browser/browsers", ".cache/ms-playwright", ".cache/puppeteer/chrome"):
+        assert f'"{home}/{cache}/' in rendered
     assert "@@HOME@@" not in rendered
     assert "/home/akelly" not in rendered
     assert ("apt-get install -y bubblewrap socat trash-cli" in log.read_text()) == (missing_command is not None)

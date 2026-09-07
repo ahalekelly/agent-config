@@ -1,0 +1,11 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+@{browser_paths} = "@@HOME@@/.agent-browser/browsers/chrome-*/{,chrome-linux64/}chrome"
+@{browser_paths} += "@@HOME@@/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome"
+@{browser_paths} += "@@HOME@@/.cache/ms-playwright/chromium-*/chrome-linux{,64}/chrome"
+@{browser_paths} += "@@HOME@@/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell"
+
+profile agent-chromium @{browser_paths} flags=(unconfined) {
+  userns,
+}
