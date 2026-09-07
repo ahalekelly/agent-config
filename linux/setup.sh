@@ -9,17 +9,21 @@ line='[ -f "$HOME/.agents/shell/bashrc.agents" ] && . "$HOME/.agents/shell/bashr
 grep -qF '.agents/shell/bashrc.agents' "$HOME/.bashrc" || printf '\n# Agent config (~/.agents)\n%s\n' "$line" >> "$HOME/.bashrc"
 
 command -v trash >/dev/null || npm install -g trash-cli
-command -v socat >/dev/null || sudo apt-get install -y socat
+if ! command -v bwrap >/dev/null || ! command -v socat >/dev/null || ! command -v trash-empty >/dev/null; then
+  sudo apt-get install -y bubblewrap socat trash-cli
+fi
 
 if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
   sudo cp "$repo/linux/apparmor.d/bwrap" /etc/apparmor.d/bwrap
-  sudo install -m 644 "$repo/linux/apparmor.d/playwright-chromium" /etc/apparmor.d/playwright-chromium
+  chromium_profile=$(<"$repo/linux/apparmor.d/playwright-chromium")
+  printf '%s\n' "${chromium_profile//@@HOME@@/"$HOME"}" | sudo install -m 644 /dev/stdin /etc/apparmor.d/playwright-chromium
   sudo mkdir -p /etc/apparmor.d/disable
   sudo ln -sf /etc/apparmor.d/bwrap-userns-restrict /etc/apparmor.d/disable/bwrap-userns-restrict
   sudo apparmor_parser -R /etc/apparmor.d/bwrap-userns-restrict 2>/dev/null || true
   sudo systemctl reload apparmor
 fi
 
+mkdir -p "$HOME/Git"
 systemctl --user daemon-reload
 systemctl --user enable --now \
   claude-remote-control.service \

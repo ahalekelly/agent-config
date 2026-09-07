@@ -1,6 +1,6 @@
 abi <abi/4.0>,
 include <tunables/global>
 
-profile playwright-chromium /home/akelly/.cache/ms-playwright/{chromium-*/chrome-linux64/chrome,chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell} flags=(unconfined) {
+profile playwright-chromium "@@HOME@@/.cache/ms-playwright/{chromium-*/chrome-linux64/chrome,chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell}" flags=(unconfined) {
   userns,
 }
