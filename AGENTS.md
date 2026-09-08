@@ -63,7 +63,7 @@ To schedule a T3 Code session on this machine (T3 has no scheduler): a systemd u
 
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
-Connect to the Linux machine over the local network first: `ssh -o ConnectTimeout=5 -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.local`. If unreachable, use `ssh -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.troodon-bigeye.ts.net`. If Tailscale fails, check `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list` (`*` marks the active profile). The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`); switch with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch c085`. Use `/Applications/Tailscale.app/Contents/MacOS/Tailscale status` to troubleshoot an unresolved hostname.
+Connect to the Linux machine over the local network first: `ssh -o ConnectTimeout=5 -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.local`. If unreachable, use `ssh -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.troodon-bigeye.ts.net`. If Tailscale fails, check `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list` (`*` marks the active profile). The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`); switch with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch c085`.
 
 ### Windows
 
