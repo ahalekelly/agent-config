@@ -53,6 +53,8 @@ Identify the machine by hostname. Notes specific to each:
 
 For connections between machines, try the local network first and use the tailnet only when the local connection is unavailable. Apply this order to SSH, file serving, and other network services.
 
+The desktop LAN is trusted. The laptop may join untrusted networks, so keep file-serving listeners on the desktop and use the laptop as a client.
+
 ### akelly-desktop (Linux, headless)
 
 Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi; run it outside the sandbox for network, user-service, and SSH access. The Obsidian CLI and `open` aren't available. `trash` is npm's `trash-cli` in `~/.npm-global/bin` (XDG trash in `~/.local/share/Trash`). `trash-empty.timer` deletes trashed items daily after 30 days. `/tmp` is on the root filesystem (`tmp.mount` masked); systemd-tmpfiles removes entries untouched for 10 days. `~/.config/environment.d/path.conf` puts `~/.local/bin` and `~/.npm-global/bin` on PATH for systemd user services, so `claude`, `uv`, and `trash` resolve there without per-unit `Environment=PATH`. `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands outside the sandbox. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are. The NTFS drives under `/mnt` are slow to crawl, so they are hidden from sandboxed commands and excluded from the `plocate` index.
