@@ -11,12 +11,12 @@ model = "gpt-6-astra"
 "~/.npm-global" = "read"
 "~/.gitconfig" = "read"
 "~/.config/git" = "read"
-"~/.cache/uv" = "write"
 "~/.npm/_logs" = "write"
 "~/.npm/_cacache" = "write"
 "~/.local/share/Trash" = "write"
 
 [shell_environment_policy.set]
+UV_CACHE_DIR = "/tmp/uv-cache-akelly"
 PATH = "/home/akelly/.agents/bin:/home/akelly/.pi/agent/bin:/home/akelly/.local/bin:/home/akelly/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 
 # Trust for the machine-local herdr SessionStart hook in ~/.codex/hooks.json.

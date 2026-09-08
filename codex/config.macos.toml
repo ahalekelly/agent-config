@@ -15,12 +15,12 @@ prevent_idle_sleep = true
 "/Library/Developer/CommandLineTools/usr/bin" = "read"
 "~/.gitconfig" = "read"
 "~/.config/git" = "read"
-"~/.cache/uv" = "write"
 "~/.npm/_logs" = "write"
 "~/.npm/_cacache" = "write"
 "/System/Library/OpenSSL" = "read"
 
 [shell_environment_policy.set]
+UV_CACHE_DIR = "/tmp/uv-cache-akelly"
 PATH = "/Users/akelly/.agents/bin:/Users/akelly/.pi/agent/bin:/Users/akelly/.platformio/penv/bin:/Users/akelly/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/usr/local/MacGPG2/bin:/Applications/iTerm.app/Contents/Resources/utilities:/Applications/Obsidian.app/Contents/MacOS:/Users/akelly/Git/codex-plugin-cc/bin:/Users/akelly/.agents/pi-run/bin"
 NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "323bc3e687e17d7e377238d9f4c69111c4d0e6219103b6316d8c52082489533b"
 
