@@ -67,8 +67,6 @@ Connect to the Linux machine over the local network first: `ssh -o ConnectTimeou
 
 ### Windows
 
-Don't run bash commands with long output because the whole output enters the chat. Use the Read tool instead of `cat` for files.
-
 `show-in-browser`, the Obsidian CLI, and `open` aren't installed. Show an HTML or Markdown file with `Start-Process <absolute-path>` from PowerShell. `trash` is npm's trash-cli and moves files to the Recycle Bin, but it silently no-ops (exit 0, file untouched) on paths containing backslashes, because its glob layer treats `\` as an escape character. Pass forward-slash paths (`trash "C:/path/to/file"`) and verify with `Test-Path` afterwards.
 
 Schedule recurring jobs with Windows Task Scheduler (`Register-ScheduledTask` from PowerShell). Example: the "Codex CLI update" task runs `codex update` daily at 4am for the npm-installed Codex that T3 Code and pi-for-claude spawn, logging to `~/.codex/update.log`. Wrap the command in `cmd.exe /c "... > log 2>&1"` inside a hidden PowerShell so npm's stderr doesn't get reported as a failed exit code.
