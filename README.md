@@ -24,6 +24,8 @@ uv run ~/.agents/sync.py
 
 Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. Restart open shells after shell config changes.
 
+Only one sync runs at a time. If sync reports another run in progress, retry after it finishes.
+
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
 Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream checkout lives in `skills/.mattpocock/`, outside version control; links in `skills/` expose its skills to all agents. Keep upstream files unmodified so updates can fast-forward.
