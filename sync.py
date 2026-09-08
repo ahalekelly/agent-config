@@ -19,7 +19,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 import tomlkit
-from filelock import FileLock
+from filelock import FileLock, Timeout
 
 REPO = Path(__file__).resolve().parent
 HOME = Path.home().resolve()
@@ -456,6 +456,9 @@ if __name__ == "__main__":
     try:
         with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
             main()
+    except Timeout:
+        print("Another config sync is running; retry after it finishes.", file=sys.stderr)
+        raise SystemExit(1)
     except SyncError as error:
         print(error, file=sys.stderr)
         raise SystemExit(1)
