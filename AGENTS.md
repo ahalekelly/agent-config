@@ -61,6 +61,8 @@ Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below 
 
 To find a file by name anywhere on this machine, use `plocate`; its index is rebuilt daily, so run `updatedb --require-visibility no` first (about 20 seconds, no sudo needed) if the file may be newer than that.
 
+Share `.md` files in chat as clickable Markdown links to their Tailscale HTTP URLs, not filesystem paths or `file://` URLs. Append the URL-encoded absolute path to `http://akelly-desktop.troodon-bigeye.ts.net:8377` and verify it loads before sending. Chat links use the tailnet so they work away from the LAN.
+
 Connect to the Mac with `ssh -o ConnectTimeout=5 -o HostKeyAlias=adrians-macbook-air akelly@Mac.local`, then `ssh -o HostKeyAlias=adrians-macbook-air akelly@adrians-macbook-air.troodon-bigeye.ts.net` if the local connection is unavailable.
 
 To schedule a T3 Code session on this machine (T3 has no scheduler): a systemd user timer runs `uv run ~/.agents/bin/t3-thread.py new <project-dir> <title> <model> <prompt-file>`, which starts a full-access thread in that project and sends the prompt, or `uv run ~/.agents/bin/t3-thread.py resume <thread-id> <prompt-file>` to send the prompt into an existing thread (its own context resumes). Thread ids come from `GET /api/orchestration/snapshot`; an agent can find its own by title. The service must declare `After=t3code.service` and `Requires=t3code.service`. Timer and service go in `~/.config/systemd/user/`; a one-off uses an absolute `OnCalendar=YYYY-MM-DD HH:MM:SS America/Los_Angeles` with `Persistent=true`. Existing examples: `morning-brief.timer` (daily) and `hdd-spinup-check.timer` (one-off). Prefer this over cloud routines, which run remotely and can't see local files.
