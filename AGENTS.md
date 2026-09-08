@@ -61,7 +61,7 @@ Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below 
 
 To find a file by name anywhere on this machine, use `plocate`; its index is rebuilt daily, so run `updatedb --require-visibility no` first (about 20 seconds, no sudo needed) if the file may be newer than that.
 
-Share `.md` files in chat as clickable Markdown links to their Tailscale HTTP URLs, not filesystem paths or `file://` URLs. Append the URL-encoded absolute path to `http://akelly-desktop.troodon-bigeye.ts.net:8377` and verify it loads before sending. Chat links use the tailnet so they work away from the LAN.
+When delivering reports or other documents for me to read, provide clickable Markdown links to their served Tailscale HTTP URLs, not filesystem paths or `file://` URLs. Append the URL-encoded absolute path to `http://akelly-desktop.troodon-bigeye.ts.net:8377` and verify it loads before sending. These links use the tailnet so they work away from the LAN.
 
 Connect to the Mac with `ssh -o ConnectTimeout=5 -o HostKeyAlias=adrians-macbook-air akelly@Mac.local`, then `ssh -o HostKeyAlias=adrians-macbook-air akelly@adrians-macbook-air.troodon-bigeye.ts.net` if the local connection is unavailable.
 
