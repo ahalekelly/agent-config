@@ -74,6 +74,14 @@
             "command": "bash ~/.agents/hooks/usage-context.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ~/.agents/hooks/usage-identity.py"
+          }
+        ]
       }
     ],
     "Notification": [
@@ -92,6 +100,14 @@
           {
             "type": "command",
             "command": "uv run ~/.claude/tab-title.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ~/.agents/hooks/usage-identity.py"
           }
         ]
       }
