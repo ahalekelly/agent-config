@@ -5,8 +5,9 @@
 """Deny Bash commands that search from /, /home, ~, /mnt, or a drive mounted under /mnt.
 
 A whole-filesystem find or grep crawls every mounted drive and can run for an
-hour at high CPU. Commands that stay on one filesystem (-xdev, -mount, -x,
---one-file-system) are allowed, as are searches inside a subdirectory of a drive.
+hour at high CPU. Commands that stay on one filesystem (find -xdev or -mount,
+du -x in any short-flag cluster such as -xsh, --one-file-system) are allowed, as
+are searches inside a subdirectory of a drive.
 """
 
 import json
@@ -19,7 +20,18 @@ HOME = os.path.expanduser("~")
 FORBIDDEN_ROOTS = {"/", "/home", HOME, "/mnt"}
 SEPARATORS = {";", "&", "&&", "|", "||", "(", ")", "`"}
 WRAPPERS = {"sudo", "command", "env", "nice", "ionice", "timeout", "time", "nohup", "exec"}
-ONE_FILESYSTEM_FLAGS = {"-xdev", "-mount", "-x", "--one-file-system"}
+ONE_FILESYSTEM_FLAGS = {
+    "find": {"-xdev", "-mount"},
+    "bfs": {"-xdev", "-mount"},
+    "du": {"--one-file-system"},
+    "tree": set(),
+    "rg": {"--one-file-system"},
+    "fd": {"--one-file-system"},
+    "fdfind": {"--one-file-system"},
+}
+# du and tree spell one-file-system as -x, which bundles into clusters like -xsh.
+# rg -x is --line-regexp and fd -x is --exec, so the cluster rule stays off them.
+X_CLUSTER_COMMANDS = {"du", "tree"}
 BLOCK_REASON = (
     "Blocked: searching from /, /home, ~, or /mnt crawls every mounted drive and runs for "
     "an hour at high CPU. Search a specific directory instead, or stay on one filesystem "
@@ -64,9 +76,9 @@ def strip_wrappers(tokens: list[str]) -> list[str]:
     return tokens
 
 
-def is_forbidden(path: str) -> bool:
-    expanded = os.path.expandvars(os.path.expanduser(path))
-    normalized = expanded.rstrip("*").rstrip("/") or "/"
+def is_forbidden(path: str, cwd: str) -> bool:
+    expanded = os.path.expandvars(os.path.expanduser(path)).rstrip("*")
+    normalized = os.path.normpath(os.path.join(cwd, expanded))
     return normalized in FORBIDDEN_ROOTS or re.fullmatch(r"/mnt/[^/]+", normalized) is not None
 
 
@@ -89,13 +101,19 @@ def has_flag(args: list[str], pattern: str) -> bool:
     return any(re.match(pattern, a) for a in args)
 
 
+def stays_on_one_filesystem(name: str, args: list[str]) -> bool:
+    if any(a in ONE_FILESYSTEM_FLAGS.get(name, ()) for a in args):
+        return True
+    return name in X_CLUSTER_COMMANDS and has_flag(args, r"^-[a-zA-Z]*x[a-zA-Z]*$")
+
+
 def segment_searches_forbidden_root(tokens: list[str], cwd: str) -> bool:
     tokens = strip_wrappers(tokens)
     if not tokens:
         return False
     name = os.path.basename(tokens[0])
     args = tokens[1:]
-    if any(a in ONE_FILESYSTEM_FLAGS for a in args):
+    if stays_on_one_filesystem(name, args):
         return False
 
     if name in {"find", "bfs"}:
@@ -110,7 +128,7 @@ def segment_searches_forbidden_root(tokens: list[str], cwd: str) -> bool:
         roots = positional_args(args) or [cwd]
     else:
         return False
-    return any(is_forbidden(r) for r in roots if r)
+    return any(is_forbidden(r, cwd) for r in roots if r)
 
 
 def searches_forbidden_root(command: str, cwd: str) -> bool:
