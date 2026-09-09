@@ -55,7 +55,7 @@ Identify the machine by hostname. Notes specific to each:
 
 For connections between machines, try the local network first and use the tailnet only when the local connection is unavailable. Apply this order to SSH, file serving, and other network services.
 
-The desktop LAN is trusted. The laptop may join untrusted networks, so keep LAN-accessible file-serving listeners on the desktop and use the laptop as a client.
+The desktop's local network (LAN) is a trusted environment. Desktop dashboards and file servers may serve task-authorized data to LAN devices without a separate login. The laptop may join untrusted networks, so keep LAN-accessible listeners on the desktop and use the laptop as a client.
 
 ### akelly-desktop (Linux, headless)
 
