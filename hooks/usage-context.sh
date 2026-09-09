@@ -5,8 +5,10 @@
 #   Fable weekly: 61% used, 99% of week elapsed
 #   Codex weekly: 12% used, 30% of week elapsed
 #   System pressure: load 21.3 on 12 cores
+#   Low disk: / has 4.3 GiB free (99% used)
 #
-# The last line appears only when the machine is struggling.
+# The last two lines appear only when the machine is struggling or a
+# filesystem holding / or $HOME is nearly full.
 #
 # Opus/Sonnet + Fable come from api.anthropic.com/api/oauth/usage: the flat
 # seven_day field is the all-models weekly limit, and the Fable cap is the
@@ -22,9 +24,9 @@
 # Both fetches are TTL-cached against the `ts` each cache carries, and are
 # refreshed in the background so prompts never wait on the network.
 #
-# This runs on every prompt, so the foreground is exactly two child processes:
-# one jq that renders the clock and every usage line, and one awk that reads
-# the kernel's load and memory counters.
+# This runs on every prompt, so the foreground stays small: one jq that
+# renders the clock and every usage line, one awk that reads the kernel's load
+# and memory counters, and one df piped to awk for free disk space.
 
 # Windows jq writes CRLF unless told to use binary mode. A stray \r would break
 # the @claude/@codex sentinel match below and leak into the bearer tokens.
@@ -179,3 +181,15 @@ elif [[ $OSTYPE == darwin* ]]; then
       if (out) print "System pressure: " out
     }'
 fi
+
+# Low disk, printed when a filesystem holding / or $HOME has under 10 GiB or
+# under 5% free. df -P prints one POSIX line per argument; when / and $HOME
+# share a filesystem the second line is a duplicate and is skipped.
+df -Pk / "$HOME" 2>/dev/null | awk '
+  function note(s) { out = out (out ? ", " : "") s }
+  NR > 1 && !seen[$1]++ {
+    avail = $4 / 1048576
+    if (avail < 10 || $5 > 95)
+      note(sprintf("%s has %.1f GiB free (%s used)", $6, avail, $5))
+  }
+  END { if (out) print "Low disk: " out }'
