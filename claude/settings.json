@@ -194,6 +194,7 @@
   "verbose": false,
   "preferredNotifChannel": "auto",
   "autoCompactEnabled": true,
+  "autoCompactWindow": 500000,
   "switchModelsOnFlag": false,
   "autoContinueAtUsageLimit": false,
   "inputNeededNotifEnabled": true,
