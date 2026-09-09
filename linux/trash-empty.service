@@ -1,6 +1,6 @@
 [Unit]
-Description=Delete trashed items older than 30 days
+Description=Delete trashed items older than 7 days
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/trash-empty -f 30
+ExecStart=/usr/bin/trash-empty -f 7
