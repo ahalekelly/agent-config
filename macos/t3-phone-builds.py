@@ -11,7 +11,8 @@ upstream release with Adrian's feature branches. Re-sign and install on a
 connected, unlocked phone every five days.
 Failed builds and installs back off for a day; a phone that is disconnected or
 locked gets a daily reminder once renewal is due. Before the first install,
-reminders begin five days after the first successful build.
+reminders begin five days after the first successful build. A fetch that cannot
+reach GitHub waits for the next run and reports after a day of failed runs.
 
 State and logs live in ~/Library/Application Support/t3-phone-builds. One
 DerivedData directory holds the current artifact. Profile expiration is read
@@ -130,6 +131,30 @@ class Runner:
                      "-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration",
                      f"DEVELOPMENT_TEAM={TEAM}", "build")
 
+    def fetch(self):
+        """Update the remotes, tolerating a network that is not up yet.
+
+        launchd starts a run the moment the Mac wakes, often seconds before DNS
+        works. Runs are half an hour apart, so a failed fetch waits for the next
+        one and reports only once a full day of runs has failed.
+        """
+        for remote, refspec in (("upstream", "--tags"),
+                                ("origin", f"refs/heads/{BRANCH}:refs/remotes/origin/{BRANCH}")):
+            if not self.attempt("git", "fetch", "--quiet", remote, refspec).returncode:
+                continue
+            since = self.state.get("unreachable_since")
+            overdue = since is not None and elapsed(since) >= DAY
+            if overdue or since is None:  # A report starts a fresh day of silence.
+                self.state["unreachable_since"] = now().isoformat()
+            self.save()
+            if overdue:
+                raise RuntimeError(f"Fetching {remote} has failed for a day of runs")
+            self.outcome = "network unavailable"
+            return False
+        if self.state.pop("unreachable_since", None):
+            self.save()
+        return True
+
     def build(self):
         self.step = "checkout"
         if self.capture("git", "status", "--porcelain", "--untracked-files=no").strip():
@@ -222,9 +247,8 @@ class Runner:
                     raise ValueError(f"Invalid {key} revision: {record['revision']}")
                 elapsed(record["at"])
         self.step = "fetch branch"
-        self.command("git", "fetch", "--quiet", "upstream", "--tags")
-        self.command("git", "fetch", "--quiet", "origin",
-                     f"refs/heads/{BRANCH}:refs/remotes/origin/{BRANCH}")
+        if not self.fetch():
+            return
         self.revision = self.capture("git", "rev-parse", f"origin/{BRANCH}").strip()
         # Release tags reach the branch through the upstream release it
         # integrates, so this names the release the build is based on.
