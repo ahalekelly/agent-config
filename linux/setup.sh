@@ -8,6 +8,10 @@ repo="$HOME/.agents"
 line='[ -f "$HOME/.agents/shell/bashrc.agents" ] && . "$HOME/.agents/shell/bashrc.agents"'
 grep -qF '.agents/shell/bashrc.agents' "$HOME/.bashrc" || printf '\n# Agent config (~/.agents)\n%s\n' "$line" >> "$HOME/.bashrc"
 
+# The package cooldown needs npm's min-release-age and a relative uv exclude-newer.
+npm install -g npm@11
+uv self update
+
 command -v trash >/dev/null || npm install -g trash-cli
 if ! command -v bwrap >/dev/null || ! command -v socat >/dev/null || ! command -v trash-empty >/dev/null; then
   sudo apt-get install -y bubblewrap socat trash-cli

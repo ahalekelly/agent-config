@@ -1,0 +1,9 @@
+# Package versions younger than this are refused, so a hijacked release is
+# noticed by the ecosystem before it can land here. Minutes.
+minimumReleaseAge: 4320
+minimumReleaseAgeExclude:
+  - npm
+  - "@openai/codex"
+  - "@anthropic-ai/claude-code"
+  - "@earendil-works/*"
+  - "@mariozechner/*"

@@ -1,6 +1,6 @@
 # Package cooldowns on every machine: options (2026-09-12)
 
-Goal: refuse to install any package version published in the last 3 days, on every package manager, on the Mac, akelly-desktop, and the Windows machine. Nothing below has been changed yet; this is the menu.
+Goal: refuse to install any package version published in the last 3 days, on every package manager, on the Mac, akelly-desktop, and the Windows machine. The "Recommended shape" below was implemented on 2026-09-14; the README documents the result.
 
 ## Where things stand today
 

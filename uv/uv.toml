@@ -1,0 +1,3 @@
+# Package versions younger than this are refused, so a hijacked release is
+# noticed by the ecosystem before it can land here.
+exclude-newer = "3 days"

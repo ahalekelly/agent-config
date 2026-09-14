@@ -6,6 +6,7 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 
 - `AGENTS.md` — shared instructions for every agent.
 - `claude/`, `codex/`, `pi/` — tool configuration. Codex has a shared base plus one OS overlay.
+- `uv/`, `pnpm/` — package manager configuration.
 - `shell/` — shell startup files and the global git ignore.
 - `linux/`, `macos/` — OS-specific service and application files.
 - `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills. `bin/t3-thread.py` sends prompts to the local T3 service.
@@ -23,6 +24,8 @@ uv run ~/.agents/sync.py
 ```
 
 Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. Restart open shells after shell config changes.
+
+Sync also quarantines fresh package releases: uv, npm, and pnpm refuse versions published in the last 3 days, configured through `uv/uv.toml`, `pnpm/config.yaml`, and `~/.npmrc`. Tools updated on purpose, such as Codex and Claude Code, are exempt by name; their dependencies are not. npm 11.15 or newer is required.
 
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 

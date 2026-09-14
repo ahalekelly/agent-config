@@ -140,6 +140,15 @@ def install_links(platform: str) -> None:
     }
     if platform in {"linux", "macos"}:
         static[HOME / ".local" / "bin" / "claudew"] = REPO / "bin" / "claudew"
+        static[HOME / ".config" / "uv" / "uv.toml"] = REPO / "uv" / "uv.toml"
+    else:
+        static[Path(os.environ["APPDATA"]) / "uv" / "uv.toml"] = REPO / "uv" / "uv.toml"
+    if shutil.which("pnpm"):
+        static[{
+            "linux": HOME / ".config" / "pnpm" / "config.yaml",
+            "macos": HOME / "Library" / "Preferences" / "pnpm" / "config.yaml",
+            "windows": HOME / "AppData" / "Local" / "pnpm" / "config" / "config.yaml",
+        }[platform]] = REPO / "pnpm" / "config.yaml"
     if platform == "linux":
         units = HOME / ".config" / "systemd" / "user"
         static |= {
@@ -169,6 +178,35 @@ def install_links(platform: str) -> None:
             f"../.claude/{name}",
             name not in {"history.jsonl", "settings.local.json"},
         )
+
+
+def install_npm_cooldown() -> None:
+    """Refuse npm releases younger than the quarantine window, minus the trusted tools.
+
+    npm reads the exclusions as one comma-separated value; the `key[]=value` form
+    that `~/.npmrc` also accepts is not something `npm config set` will write.
+    """
+    npm = shutil.which("npm")
+    if not npm:
+        raise SyncError("npm is missing; install Node.js, then re-run")
+    version = subprocess.run([npm, "--version"], check=True, capture_output=True, text=True).stdout
+    if tuple(int(part) for part in version.split(".")[:2]) < (11, 15):
+        raise SyncError("npm 11.15 or newer is needed for min-release-age; run: npm install -g npm@11")
+
+    settings = {
+        "min-release-age": "3",
+        "min-release-age-exclude": "npm,@openai/codex,@anthropic-ai/claude-code,@earendil-works/*,@mariozechner/*",
+    }
+    keys = list(settings)
+    current = subprocess.run(
+        [npm, "config", "get", *keys],
+        check=True, capture_output=True, text=True, cwd=HOME,
+    ).stdout.splitlines()
+    wanted = [f"{key}={value}" for key, value in settings.items()]
+    if current == wanted:
+        return
+    subprocess.run([npm, "config", "set", *wanted, "--location=user"], check=True, capture_output=True, text=True)
+    print(f"set {', '.join(keys)} in {HOME / '.npmrc'}")
 
 
 def deep_merge(base: MutableMapping, overlay: Mapping) -> None:
@@ -440,12 +478,14 @@ def main() -> None:
     ):
         ensure_directory(directory)
     install_links(platform)
+    install_npm_cooldown()
     install_process_wrapper(platform)
     render_codex(platform)
     if args == ["pull"]:
         sync_submodules()
         sync_repository(REPO)
         install_links(platform)
+        install_npm_cooldown()
         install_process_wrapper(platform)
         render_codex(platform)
     else:
