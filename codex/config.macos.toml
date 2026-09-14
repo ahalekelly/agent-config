@@ -27,6 +27,9 @@ NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "323bc3e687e17d7e377238d9f4c69111c4d0
 [apps.connector_69a3bc1ded54819199d1684e671e38b9.tools."paper search_search"]
 approval_mode = "approve"
 
+[mcp_servers.fusion]
+url = "http://127.0.0.1:27182/mcp"
+
 [mcp_servers.paper-search]
 command = "sh"
 args = ["-c", "exec uv run --directory \"$HOME/Git/paper-search-mcp\" paper-search-mcp"]
@@ -131,7 +134,7 @@ enabled = false
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 "gpt-5.6-sol" = 1
-gpt-6-astra = 3
+gpt-6-astra = 4
 
 [marketplaces.openai-bundled]
 source_type = "local"
