@@ -15,15 +15,19 @@ spec = importlib.util.spec_from_file_location("phone", Path(__file__).with_name(
 phone = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(phone)
 NOW = datetime(2026, 9, 5, tzinfo=timezone.utc)
-TAG = "v0.0.38"
+FORK = "a" * 40          # origin/main before an upstream release is merged in
+MERGED = "b" * 40        # origin/main after the release is merged and pushed
+RELEASE = "c" * 40       # the commit the newest stable tag points at
+TAG = "v0.0.39"
 
 
-def record(days=0, tag=TAG):
-    return {"tag": tag, "at": (NOW - timedelta(days=days)).isoformat(),
+def record(days=0, revision=FORK, version="0.0.38"):
+    return {"revision": revision, "version": version,
+            "at": (NOW - timedelta(days=days)).isoformat(),
             "expires_at": (NOW + timedelta(days=7-days)).isoformat()}
 
 
-class RunTests(unittest.TestCase):
+class StateTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.addCleanup(self.folder.cleanup)
@@ -33,6 +37,17 @@ class RunTests(unittest.TestCase):
             item.start()
             self.addCleanup(item.stop)
         self.events = []
+
+    def save(self, state):
+        (self.root / "state.json").write_text(json.dumps(state))
+
+    def state(self):
+        return json.loads((self.root / "state.json").read_text())
+
+
+class RunTests(StateTests):
+    def setUp(self):
+        super().setUp()
         self.builds = 0
         self.installs = 0
         self.blocker = "not connected"
@@ -40,12 +55,11 @@ class RunTests(unittest.TestCase):
         self.fail_install = False
         self.power = "Now drawing from 'AC Power'"
 
-    def save(self, state):
-        (self.root / "state.json").write_text(json.dumps(state))
-
     def run_service(self):
-        def capture(runner, *args):
-            return self.power if args[0] == "pmset" else f"hash\trefs/tags/{TAG}\n"
+        def capture(runner, *args, cwd=phone.REPO):
+            if args[0] == "pmset":
+                return self.power
+            return FORK + "\n" if args[1] == "rev-parse" else "v0.0.38\n"
 
         def build(runner):
             self.builds += 1
@@ -66,14 +80,13 @@ class RunTests(unittest.TestCase):
             runner.save()
 
         with patch.object(phone.Runner, "capture", capture), \
+             patch.object(phone.Runner, "attempt", lambda _, *a, cwd=None: subprocess.CompletedProcess(a, 0)), \
+             patch.object(phone.Runner, "integrate", lambda _: None), \
              patch.object(phone.Runner, "build", build), \
              patch.object(phone.Runner, "install", install), \
              patch.object(phone.Runner, "phone_blocker", lambda _: self.blocker), \
              patch.object(phone.Runner, "notify", lambda _, title, body: self.events.append((title, body))):
             return phone.main()
-
-    def test_numeric_stable_tags(self):
-        self.assertEqual(phone.latest_tag("h refs/tags/v0.0.9\nh refs/tags/v0.0.10\nh refs/tags/v0.0.11-nightly.1\n"), "v0.0.10")
 
     def test_battery_does_no_work(self):
         self.power = "Now drawing from 'Battery Power'"
@@ -115,8 +128,8 @@ class RunTests(unittest.TestCase):
             self.run_service()
         self.assertEqual(self.builds, 2)
 
-    def test_different_tag_bypasses_failure_backoff(self):
-        self.save({"build_failure": record(tag="v0.0.37")})
+    def test_different_revision_bypasses_failure_backoff(self):
+        self.save({"build_failure": record(revision=MERGED)})
         self.run_service()
         self.assertEqual(self.builds, 1)
 
@@ -127,7 +140,7 @@ class RunTests(unittest.TestCase):
         self.run_service()
         self.assertEqual(self.builds, 0)
         self.assertEqual(self.installs, 1)
-        self.assertNotIn("overdue_notified_at", json.loads((self.root / "state.json").read_text()))
+        self.assertNotIn("overdue_notified_at", self.state())
 
     def test_failed_install_does_not_rebuild_or_retry_same_day(self):
         self.blocker, self.fail_install = None, True
@@ -145,16 +158,122 @@ class RunTests(unittest.TestCase):
         self.assertEqual(self.installs, 0)
         self.assertEqual(self.events[0][0], "iPhone: first install overdue")
         self.assertIn("The phone is locked.", self.events[0][1])
-        self.assertNotIn("install_failure", json.loads((self.root / "state.json").read_text()))
+        self.assertNotIn("install_failure", self.state())
         self.blocker = None
         self.run_service()
         self.assertEqual(self.installs, 1)
 
-    def test_new_release_installs_immediately(self):
+    def test_new_revision_installs_immediately(self):
         self.blocker = None
-        self.save({"built": record(tag="v0.0.37"), "installed": record(tag="v0.0.37")})
+        self.save({"built": record(revision=MERGED), "installed": record(revision=MERGED)})
         self.run_service()
         self.assertEqual((self.builds, self.installs), (1, 1))
+
+
+class IntegrationTests(StateTests):
+    """Drive run() against a git that answers from self.head and self.conflicts."""
+
+    def setUp(self):
+        super().setUp()
+        self.head = FORK
+        self.integrated = False
+        self.conflicts = []
+        self.builds = []
+        self.commands = []
+
+    def git(self, args):
+        self.commands.append(tuple(str(item) for item in args))
+        if args[0] == "pmset":
+            return "Now drawing from 'AC Power'", 0
+        if args[1] == "tag":
+            return f"{TAG}-nightly.2\n{TAG}\nv0.0.38\n", 0
+        if args[1] == "rev-parse":
+            return (RELEASE if args[2].startswith(TAG) else self.head) + "\n", 0
+        if args[1] == "describe":
+            return TAG + "\n", 0
+        if args[1] == "merge-base":
+            return "", 0 if self.integrated else 1
+        if args[1] == "merge" and args[2] == "--no-ff":
+            return "", 1 if self.conflicts else 0
+        if args[1] == "diff":
+            return "".join(f"{name}\n" for name in self.conflicts), 0
+        if args[1] == "push":
+            self.head = MERGED
+            return "", 0
+        return "", 0
+
+    def run_service(self):
+        def capture(runner, *args, cwd=phone.REPO):
+            output, code = self.git(args)
+            if code:
+                raise subprocess.CalledProcessError(code, args)
+            return output
+
+        def attempt(runner, *args, cwd=phone.REPO):
+            return subprocess.CompletedProcess(args, self.git(args)[1])
+
+        def command(runner, *args, cwd=phone.REPO):
+            attempt(runner, *args, cwd=cwd).check_returncode()
+
+        def build(runner):
+            self.builds.append(runner.revision)
+            runner.state["built"] = record(revision=runner.revision, version=runner.version)
+            runner.save()
+
+        with patch.object(phone.Runner, "capture", capture), \
+             patch.object(phone.Runner, "attempt", attempt), \
+             patch.object(phone.Runner, "command", command), \
+             patch.object(phone.Runner, "build", build), \
+             patch.object(phone.Runner, "phone_blocker", lambda _: "not connected"), \
+             patch.object(phone.Runner, "notify", lambda _, title, body: self.events.append((title, body))):
+            return phone.main()
+
+    def ran(self, *prefix):
+        return [args for args in self.commands if args[:len(prefix)] == prefix]
+
+    def test_release_already_in_main_is_left_alone(self):
+        self.integrated = True
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.ran("git", "merge"), [])
+        self.assertEqual(self.ran("git", "push"), [])
+        self.assertEqual(self.builds, [FORK])
+
+    def test_clean_merge_is_pushed_and_built(self):
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(len(self.ran("git", "push")), 1)
+        self.assertEqual(self.builds, [MERGED])
+        self.assertEqual(self.events, [])
+
+    def test_lockfile_conflict_is_regenerated(self):
+        self.conflicts = ["pnpm-lock.yaml"]
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(len(self.ran("git", "checkout", "--ours", "pnpm-lock.yaml")), 1)
+        self.assertEqual(len(self.ran("npx", "--yes", "corepack", "pnpm", "install", "--lockfile-only")), 1)
+        self.assertEqual(len(self.ran("git", "push")), 1)
+        self.assertEqual(self.builds, [MERGED])
+        self.assertEqual(self.events, [])
+
+    def test_other_conflict_asks_for_help_and_builds_the_old_revision(self):
+        self.conflicts = ["pnpm-lock.yaml", "apps/mobile/app.config.ts"]
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(len(self.ran("git", "merge", "--abort")), 1)
+        self.assertEqual(self.ran("git", "push"), [])
+        self.assertEqual(self.builds, [FORK])
+        self.assertEqual(self.state()["integration_failure"]["revision"], RELEASE)
+        self.assertEqual(len(self.events), 1)
+        self.assertIn("apps/mobile/app.config.ts", self.events[0][1])
+
+    def test_conflict_is_not_retried_for_a_day(self):
+        self.save({"integration_failure": record(revision=RELEASE)})
+        self.conflicts = ["apps/mobile/app.config.ts"]
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.ran("git", "merge"), [])
+        self.assertEqual(self.events, [])
+        self.assertEqual(self.builds, [FORK])
+        with patch.object(phone, "now", return_value=NOW + phone.DAY):
+            self.run_service()
+        self.assertEqual(len(self.ran("git", "merge", "--abort")), 1)
+        self.assertEqual(len(self.events), 1)
 
 
 class XcodebuildTests(unittest.TestCase):

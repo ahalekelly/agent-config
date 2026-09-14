@@ -6,10 +6,11 @@
 """Keep Adrian's iPhone signed and running his T3 Code fork.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Every half
-hour on AC power, build the fork's main branch, which integrates the stable
-upstream release with Adrian's feature branches. Re-sign and install on a
-connected, unlocked phone every five days.
-Failed builds and installs back off for a day; a phone that is disconnected,
+hour on AC power, merge the newest stable upstream release into the fork's main
+branch and build that branch, which carries Adrian's feature branches on top of
+the release. A merge that conflicts beyond the lockfile asks an agent for help.
+Re-sign and install on a connected, unlocked phone every five days.
+Failed merges, builds and installs back off for a day; a phone that is disconnected,
 unreachable, or locked gets a daily reminder once renewal is due. Before the
 first install, reminders begin five days after the first successful build. A
 fetch that cannot reach GitHub waits for the next run and reports after a day
@@ -97,8 +98,8 @@ class Runner:
             return subprocess.run(list(map(str, args)), cwd=cwd, env=self.env,
                                   stdout=output, stderr=subprocess.STDOUT)
 
-    def capture(self, *args):
-        result = subprocess.run(list(map(str, args)), cwd=REPO, env=self.env,
+    def capture(self, *args, cwd=REPO):
+        result = subprocess.run(list(map(str, args)), cwd=cwd, env=self.env,
                                 capture_output=True, text=True)
         if result.returncode:
             with self.log.open("a") as output:
@@ -128,6 +129,9 @@ class Runner:
 
     def xcodebuild(self):
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
+        # pod install pins NODE_BINARY to Node's versioned Cellar path, which Homebrew
+        # deletes on upgrade; renewals rebuild days later, so resolve node at build time.
+        (workspace.parent / ".xcode.env.local").write_text("export NODE_BINARY=$(command -v node)\n")
         # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
         self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                      "-configuration", "Release", "-destination", "generic/platform=iOS",
@@ -158,6 +162,62 @@ class Runner:
         if self.state.pop("unreachable_since", None):
             self.save()
         return True
+
+    def integrate(self):
+        """Merge the newest stable upstream release into the fork's main branch.
+
+        Fork branches that patch a dependency touch the same pnpm-lock.yaml lines as
+        every release, so that one conflict is regenerated; any other needs a person.
+        """
+        self.step = "newest release"
+        tags = self.capture("git", "tag", "--list", "v[0-9]*.[0-9]*.[0-9]*",
+                            "--sort=-v:refname").split()
+        # Version sort ranks v1.2.3-nightly.1 above v1.2.3, so drop prereleases by their hyphen.
+        tag = next(name for name in tags if "-" not in name)
+        commit = self.capture("git", "rev-parse", f"{tag}^{{commit}}").strip()
+        if not self.attempt("git", "merge-base", "--is-ancestor", commit, f"origin/{BRANCH}").returncode:
+            return
+        if cooling_down(self.state.get("integration_failure"), commit):
+            return
+        self.revision, self.version, self.phase = commit, tag[1:], "integration_failure"
+        self.step = f"merge {tag}"
+        worktree = STATE_DIR / "integration"
+        self.attempt("git", "worktree", "remove", "--force", worktree)
+        self.command("git", "worktree", "prune")
+        self.command("git", "worktree", "add", "--detach", worktree, f"origin/{BRANCH}")
+        try:
+            if self.attempt("git", "merge", "--no-ff", "-m", f"merge {tag}", tag, cwd=worktree).returncode:
+                conflicted = self.capture("git", "diff", "--name-only", "--diff-filter=U",
+                                          cwd=worktree).split()
+                if conflicted != ["pnpm-lock.yaml"]:
+                    self.command("git", "merge", "--abort", cwd=worktree)
+                    self.state["integration_failure"] = self.record()
+                    self.save()
+                    self.phase = None
+                    head = self.capture("git", "rev-parse", f"origin/{BRANCH}").strip()[:9]
+                    self.notify(
+                        f"iPhone build: merge {tag} into {BRANCH} needs a hand",
+                        f"Merging {tag} ({self.short}) into the fork's {BRANCH} at {head} conflicts in:\n"
+                        + "".join(f"- {name}\n" for name in conflicted)
+                        + f"Integrate in a worktree of your own; {REPO} belongs to the build service.\n"
+                        "Resolve the conflicts, then run pnpm install --frozen-lockfile and "
+                        "tsc --noEmit in apps/mobile, and push the merge to the fork's "
+                        f"{BRANCH}. The next run builds it.")
+                    return
+                self.command("git", "checkout", "--ours", "pnpm-lock.yaml", cwd=worktree)
+                self.command("npx", "--yes", "corepack", "pnpm", "install", "--lockfile-only",
+                             cwd=worktree)
+                self.command("git", "add", "pnpm-lock.yaml", cwd=worktree)
+                self.command("git", "commit", "--no-edit", cwd=worktree)
+            self.step = f"push {tag}"
+            self.command("git", "push", "origin", f"HEAD:refs/heads/{BRANCH}", cwd=worktree)
+        finally:
+            self.command("git", "worktree", "remove", "--force", worktree)
+        self.command("git", "fetch", "--quiet", "origin",
+                     f"refs/heads/{BRANCH}:refs/remotes/origin/{BRANCH}")
+        self.state.pop("integration_failure", None)
+        self.save()
+        self.phase = None
 
     def build(self):
         self.step = "checkout"
@@ -247,7 +307,7 @@ class Runner:
             return
         path = STATE_DIR / "state.json"
         self.state = json.loads(path.read_text()) if path.exists() else {}
-        for key in ("built", "installed", "build_failure", "install_failure"):
+        for key in ("built", "installed", "build_failure", "install_failure", "integration_failure"):
             if key in self.state:
                 record = self.state[key]
                 if not re.fullmatch(r"[0-9a-f]{7,40}", record["revision"]):
@@ -256,6 +316,8 @@ class Runner:
         self.step = "fetch branch"
         if not self.fetch():
             return
+        self.integrate()
+        self.step = "fork revision"
         self.revision = self.capture("git", "rev-parse", f"origin/{BRANCH}").strip()
         # Release tags reach the branch through the upstream release it
         # integrates, so this names the release the build is based on.
