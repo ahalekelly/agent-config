@@ -81,34 +81,6 @@
             "type" : "command"
           }
         ]
-      },
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
-            "type" : "command"
-          }
-        ]
-      }
-    ],
-    "PermissionRequest" : [
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
-            "type" : "command"
-          }
-        ]
-      }
-    ],
-    "PostToolUse" : [
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
-            "type" : "command"
-          }
-        ]
       }
     ],
     "PreToolUse" : [
@@ -141,14 +113,6 @@
             "type" : "command"
           }
         ]
-      },
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
-            "type" : "command"
-          }
-        ]
       }
     ],
     "SessionEnd" : [
@@ -156,14 +120,6 @@
         "hooks" : [
           {
             "command" : "uv run ~\/.claude\/tab-title.py",
-            "type" : "command"
-          }
-        ]
-      },
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
             "type" : "command"
           }
         ]
@@ -185,14 +141,6 @@
             "type" : "command"
           }
         ]
-      },
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
-            "type" : "command"
-          }
-        ]
       }
     ],
     "Stop" : [
@@ -200,34 +148,6 @@
         "hooks" : [
           {
             "command" : "uv run ~\/.claude\/tab-title.py",
-            "type" : "command"
-          }
-        ]
-      },
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
-            "type" : "command"
-          }
-        ]
-      }
-    ],
-    "StopFailure" : [
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
-            "type" : "command"
-          }
-        ]
-      }
-    ],
-    "SubagentStop" : [
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
             "type" : "command"
           }
         ]
@@ -262,14 +182,6 @@
         "hooks" : [
           {
             "command" : "\"$HOME\/.local\/bin\/uv\" run \"$HOME\/.agents\/hooks\/usage-identity.py\"",
-            "type" : "command"
-          }
-        ]
-      },
-      {
-        "hooks" : [
-          {
-            "command" : "\/Users\/akelly\/.config\/iterm2\/cc-status",
             "type" : "command"
           }
         ]
