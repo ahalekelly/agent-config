@@ -23,7 +23,7 @@ Edit the source under `claude/`, `codex/`, or `pi/`, then run:
 uv run ~/.agents/sync.py
 ```
 
-Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. Restart open shells after shell config changes.
+Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. A pulled change to `sync.py` itself takes effect on the following run. Restart open shells after shell config changes.
 
 Sync also quarantines fresh package releases: uv, npm, and pnpm refuse versions published in the last 3 days, configured through `uv/uv.toml`, `pnpm/config.yaml`, and `~/.npmrc`. Tools updated on purpose, such as Codex and Claude Code, are exempt by name; their dependencies are not. npm 11.15 or newer is required.
 
@@ -64,9 +64,15 @@ On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile.
 
 The `claudew` launcher (`bin/claudew`) uses `~/.claude-work` for a second account while sharing config and runtime data with the personal profile. See `claude/second-profile-setup.md`.
 
-The `claude-automation` launcher (`bin/claude-automation`) runs scheduled T3 threads on the personal profile with a one-year `claude setup-token` read from the gitignored `~/.agents/claude-token.env`, so they never depend on the refreshable login.
+The `claude-token` launcher (`bin/claude-token`) is T3 Code's personal Claude provider on every machine. It authenticates with a one-year `claude setup-token` read from the gitignored `~/.agents/claude-token.env`, so T3 threads never depend on the refreshable login. Token sessions can't use claude.ai connectors or Remote Control.
 
 Autodesk Fusion's local MCP endpoint is configured in the Codex macOS overlay. Enable it in Fusion under Preferences > General > API and keep Fusion running. Register it globally in Claude Code with `claude mcp add --transport http --scope user fusion http://127.0.0.1:27182/mcp`.
+
+Gmail comes from Google's Gmail MCP server (search, read, label, create drafts; no send or draft editing). It needs a Google Cloud project with the Gmail API and Gmail MCP API enabled, an OAuth consent screen with the `gmail.readonly` and `gmail.compose` scopes, and a Web application OAuth client whose redirect URI is `http://localhost:8080/callback`. Register it per machine, then authorize with `/mcp` in an interactive session:
+
+```bash
+claude mcp add-json --scope user gmail '{"type":"http","url":"https://gmailmcp.googleapis.com/mcp/v1","oauth":{"clientId":"<client id>","callbackPort":8080}}' --client-secret
+```
 
 ## History
 

@@ -82,7 +82,7 @@ def main() -> None:
             dispatch({"type": "project.create", "projectId": project_id, "title": Path(project_dir).name, "workspaceRoot": project_dir})
         thread_id = str(uuid.uuid4())
         dispatch({"type": "thread.create", "threadId": thread_id, "projectId": project_id,
-                  "title": title, "modelSelection": {"instanceId": "claudeAgent_claude_automation", "model": model},
+                  "title": title, "modelSelection": {"instanceId": "claudeAgent", "model": model},
                   "runtimeMode": "full-access", "branch": "main", "worktreePath": None})
     dispatch({"type": "thread.turn.start", "threadId": thread_id,
               "runtimeMode": "full-access", "interactionMode": "default",
