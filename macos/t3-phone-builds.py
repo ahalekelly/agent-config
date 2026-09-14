@@ -9,10 +9,11 @@ launchd owns this runner and its dedicated ~/Git/t3code checkout. Every half
 hour on AC power, build the fork's main branch, which integrates the stable
 upstream release with Adrian's feature branches. Re-sign and install on a
 connected, unlocked phone every five days.
-Failed builds and installs back off for a day; a phone that is disconnected or
-locked gets a daily reminder once renewal is due. Before the first install,
-reminders begin five days after the first successful build. A fetch that cannot
-reach GitHub waits for the next run and reports after a day of failed runs.
+Failed builds and installs back off for a day; a phone that is disconnected,
+unreachable, or locked gets a daily reminder once renewal is due. Before the
+first install, reminders begin five days after the first successful build. A
+fetch that cannot reach GitHub waits for the next run and reports after a day
+of failed runs.
 
 State and logs live in ~/Library/Application Support/t3-phone-builds. One
 DerivedData directory holds the current artifact. Profile expiration is read
@@ -43,7 +44,10 @@ DEVICE = "00008140-000809E90402201C"
 TEAM = "T3TBGN4UX7"
 BUNDLE_ID = "com.akelly.t3code"
 MODEL = "claude-opus-5"
-DEVICE_LOCKED = -402652958  # kAMDMobileImageMounterDeviceLocked, as reported in devicectl JSON
+# Error codes as reported in devicectl JSON.
+DEVICE_LOCKED = -402652958  # kAMDMobileImageMounterDeviceLocked
+# CoreDeviceError: a paired Wi-Fi phone that is asleep or dropping off the network resets the tunnel.
+DEVICE_UNREACHABLE = 4000
 DAY = timedelta(days=1)
 RENEW_AFTER = timedelta(days=5)
 
@@ -199,9 +203,12 @@ class Runner:
             services = self.attempt("xcrun", "devicectl", "device", "info", "ddiServices",
                                     "--device", DEVICE, "--json-output", report)
             if services.returncode:
-                if str(DEVICE_LOCKED) not in re.findall(r'"code"\s*:\s*(-?\d+)', report.read_text()):
-                    services.check_returncode()
-                return "locked"
+                codes = {int(code) for code in re.findall(r'"code"\s*:\s*(-?\d+)', report.read_text())}
+                if DEVICE_LOCKED in codes:
+                    return "locked"
+                if DEVICE_UNREACHABLE in codes:
+                    return "unreachable"
+                services.check_returncode()
         return None
 
     def profile(self, path):
