@@ -64,6 +64,8 @@ On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile.
 
 The `claudew` launcher (`bin/claudew`) uses `~/.claude-work` for a second account while sharing config and runtime data with the personal profile. See `claude/second-profile-setup.md`.
 
+The `claude-automation` launcher (`bin/claude-automation`) runs scheduled T3 threads on the personal profile with a one-year `claude setup-token` read from the gitignored `~/.agents/claude-token.env`, so they never depend on the refreshable login.
+
 Autodesk Fusion's local MCP endpoint is configured in the Codex macOS overlay. Enable it in Fusion under Preferences > General > API and keep Fusion running. Register it globally in Claude Code with `claude mcp add --transport http --scope user fusion http://127.0.0.1:27182/mcp`.
 
 ## History

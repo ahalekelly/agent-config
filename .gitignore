@@ -1,6 +1,7 @@
 # Dependencies, runtime state, and machine-local files.
 .DS_Store
 secrets.env
+claude-token.env
 web-bot-auth/private.pem
 node_modules/
 *.log
