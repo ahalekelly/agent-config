@@ -2,6 +2,7 @@
 
 personality = "pragmatic"
 model = "gpt-5.6-sol"
+model_instructions_file = "~/.agents/codex/model-instructions.md"
 plan_mode_reasoning_effort = "xhigh"
 
 sandbox_mode = "workspace-write"

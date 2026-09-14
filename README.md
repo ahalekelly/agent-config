@@ -32,6 +32,8 @@ Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex
 
 `claude/settings.json` holds only portable settings. Machine-specific ones go in `~/.claude/settings.local.json`, which Claude Code layers on top: sync writes `processWrapper` there on Linux and macOS, and hooks for tools installed on one machine (Herdr's session-start hook on akelly-desktop) belong there too. Sandbox filesystem rules are the exception: Claude Code ignores `sandbox` in the local file, so machine-specific entries such as akelly-desktop's NTFS mounts in `denyRead` live in `claude/settings.json`; the sandbox skips paths that don't exist on a machine.
 
+`codex/model-instructions.md` replaces Codex's base prompt for all models. It uses the GPT-6-Astra template with file-link formatting delegated to the user's machine-specific instructions. Maintain this prompt manually; model catalog updates do not refresh it. Start a new session after editing it.
+
 ## Setup
 
 Requires git and [uv](https://docs.astral.sh/uv/). Windows also requires Developer Mode for symlinks.
