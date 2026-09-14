@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Claude Code launcher for T3 Code's personal-profile provider. It authenticates
+# Claude Code launcher for T3 Code's personal Claude provider on the headless
+# desktop (see README.md for why the Mac stays on the login). It authenticates
 # with the one-year token from `claude setup-token`, stored as
 # CLAUDE_CODE_OAUTH_TOKEN in ~/.agents/claude-token.env, so threads never depend
 # on the refreshable login that interactive terminals rotate and can lose.
