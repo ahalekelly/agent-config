@@ -36,14 +36,18 @@ def fake_home(tmp_path):
     subprocess.run(["git", "-C", str(upstream), "add", "."], check=True)
     subprocess.run(["git", "-C", str(upstream), "commit", "-m", "Initial skill"], check=True, capture_output=True)
     subprocess.run(["git", "clone", str(upstream), str(repo / "skills" / ".mattpocock")], check=True, capture_output=True)
+    # Stub the schedulers so a test run never touches the real machine's services.
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    systemctl = bin_dir / "systemctl"
-    systemctl.write_text("#!/bin/sh\nexit 0\n")
-    systemctl.chmod(0o755)
+    for name in ("systemctl", "launchctl"):
+        stub = bin_dir / name
+        stub.write_text("#!/bin/sh\nexit 0\n")
+        stub.chmod(0o755)
+    (bin_dir / "schtasks.cmd").write_text("@echo off\nexit /b 0\n")
     environment = os.environ | {
         "HOME": str(home),
         "USERPROFILE": str(home),
+        "APPDATA": str(home / "AppData" / "Roaming"),
         "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
     }
     return home, repo, environment
@@ -76,7 +80,7 @@ def test_installs_profile_links(fake_home):
 
     assert read_link(home / ".claude" / "settings.json") == str(repo / "claude" / "settings.json")
     work_skills = home / ".claude-work" / "skills"
-    assert read_link(work_skills) == "../.claude/skills"
+    assert Path(read_link(work_skills)) == Path("../.claude/skills")
     assert work_skills.resolve() == (repo / "skills").resolve()
     assert "linked" in result.stdout
     assert run_sync(repo, environment).stdout == ""
@@ -312,7 +316,7 @@ def test_sync_initializes_submodules_and_publishes_edits(repositories, sync_modu
     parent.mkdir()
     git = sync_module.git
     git(parent, "init", "--initial-branch=main")
-    (parent / ".gitmodules").write_text(f'[submodule "child"]\npath = child\nurl = {tmp_path / "origin.git"}\n')
+    (parent / ".gitmodules").write_text(f'[submodule "child"]\npath = child\nurl = {(tmp_path / "origin.git").as_posix()}\n')
     git(parent, "add", ".gitmodules")
     git(parent, "update-index", "--add", "--cacheinfo", "160000", git(first, "rev-parse", "HEAD"), "child")
     monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "file")

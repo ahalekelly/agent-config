@@ -91,6 +91,9 @@ def print_diff(target: Path, source: Path) -> None:
 
 
 def link(target: Path, link_text: str, is_directory: bool) -> None:
+    # Windows cannot follow a relative link whose text uses forward slashes, so
+    # links are written and compared with native separators.
+    link_text = str(Path(link_text))
     target.parent.mkdir(parents=True, exist_ok=True)
     if same_link(target, link_text):
         return
@@ -425,7 +428,7 @@ def sync_mattpocock_skills() -> None:
             raise SyncError(f"{source}: missing SKILL.md")
         link(skills / source.name, source.relative_to(skills).as_posix(), True)
     for target in skills.iterdir():
-        if target.is_symlink() and read_link(target).startswith(".mattpocock/") and target.name not in names:
+        if target.is_symlink() and Path(read_link(target)).parts[:1] == (".mattpocock",) and target.name not in names:
             target.unlink()
             print(f"removed upstream skill link {target}")
 
@@ -438,23 +441,25 @@ def install_pull_schedule(platform: str) -> None:
             check=True,
         )
     elif platform == "macos":
+        launchctl = shutil.which("launchctl")
         for source in sorted((REPO / "macos/Library/LaunchAgents").glob("*.plist")):
             plist = HOME / "Library/LaunchAgents" / source.name
             label = f"gui/{os.getuid()}/{source.stem}"
-            loaded = subprocess.run(["launchctl", "print", label], capture_output=True)
+            loaded = subprocess.run([launchctl, "print", label], capture_output=True)
             if loaded.returncode == 0 and plist.exists() and plist.read_bytes() == source.read_bytes():
                 continue
             # launchd requires a regular plist file.
-            subprocess.run(["launchctl", "bootout", label], capture_output=True)
+            subprocess.run([launchctl, "bootout", label], capture_output=True)
             plist.parent.mkdir(parents=True, exist_ok=True)
             plist.write_bytes(source.read_bytes())
-            subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True)
+            subprocess.run([launchctl, "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True)
             print(f"installed launchd agent {plist}")
     elif platform == "windows":
         command = subprocess.list2cmdline([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"])
         subprocess.run(
-            ["schtasks", "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/TR", command],
+            [shutil.which("schtasks"), "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/TR", command],
             check=True,
+            capture_output=True,
         )
 
 

@@ -89,10 +89,6 @@
           {
             "command" : "uv run ~\/.agents\/hooks\/prevent-rm.py",
             "type" : "command"
-          },
-          {
-            "command" : "uv run ~\/.agents\/hooks\/prevent-root-search.py",
-            "type" : "command"
           }
         ],
         "matcher" : "Bash"
