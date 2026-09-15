@@ -455,7 +455,8 @@ def install_pull_schedule(platform: str) -> None:
             subprocess.run([launchctl, "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True)
             print(f"installed launchd agent {plist}")
     elif platform == "windows":
-        command = subprocess.list2cmdline([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"])
+        # uvw is uv without a console window, so the task runs without a terminal popping up.
+        command = subprocess.list2cmdline([shutil.which("uvw"), "run", "--quiet", str(REPO / "sync.py"), "pull"])
         subprocess.run(
             [shutil.which("schtasks"), "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/TR", command],
             check=True,
