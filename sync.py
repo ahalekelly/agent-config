@@ -77,8 +77,7 @@ def read_link(target: Path) -> str:
 
 
 def same_link(target: Path, link_text: str) -> bool:
-    """Compare as paths: git checks relative links out with backslashes on Windows."""
-    return target.is_symlink() and Path(read_link(target)) == Path(link_text)
+    return target.is_symlink() and read_link(target) == link_text
 
 
 def print_diff(target: Path, source: Path) -> None:
@@ -92,7 +91,8 @@ def print_diff(target: Path, source: Path) -> None:
 
 
 def link(target: Path, link_text: str, is_directory: bool) -> None:
-    # Windows cannot follow a relative link whose text uses forward slashes.
+    # Windows cannot follow a relative link whose text uses forward slashes, so
+    # links are written and compared with native separators.
     link_text = str(Path(link_text))
     target.parent.mkdir(parents=True, exist_ok=True)
     if same_link(target, link_text):
