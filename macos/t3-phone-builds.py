@@ -233,7 +233,11 @@ class Runner:
         self.command("npx", "expo", "prebuild", "--clean", "--platform", "ios", "--no-install",
                      cwd=REPO / "apps/mobile")
         self.step = "CocoaPods"
-        self.command("pod", "install", cwd=REPO / "apps/mobile/ios")
+        # Pods compile host stubs with a bare clang, which takes its SDK from the
+        # Command Line Tools. Apple ships those ahead of Xcode, and an SDK newer than
+        # Xcode's linker leaves it unable to read libSystem, so name Xcode's own SDK.
+        sdk = self.capture("xcrun", "--sdk", "macosx", "--show-sdk-path").strip()
+        self.command("env", f"SDKROOT={sdk}", "pod", "install", cwd=REPO / "apps/mobile/ios")
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
         info = workspace.parent / workspace.stem / "Info.plist"
         self.command("/usr/libexec/PlistBuddy", "-c",

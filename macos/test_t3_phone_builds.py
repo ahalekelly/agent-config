@@ -276,6 +276,35 @@ class IntegrationTests(StateTests):
         self.assertEqual(len(self.events), 1)
 
 
+class CocoaPodsTests(StateTests):
+    def test_pod_install_compiles_against_the_active_xcode_sdk(self):
+        workspace = self.root / "apps/mobile/ios/T3Code.xcworkspace"
+        workspace.mkdir(parents=True)
+        executable = self.root / "pod"
+        executable.write_text('#!/bin/sh\nprintf "SDKROOT=%s\\n" "$SDKROOT"\n')
+        executable.chmod(0o755)
+        runner = phone.Runner()
+        runner.log = self.root / "build.log"
+        runner.env["PATH"] = f"{self.root}:{runner.env['PATH']}"
+        capture, command = phone.Runner.capture, phone.Runner.command
+
+        def git_is_clean(self, *args, cwd=phone.REPO):
+            return "" if args[0] == "git" else capture(self, *args, cwd=cwd)
+
+        def only_pod_install(self, *args, cwd=phone.REPO):
+            if args[0] == "env":
+                command(self, *args, cwd=cwd)
+
+        with patch.object(phone, "REPO", self.root), \
+             patch.object(phone.Runner, "capture", git_is_clean), \
+             patch.object(phone.Runner, "command", only_pod_install), \
+             patch.object(phone.Runner, "xcodebuild", lambda _: None):
+            runner.build()
+        sdk = runner.log.read_text().splitlines()[-1].removeprefix("SDKROOT=")
+        developer = subprocess.run(["xcode-select", "-p"], capture_output=True, text=True).stdout.strip()
+        self.assertTrue(sdk.startswith(developer), sdk)
+
+
 class XcodebuildTests(unittest.TestCase):
     def test_xcodebuild_resets_metro_cache_without_changing_runner_ci(self):
         with tempfile.TemporaryDirectory() as folder:
