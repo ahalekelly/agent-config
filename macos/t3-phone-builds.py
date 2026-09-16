@@ -118,13 +118,18 @@ class Runner:
 
     def xcodebuild(self):
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
+        # Generated extension plists take their version from Xcode's build setting.
+        for target in (workspace.stem, "ExpoWidgetsTarget"):
+            info = workspace.parent / target / "Info.plist"
+            self.command("/usr/libexec/PlistBuddy", "-c",
+                         "Set :CFBundleVersion $(CURRENT_PROJECT_VERSION)", info)
         # Resolve Node at build time rather than retaining a versioned Homebrew path.
         (workspace.parent / ".xcode.env.local").write_text("export NODE_BINARY=$(command -v node)\n")
         # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
         self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                      "-configuration", "Release", "-destination", "generic/platform=iOS",
                      "-derivedDataPath", STATE_DIR / "DerivedData",
-                     "CODE_SIGNING_ALLOWED=NO", "build")
+                     "CODE_SIGNING_ALLOWED=NO", f"CURRENT_PROJECT_VERSION={self.version}", "build")
 
     def fetch(self):
         """Update the remotes, tolerating a network that is not up yet.
@@ -225,11 +230,6 @@ class Runner:
         # Xcode's linker leaves it unable to read libSystem, so name Xcode's own SDK.
         sdk = self.capture("xcrun", "--sdk", "macosx", "--show-sdk-path").strip()
         self.command("env", f"SDKROOT={sdk}", "pod", "install", cwd=REPO / "apps/mobile/ios")
-        workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
-        for target in (workspace.stem, "ExpoWidgetsTarget"):
-            info = workspace.parent / target / "Info.plist"
-            self.command("/usr/libexec/PlistBuddy", "-c",
-                         f"Set :CFBundleVersion {self.version}", info)
         self.step = "xcodebuild"
         self.xcodebuild()
         self.step = "package IPA"
@@ -249,6 +249,9 @@ class Runner:
             widget, = (copied / "PlugIns").glob("*.appex")
             for bundle in (copied, widget):
                 info = plistlib.loads((bundle / "Info.plist").read_bytes())
+                if info["CFBundleVersion"] != self.version:
+                    raise RuntimeError(
+                        f"{bundle.name} has CFBundleVersion {info['CFBundleVersion']}; expected {self.version}")
                 expected_group = f"group.{BUNDLE_ID}.{TEAM}"
                 if info.get("ExpoWidgetsAppGroupIdentifier") != expected_group:
                     raise RuntimeError(f"{bundle.name} does not use SideStore App Group {expected_group}")
