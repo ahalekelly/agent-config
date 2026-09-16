@@ -8,10 +8,33 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from filelock import FileLock
 
 ROOT = Path(__file__).resolve().parents[1]
 PLATFORM = {"darwin": "macos", "win32": "windows"}.get(sys.platform, "linux")
 linux_only = pytest.mark.skipif(PLATFORM != "linux", reason="systemd units are Linux-only")
+
+
+@pytest.mark.parametrize("args", [[], ["pull"]])
+def test_concurrent_sync_reports_busy_without_running(tmp_path, args):
+    repo = tmp_path / ".agents"
+    repo.mkdir()
+    script = repo / "sync.py"
+    shutil.copy2(ROOT / "sync.py", script)
+    environment = os.environ | {"HOME": str(tmp_path), "USERPROFILE": str(tmp_path)}
+    command = [sys.executable, str(script), *args]
+    with FileLock(tmp_path / ".agent-config-sync.lock", timeout=0):
+        result = subprocess.run(command, env=environment, capture_output=True, text=True, timeout=10)
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert result.stderr == "Another config sync is running; retry after it finishes.\n"
+    assert not (tmp_path / ".claude").exists()
+    result = subprocess.run(
+        [sys.executable, str(script), "invalid"],
+        env=environment, capture_output=True, text=True, timeout=10,
+    )
+    assert result.stderr == "usage: sync.py [pull]\n"
 
 
 @pytest.fixture

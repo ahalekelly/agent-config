@@ -27,6 +27,8 @@ Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a
 
 Sync also quarantines fresh package releases: uv, npm, and pnpm refuse versions published in the last 3 days, configured through `uv/uv.toml`, `pnpm/config.yaml`, and `~/.npmrc`. Tools updated on purpose, such as Codex and Claude Code, are exempt by name; their dependencies are not. npm 11.15 or newer is required.
 
+Only one sync runs at a time. If sync reports another run in progress, retry after it finishes.
+
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
 Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream checkout lives in `skills/.mattpocock/`, outside version control; links in `skills/` expose its skills to all agents. Keep upstream files unmodified so updates can fast-forward.
