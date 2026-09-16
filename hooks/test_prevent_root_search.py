@@ -12,6 +12,8 @@ import sys
 
 import pytest
 
+pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="the hook is installed only on akelly-desktop")
+
 spec = importlib.util.spec_from_file_location(
     "prevent_root_search", pathlib.Path(__file__).parent / "prevent-root-search.py"
 )

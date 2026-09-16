@@ -59,7 +59,7 @@ The desktop's local network (LAN) is a trusted environment. Desktop dashboards a
 
 ### akelly-desktop (Linux, headless)
 
-Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi; run it outside the sandbox for network, user-service, and SSH access. The Obsidian CLI and `open` aren't available. `trash` is npm's `trash-cli` in `~/.npm-global/bin` (XDG trash in `~/.local/share/Trash`). `trash-empty.timer` deletes trashed items daily after 7 days. `/tmp` is on the root filesystem (`tmp.mount` masked); systemd-tmpfiles removes entries untouched for 10 days. `~/.config/environment.d/path.conf` puts `~/.local/bin` and `~/.npm-global/bin` on PATH for systemd user services, so `claude`, `uv`, and `trash` resolve there without per-unit `Environment=PATH`. `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands outside the sandbox. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are. The NTFS drives under `/mnt` are slow to crawl, so they are hidden from sandboxed commands and excluded from the `plocate` index.
+Headless Ubuntu: bash, no desktop, no zsh. The `show-in-browser` workflow below opens local files in my Mac's Vivaldi; run it outside the sandbox for network, user-service, and SSH access. The Obsidian CLI and `open` aren't available. `trash` is npm's `trash-cli` in `~/.npm-global/bin` (XDG trash in `~/.local/share/Trash`). `trash-empty.timer` deletes trashed items daily after 7 days. `/tmp` is on the root filesystem (`tmp.mount` masked); systemd-tmpfiles removes entries untouched for 10 days. `~/.config/environment.d/path.conf` puts `~/.local/bin` and `~/.npm-global/bin` on PATH for systemd user services, so `claude`, `uv`, and `trash` resolve there without per-unit `Environment=PATH`. `sudo` is passwordless (`/etc/sudoers.d/akelly-nopasswd`), but the sandbox still blocks root operations, so run sudo commands outside the sandbox. The interactive Pi CLI isn't installed here; Codex and pi-for-claude are. The NTFS drives under `/mnt` are slow to crawl, so they are hidden from sandboxed commands and excluded from the `plocate` index. Never run `find`, `rg`, or `grep` from `/`, `~`, or `/mnt` (a hook in `~/.claude/settings.local.json` blocks these); look in the directory a tool said it wrote to, or search a specific directory.
 
 To find a file by name anywhere on this machine, use `plocate`; its index is rebuilt daily, so run `updatedb --require-visibility no` first (about 20 seconds, no sudo needed) if the file may be newer than that.
 
@@ -92,8 +92,6 @@ If I ask a question mid task, always answer my question first, before resuming w
 Sometimes I miss an earlier message of yours, especially one buried in a long run of tool calls. Don't assume I read everything: repeat anything still relevant — open questions, warnings, key findings — in your latest reply.
 
 Do not run `rm` directly or add it to scripts; use `trash` for deletions you author. Existing scripts and build tools may use `rm` internally.
-
-Never run `find`, `rg`, or `grep` from `/`, `~`, or `/mnt` (a hook blocks these); look in the directory a tool said it wrote to, or search a specific directory.
 
 Python, TypeScript, and Rust are the preferred languages when starting a greenfield project.
 
