@@ -261,12 +261,84 @@ class CocoaPodsTests(StateTests):
         self.assertTrue(sdk.startswith(developer), sdk)
 
 
-class XcodebuildTests(unittest.TestCase):
+def native_project(root):
+    ios = root / "apps/mobile/ios"
+    workspace = ios / "T3Code.xcworkspace"
+    workspace.mkdir(parents=True)
+    (workspace / "contents.xcworkspacedata").write_text(
+        '<Workspace version="1.0"><FileRef location="group:T3Code.xcodeproj"/></Workspace>')
+    project = ios / "T3Code.xcodeproj"
+    project.mkdir()
+    objects = {
+        "PROJECT": {"isa": "PBXProject", "mainGroup": "GROUP", "targets": ["APP", "WIDGET"],
+                    "buildConfigurationList": "CONFIGS", "compatibilityVersion": "Xcode 14.0"},
+        "GROUP": {"isa": "PBXGroup", "children": [], "sourceTree": "<group>"},
+        "CONFIGS": {"isa": "XCConfigurationList", "buildConfigurations": ["RELEASE"],
+                    "defaultConfigurationName": "Release"},
+        "RELEASE": {"isa": "XCBuildConfiguration", "name": "Release", "buildSettings": {
+            "SDKROOT": "iphoneos", "IPHONEOS_DEPLOYMENT_TARGET": "16.0"}},
+    }
+    for key, name, kind in (("APP", "T3Code", "application"),
+                            ("WIDGET", "ExpoWidgetsTarget", "app-extension")):
+        folder = ios / name
+        folder.mkdir()
+        (folder / "Info.plist").write_bytes(plistlib.dumps({
+            "CFBundleVersion": "0.0.42", "CFBundleShortVersionString": "0.0.42"}))
+        objects.update({
+            key: {"isa": "PBXNativeTarget", "name": name, "productName": name,
+                  "productType": "com.apple.product-type." + kind,
+                  "productReference": key + "PRODUCT", "buildPhases": [],
+                  "buildConfigurationList": key + "CONFIGS"},
+            key + "PRODUCT": {"isa": "PBXFileReference", "path": name + (".app" if key == "APP" else ".appex"),
+                              "sourceTree": "BUILT_PRODUCTS_DIR"},
+            key + "CONFIGS": {"isa": "XCConfigurationList", "buildConfigurations": [key + "RELEASE"],
+                              "defaultConfigurationName": "Release"},
+            key + "RELEASE": {"isa": "XCBuildConfiguration", "name": "Release", "buildSettings": {
+                "PRODUCT_NAME": name, "PRODUCT_BUNDLE_IDENTIFIER": "test." + name,
+                "GENERATE_INFOPLIST_FILE": "NO" if key == "APP" else "YES",
+                "INFOPLIST_FILE": name + "/Info.plist",
+                "CURRENT_PROJECT_VERSION": "1", "VERSIONING_SYSTEM": "apple-generic"}},
+        })
+    (project / "project.pbxproj").write_bytes(plistlib.dumps({
+        "archiveVersion": "1", "objectVersion": "56", "objects": objects, "rootObject": "PROJECT"}))
+    schemes = project / "xcshareddata/xcschemes"
+    schemes.mkdir(parents=True)
+    entries = "".join(
+        f'<BuildActionEntry buildForRunning="YES" buildForArchiving="YES">'
+        f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{key}" '
+        f'BlueprintName="{name}" ReferencedContainer="container:T3Code.xcodeproj"/>'
+        '</BuildActionEntry>'
+        for key, name in (("APP", "T3Code"), ("WIDGET", "ExpoWidgetsTarget")))
+    (schemes / "T3Code.xcscheme").write_text(
+        f'<Scheme version="1.7"><BuildAction><BuildActionEntries>{entries}'
+        '</BuildActionEntries></BuildAction></Scheme>')
+
+
+class XcodebuildTests(StateTests):
+    def test_generated_app_and_widget_use_release_build_version(self):
+        native_project(self.root)
+        runner = phone.Runner()
+        runner.version = "0.0.42"
+        with patch.object(phone, "REPO", self.root):
+            try:
+                runner.xcodebuild()
+            except subprocess.CalledProcessError:
+                self.fail(runner.log.read_text())
+        products = self.root / "DerivedData/Build/Products/Release-iphoneos"
+        for name in ("T3Code.app", "ExpoWidgetsTarget.appex"):
+            with self.subTest(bundle=name):
+                info = plistlib.loads((products / name / "Info.plist").read_bytes())
+                self.assertEqual(info["CFBundleVersion"], runner.version)
+
     def test_xcodebuild_resets_metro_cache_without_changing_runner_ci(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             workspace = root / "apps/mobile/ios/T3Code.xcworkspace"
             workspace.mkdir(parents=True)
+            for name in ("T3Code", "ExpoWidgetsTarget"):
+                target = workspace.parent / name
+                target.mkdir()
+                (target / "Info.plist").write_bytes(plistlib.dumps({"CFBundleVersion": "1"}))
             executable = root / "xcodebuild"
             executable.write_text('#!/bin/sh\nprintf "CI=%s\\n" "$CI"\n')
             executable.chmod(0o755)
@@ -280,6 +352,28 @@ class XcodebuildTests(unittest.TestCase):
 
 
 class PackageTests(StateTests):
+    def test_mismatched_bundle_version_preserves_existing_ipa(self):
+        app = self.root / "DerivedData/Build/Products/Release-iphoneos/T3Code.app"
+        widget = app / "PlugIns/ExpoWidgetsTarget.appex"
+        widget.mkdir(parents=True)
+        destination = self.root / "iCloud"
+        destination.mkdir()
+        ipa = destination / "T3Code.ipa"
+        ipa.write_bytes(b"existing IPA")
+        runner = phone.Runner()
+        runner.version = "0.0.42"
+        for stale in (app, widget):
+            with self.subTest(stale=stale.name):
+                for bundle in (app, widget):
+                    (bundle / "Info.plist").write_bytes(plistlib.dumps({
+                        "CFBundleVersion": "1" if bundle == stale else runner.version,
+                        "ExpoWidgetsAppGroupIdentifier": f"group.{phone.BUNDLE_ID}.{phone.TEAM}",
+                    }))
+                with patch.object(phone, "REPO", self.root), patch.object(phone, "ARTIFACT_DIR", destination):
+                    with self.assertRaisesRegex(RuntimeError, "CFBundleVersion"):
+                        runner.package()
+                self.assertEqual(ipa.read_bytes(), b"existing IPA")
+
     def test_ipa_preserves_widget_and_provisioning_entitlements(self):
         app = self.root / "DerivedData/Build/Products/Release-iphoneos/T3Code.app"
         widget = app / "PlugIns/ExpoWidgetsTarget.appex"
@@ -305,7 +399,9 @@ class PackageTests(StateTests):
             }))
         destination = self.root / "iCloud"
         with patch.object(phone, "REPO", self.root), patch.object(phone, "ARTIFACT_DIR", destination):
-            phone.Runner().package()
+            runner = phone.Runner()
+            runner.version = "1"
+            runner.package()
         with zipfile.ZipFile(destination / "T3Code.ipa") as archive:
             archive.extractall(self.root / "unpacked")
         for relative in ("T3Code.app", "T3Code.app/PlugIns/ExpoWidgetsTarget.appex"):
