@@ -4,9 +4,11 @@
 # ///
 import importlib.util
 import json
+import plistlib
 import subprocess
 import tempfile
 import unittest
+import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -23,8 +25,7 @@ TAG = "v0.0.39"
 
 def record(days=0, revision=FORK, version="0.0.38"):
     return {"revision": revision, "version": version,
-            "at": (NOW - timedelta(days=days)).isoformat(),
-            "expires_at": (NOW + timedelta(days=7-days)).isoformat()}
+            "at": (NOW - timedelta(days=days)).isoformat()}
 
 
 class StateTests(unittest.TestCase):
@@ -49,10 +50,7 @@ class RunTests(StateTests):
     def setUp(self):
         super().setUp()
         self.builds = 0
-        self.installs = 0
-        self.blocker = "not connected"
         self.fail_build = False
-        self.fail_install = False
         self.power = "Now drawing from 'AC Power'"
 
     def run_service(self):
@@ -64,27 +62,16 @@ class RunTests(StateTests):
         def build(runner):
             self.builds += 1
             if self.fail_build:
-                runner.step = "merge missing branch"
-                raise subprocess.CalledProcessError(1, "git fetch")
-            runner.state["built"] = record()
+                runner.step = "xcodebuild"
+                raise subprocess.CalledProcessError(1, "xcodebuild")
+            runner.state["packaged"] = record()
             runner.state.pop("build_failure", None)
-            runner.save()
-
-        def install(runner):
-            self.installs += 1
-            if self.fail_install:
-                raise RuntimeError("Signing failed")
-            runner.state["installed"] = record()
-            runner.state.pop("install_failure", None)
-            runner.state.pop("overdue_notified_at", None)
             runner.save()
 
         with patch.object(phone.Runner, "capture", capture), \
              patch.object(phone.Runner, "attempt", lambda _, *a, cwd=None: subprocess.CompletedProcess(a, 0)), \
              patch.object(phone.Runner, "integrate", lambda _: None), \
              patch.object(phone.Runner, "build", build), \
-             patch.object(phone.Runner, "install", install), \
-             patch.object(phone.Runner, "phone_blocker", lambda _: self.blocker), \
              patch.object(phone.Runner, "notify", lambda _, title, body: self.events.append((title, body))):
             return phone.main()
 
@@ -94,28 +81,19 @@ class RunTests(StateTests):
         self.assertEqual(self.builds, 0)
         self.assertEqual(self.events, [])
 
-    def test_first_build_waits_silently_for_phone(self):
+    def test_first_build_publishes_and_notifies_once(self):
+        self.assertEqual(self.run_service(), 0)
         self.assertEqual(self.run_service(), 0)
         self.assertEqual(self.builds, 1)
+        self.assertEqual(len(self.events), 1)
+        self.assertIn("SideStore update", self.events[0][0])
+        self.assertIn("keep its widget extension", self.events[0][1])
+
+    def test_sidestore_owns_renewal_without_rebuilding(self):
+        self.save({"packaged": record(8), "notified_revision": FORK})
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.builds, 0)
         self.assertEqual(self.events, [])
-        self.run_service()
-        self.assertEqual(self.builds, 1)
-
-    def test_first_install_overdue_after_five_days(self):
-        self.save({"built": record(5)})
-        self.run_service()
-        self.run_service()
-        self.assertEqual(len(self.events), 1)
-        self.assertEqual(self.events[0][0], "iPhone: first install overdue")
-
-    def test_overdue_once_per_day(self):
-        self.save({"built": record(6), "installed": record(6)})
-        self.run_service()
-        self.run_service()
-        self.assertEqual(len(self.events), 1)
-        with patch.object(phone, "now", return_value=NOW + phone.DAY):
-            self.run_service()
-        self.assertEqual(len(self.events), 2)
 
     def test_failed_build_backoff_and_retry(self):
         self.fail_build = True
@@ -127,47 +105,24 @@ class RunTests(StateTests):
         with patch.object(phone, "now", return_value=NOW + phone.DAY):
             self.run_service()
         self.assertEqual(self.builds, 2)
+        self.assertEqual(self.state()["packaged"]["revision"], FORK)
 
     def test_different_revision_bypasses_failure_backoff(self):
         self.save({"build_failure": record(revision=MERGED)})
         self.run_service()
         self.assertEqual(self.builds, 1)
 
-    def test_install_renews_without_rebuilding_after_five_days(self):
-        self.blocker = None
-        self.save({"built": record(6), "installed": record(5), "overdue_notified_at": NOW.isoformat()})
+    def test_new_revision_builds_and_notifies(self):
+        self.save({"packaged": record(revision=MERGED), "notified_revision": MERGED})
         self.run_service()
-        self.run_service()
-        self.assertEqual(self.builds, 0)
-        self.assertEqual(self.installs, 1)
-        self.assertNotIn("overdue_notified_at", self.state())
+        self.assertEqual(self.builds, 1)
+        self.assertEqual(self.state()["notified_revision"], FORK)
 
-    def test_failed_install_does_not_rebuild_or_retry_same_day(self):
-        self.blocker, self.fail_install = None, True
-        self.save({"built": record()})
-        self.assertEqual(self.run_service(), 1)
-        self.assertEqual(self.run_service(), 0)
+    def test_unreported_package_notifies_without_rebuilding(self):
+        self.save({"packaged": record()})
+        self.run_service()
         self.assertEqual(self.builds, 0)
-        self.assertEqual(self.installs, 1)
         self.assertEqual(len(self.events), 1)
-
-    def test_locked_phone_waits_without_backoff(self):
-        self.blocker = "locked"
-        self.save({"built": record(6)})
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.installs, 0)
-        self.assertEqual(self.events[0][0], "iPhone: first install overdue")
-        self.assertIn("The phone is locked.", self.events[0][1])
-        self.assertNotIn("install_failure", self.state())
-        self.blocker = None
-        self.run_service()
-        self.assertEqual(self.installs, 1)
-
-    def test_new_revision_installs_immediately(self):
-        self.blocker = None
-        self.save({"built": record(revision=MERGED), "installed": record(revision=MERGED)})
-        self.run_service()
-        self.assertEqual((self.builds, self.installs), (1, 1))
 
 
 class IntegrationTests(StateTests):
@@ -217,15 +172,15 @@ class IntegrationTests(StateTests):
 
         def build(runner):
             self.builds.append(runner.revision)
-            runner.state["built"] = record(revision=runner.revision, version=runner.version)
+            runner.state["packaged"] = record(revision=runner.revision, version=runner.version)
             runner.save()
 
         with patch.object(phone.Runner, "capture", capture), \
              patch.object(phone.Runner, "attempt", attempt), \
              patch.object(phone.Runner, "command", command), \
              patch.object(phone.Runner, "build", build), \
-             patch.object(phone.Runner, "phone_blocker", lambda _: "not connected"), \
-             patch.object(phone.Runner, "notify", lambda _, title, body: self.events.append((title, body))):
+             patch.object(phone.Runner, "notify", lambda _, title, body:
+                          self.events.append((title, body)) if "SideStore update" not in title else None):
             return phone.main()
 
     def ran(self, *prefix):
@@ -298,7 +253,8 @@ class CocoaPodsTests(StateTests):
         with patch.object(phone, "REPO", self.root), \
              patch.object(phone.Runner, "capture", git_is_clean), \
              patch.object(phone.Runner, "command", only_pod_install), \
-             patch.object(phone.Runner, "xcodebuild", lambda _: None):
+             patch.object(phone.Runner, "xcodebuild", lambda _: None), \
+             patch.object(phone.Runner, "package", lambda _: None):
             runner.build()
         sdk = runner.log.read_text().splitlines()[-1].removeprefix("SDKROOT=")
         developer = subprocess.run(["xcode-select", "-p"], capture_output=True, text=True).stdout.strip()
@@ -323,33 +279,43 @@ class XcodebuildTests(unittest.TestCase):
             self.assertEqual(runner.env["CI"], "1")
 
 
-class PhoneBlockerTests(unittest.TestCase):
-    def blocker(self, udids, ddi_error):
-        def command(runner, *args, cwd=phone.REPO):
-            Path(args[-1]).write_text(json.dumps(
-                {"result": {"devices": [{"hardwareProperties": {"udid": udid}} for udid in udids]}}))
-
-        def attempt(runner, *args, cwd=phone.REPO):
-            Path(args[-1]).write_text(json.dumps(ddi_error or {}))
-            return subprocess.CompletedProcess(args, 1 if ddi_error else 0)
-
-        with patch.object(phone.Runner, "command", command), patch.object(phone.Runner, "attempt", attempt):
-            return phone.Runner().phone_blocker()
-
-    def test_absent_phone(self):
-        self.assertEqual(self.blocker(["00008140-other"], None), "not connected")
-
-    def test_mounted_image_clears_the_phone_for_install(self):
-        self.assertIsNone(self.blocker([phone.DEVICE], None))
-
-    def test_locked_phone_from_nested_mount_error(self):
-        error = {"error": {"code": 12040, "userInfo": {"NSUnderlyingError": {
-            "error": {"code": phone.DEVICE_LOCKED}}}}}
-        self.assertEqual(self.blocker([phone.DEVICE], error), "locked")
-
-    def test_other_mount_failure_is_a_real_failure(self):
-        with self.assertRaises(subprocess.CalledProcessError):
-            self.blocker([phone.DEVICE], {"error": {"code": 12040}})
+class PackageTests(StateTests):
+    def test_ipa_preserves_widget_and_provisioning_entitlements(self):
+        app = self.root / "DerivedData/Build/Products/Release-iphoneos/T3Code.app"
+        widget = app / "PlugIns/ExpoWidgetsTarget.appex"
+        for bundle, identifier, package_type in (
+            (app, phone.BUNDLE_ID, "APPL"),
+            (widget, phone.BUNDLE_ID + ".widgets", "XPC!"),
+        ):
+            bundle.mkdir(parents=True)
+            info = {
+                "CFBundleIdentifier": identifier,
+                "CFBundleExecutable": bundle.stem,
+                "CFBundlePackageType": package_type,
+                "CFBundleVersion": "1",
+                "ExpoWidgetsAppGroupIdentifier": f"group.{phone.BUNDLE_ID}.{phone.TEAM}",
+            }
+            (bundle / "Info.plist").write_bytes(plistlib.dumps(info))
+            subprocess.run(["xcrun", "clang", "-x", "c", "-", "-o", str(bundle / bundle.stem)],
+                           input="int main(void) { return 0; }", text=True, check=True)
+            entitlements = self.root / f"apps/mobile/ios/{bundle.stem}/{bundle.stem}.entitlements"
+            entitlements.parent.mkdir(parents=True)
+            entitlements.write_bytes(plistlib.dumps({
+                "com.apple.security.application-groups": [f"group.{phone.BUNDLE_ID}"],
+            }))
+        destination = self.root / "iCloud"
+        with patch.object(phone, "REPO", self.root), patch.object(phone, "ARTIFACT_DIR", destination):
+            phone.Runner().package()
+        with zipfile.ZipFile(destination / "T3Code.ipa") as archive:
+            archive.extractall(self.root / "unpacked")
+        for relative in ("T3Code.app", "T3Code.app/PlugIns/ExpoWidgetsTarget.appex"):
+            bundle = self.root / "unpacked/Payload" / relative
+            signed = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(bundle)],
+                                    capture_output=True, check=True)
+            self.assertEqual(plistlib.loads(signed.stdout)["com.apple.security.application-groups"],
+                             [f"group.{phone.BUNDLE_ID}"])
+            info = plistlib.loads((bundle / "Info.plist").read_bytes())
+            self.assertEqual(info["ExpoWidgetsAppGroupIdentifier"], f"group.{phone.BUNDLE_ID}.{phone.TEAM}")
 
 
 if __name__ == "__main__":
