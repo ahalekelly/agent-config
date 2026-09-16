@@ -26,10 +26,8 @@ _patched_claude() {
   _scrub_secrets "$bin" "$@"
 }
 
-# The personal profile must leave CLAUDE_CONFIG_DIR unset: Claude Code keys its
-# macOS Keychain entry on whether the variable is set, so setting it even to the
-# default ~/.claude would split credentials from tools that launch `claude` bare.
-claude() { _patched_claude "$@"; }
-# The work profile is ~/.agents/bin/claudew, an executable so T3 can spawn it too.
+# Both profiles are executables under ~/.agents/bin so T3 can spawn them too;
+# each authenticates with its own setup token. The work profile is claudew.
+claude() { "$HOME/.agents/bin/claude-token" "$@"; }
 ca() { claude agents "$@"; }
 caw() { claudew agents "$@"; }

@@ -62,9 +62,7 @@ The browser AppArmor rule covers the current user's standard agent-browser, Play
 
 On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile. On Windows, rerun sync after enabling Developer Mode if symlink creation fails, and install `jq` (`winget install jqlang.jq`) for the prompt hooks. Windows paths and native Codex settings live in `codex/config.windows.toml`.
 
-The `claudew` launcher (`bin/claudew`) uses `~/.claude-work` for a second account while sharing config and runtime data with the personal profile. See `claude/second-profile-setup.md`.
-
-The `claude-token` and `claudew-token` launchers (`bin/`) are T3 Code's personal and work Claude providers on every machine. Each authenticates with a one-year `claude setup-token` read from the gitignored `~/.agents/claude-token.env` or `~/.agents/claudew-token.env`, so T3 threads never depend on the refreshable login. Token sessions can't use claude.ai connectors or Remote Control.
+Every Claude Code launch, terminal or T3 Code, goes through a per-profile launcher in `bin/`: `claude-token` for the personal profile (the `claude` shell function) and `claudew` for the work profile, which uses `~/.claude-work` while sharing config and runtime data with the personal profile. Each authenticates with a one-year token from `command claude setup-token`, stored as `CLAUDE_CODE_OAUTH_TOKEN=<token>` in the gitignored `~/.agents/claude-token.env` or `~/.agents/claudew-token.env`, so no session depends on a refreshable login. Token sessions can't use claude.ai connectors or Remote Control. See `claude/second-profile-setup.md`.
 
 Autodesk Fusion's local MCP endpoint is configured in the Codex macOS overlay. Enable it in Fusion under Preferences > General > API and keep Fusion running. Register it globally in Claude Code with `claude mcp add --transport http --scope user fusion http://127.0.0.1:27182/mcp`.
 
