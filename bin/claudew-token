@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Claude Code launcher for T3 Code's work Claude provider. It runs the work
+# profile (~/.claude-work) and authenticates with the one-year token from
+# `claudew setup-token`, stored as CLAUDE_CODE_OAUTH_TOKEN in
+# ~/.agents/claudew-token.env, so threads never depend on the refreshable login
+# that interactive terminals rotate and can lose.
+# Token sessions can't use claude.ai connectors or Remote Control.
+# Auto-update stays off because every profile shares one version store; two
+# updaters installing the same version race and corrupt the install.
+token_file="$HOME/.agents/claudew-token.env"
+if [[ ! -r "$token_file" ]]; then
+  echo "claudew-token: $token_file is missing; run 'claudew setup-token' and store it as CLAUDE_CODE_OAUTH_TOKEN=<token>" >&2
+  exit 1
+fi
+source "$HOME/.agents/shell/agent-wrappers.sh"
+set -a; source "$token_file"; set +a
+CLAUDE_CONFIG_DIR="$HOME/.claude-work" DISABLE_AUTOUPDATER=1 _patched_claude "$@"

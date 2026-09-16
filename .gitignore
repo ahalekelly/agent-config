@@ -2,6 +2,7 @@
 .DS_Store
 secrets.env
 claude-token.env
+claudew-token.env
 web-bot-auth/private.pem
 node_modules/
 *.log
