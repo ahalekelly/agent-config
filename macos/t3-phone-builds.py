@@ -3,25 +3,17 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Keep Adrian's iPhone signed and running his T3 Code fork.
+"""Build Adrian's T3 Code fork for SideStore.
 
-launchd owns this runner and its dedicated ~/Git/t3code checkout. Every half
-hour on AC power, merge the newest stable upstream release into the fork's main
-branch and build that branch, which carries Adrian's feature branches on top of
-the release. A merge that conflicts beyond the lockfile asks an agent for help.
-Re-sign and install on a connected, unlocked phone every five days.
-Failed merges, builds and installs back off for a day; a phone that is disconnected,
-unreachable, or locked gets a daily reminder once renewal is due. Before the
-first install, reminders begin five days after the first successful build. A
-fetch that cannot reach GitHub waits for the next run and reports after a day
-of failed runs.
+Every half hour on AC power, integrate the newest stable upstream release into
+main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. SideStore
+owns installation, signing, and renewal. Failed merges and builds back off for
+a day; a network outage waits for the next run and reports after a day.
 
-State and logs live in ~/Library/Application Support/t3-phone-builds. One
-DerivedData directory holds the current artifact. Profile expiration is read
-from the signed app so notifications describe the actual signature lifetime.
-T3 notifications use bin/t3-thread.py against the service in ~/.t3-service.
-Run manually only while the launchd job is unloaded; launchd serializes its
-own runs. The checkout must have no tracked edits before a release build.
+launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
+only while the job is unloaded. State, logs, and DerivedData live in
+~/Library/Application Support/t3-phone-builds. T3 notifications use the service
+in ~/.t3-service. Work on fixes in a separate worktree.
 """
 
 import json
@@ -29,6 +21,7 @@ import os
 import plistlib
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -41,16 +34,11 @@ REPO = Path.home() / "Git/t3code"
 STATE_DIR = Path.home() / "Library/Application Support/t3-phone-builds"
 THREAD_HELPER = Path.home() / ".agents/bin/t3-thread.py"
 BRANCH = "main"
-DEVICE = "00008140-000809E90402201C"
+ARTIFACT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/SideStore Setup"
 TEAM = "T3TBGN4UX7"
 BUNDLE_ID = "com.akelly.t3code"
 MODEL = "claude-opus-5"
-# Error codes as reported in devicectl JSON.
-DEVICE_LOCKED = -402652958  # kAMDMobileImageMounterDeviceLocked
-# CoreDeviceError: a paired Wi-Fi phone that is asleep or dropping off the network resets the tunnel.
-DEVICE_UNREACHABLE = 4000
 DAY = timedelta(days=1)
-RENEW_AFTER = timedelta(days=5)
 
 
 def now():
@@ -81,8 +69,9 @@ class Runner:
             **os.environ,
             "APP_VARIANT": "production",
             "T3CODE_HOME": str(Path.home() / ".t3-service"),
-            "T3CODE_IOS_PERSONAL_TEAM": "1",
-            "T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID": BUNDLE_ID,
+            "T3CODE_IOS_SIGNING": "sidestore",
+            "T3CODE_IOS_BUNDLE_ID": BUNDLE_ID,
+            "T3CODE_IOS_SIDESTORE_TEAM_ID": TEAM,
             "EXPO_NO_GIT_STATUS": "1",
             "CI": "1",
         }
@@ -129,15 +118,18 @@ class Runner:
 
     def xcodebuild(self):
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
-        # pod install pins NODE_BINARY to Node's versioned Cellar path, which Homebrew
-        # deletes on upgrade; renewals rebuild days later, so resolve node at build time.
+        # Generated extension plists take their version from Xcode's build setting.
+        for target in (workspace.stem, "ExpoWidgetsTarget"):
+            info = workspace.parent / target / "Info.plist"
+            self.command("/usr/libexec/PlistBuddy", "-c",
+                         "Set :CFBundleVersion $(CURRENT_PROJECT_VERSION)", info)
+        # Resolve Node at build time rather than retaining a versioned Homebrew path.
         (workspace.parent / ".xcode.env.local").write_text("export NODE_BINARY=$(command -v node)\n")
         # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
         self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                      "-configuration", "Release", "-destination", "generic/platform=iOS",
                      "-derivedDataPath", STATE_DIR / "DerivedData",
-                     "-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration",
-                     f"DEVELOPMENT_TEAM={TEAM}", "build")
+                     "CODE_SIGNING_ALLOWED=NO", f"CURRENT_PROJECT_VERSION={self.version}", "build")
 
     def fetch(self):
         """Update the remotes, tolerating a network that is not up yet.
@@ -228,77 +220,53 @@ class Runner:
         self.command("npx", "--yes", "corepack", "pnpm", "install", "--frozen-lockfile")
         self.step = "prebuild"
         # Prebuild and xcodebuild replace the one artifact this state describes.
-        self.state.pop("built", None)
+        self.state.pop("packaged", None)
         self.save()
         self.command("npx", "expo", "prebuild", "--clean", "--platform", "ios", "--no-install",
                      cwd=REPO / "apps/mobile")
         self.step = "CocoaPods"
-        self.command("pod", "install", cwd=REPO / "apps/mobile/ios")
-        workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
-        info = workspace.parent / workspace.stem / "Info.plist"
-        self.command("/usr/libexec/PlistBuddy", "-c",
-                     f"Set :CFBundleVersion {self.version}", info)
+        # Pods compile host stubs with a bare clang, which takes its SDK from the
+        # Command Line Tools. Apple ships those ahead of Xcode, and an SDK newer than
+        # Xcode's linker leaves it unable to read libSystem, so name Xcode's own SDK.
+        sdk = self.capture("xcrun", "--sdk", "macosx", "--show-sdk-path").strip()
+        self.command("env", f"SDKROOT={sdk}", "pod", "install", cwd=REPO / "apps/mobile/ios")
         self.step = "xcodebuild"
         self.xcodebuild()
-        self.state["built"] = self.record()
+        self.step = "package IPA"
+        self.package()
+        self.state["packaged"] = self.record()
         self.state.pop("build_failure", None)
         self.save()
 
-    def phone_blocker(self):
-        """Report why the phone cannot take an install, or None when it can.
-
-        Mounting the developer disk image needs an unlocked phone, and the mount
-        lasts until the phone reboots, so this probe also leaves later installs
-        working while the phone is locked.
-        """
-        with tempfile.TemporaryDirectory(prefix="t3-phone-device-") as folder:
-            devices = Path(folder) / "devices.json"
-            self.command("xcrun", "devicectl", "list", "devices", "--filter",
-                         "State == 'connected' OR State == 'available (paired)'",
-                         "--json-output", devices)
-            if not any(device["hardwareProperties"]["udid"] == DEVICE
-                       for device in json.loads(devices.read_text())["result"]["devices"]):
-                return "not connected"
-            report = Path(folder) / "ddi.json"
-            services = self.attempt("xcrun", "devicectl", "device", "info", "ddiServices",
-                                    "--device", DEVICE, "--json-output", report)
-            if services.returncode:
-                codes = {int(code) for code in re.findall(r'"code"\s*:\s*(-?\d+)', report.read_text())}
-                if DEVICE_LOCKED in codes:
-                    return "locked"
-                if DEVICE_UNREACHABLE in codes:
-                    return "unreachable"
-                services.check_returncode()
-        return None
-
-    def profile(self, path):
-        return plistlib.loads(self.capture("security", "cms", "-D", "-i", path).encode())
-
-    def install(self):
-        self.step = "renew signing"
-        for folder in ("Library/Developer/Xcode/UserData/Provisioning Profiles",
-                       "Library/MobileDevice/Provisioning Profiles"):
-            for path in (Path.home() / folder).glob("*.mobileprovision"):
-                if self.profile(path)["Entitlements"]["application-identifier"].endswith("." + BUNDLE_ID):
-                    self.command("/usr/bin/trash", path)
-        self.xcodebuild()
+    def package(self):
         app, = (STATE_DIR / "DerivedData/Build/Products/Release-iphoneos").glob("*.app")
-        expires = self.profile(app / "embedded.mobileprovision")["ExpirationDate"].replace(tzinfo=timezone.utc)
-        if expires - now() < timedelta(days=6):
-            raise RuntimeError(f"Xcode did not issue a fresh profile; it expires {expires.isoformat()}")
-        self.step = "install app"
-        self.command("xcrun", "devicectl", "device", "install", "app", "--device", DEVICE, app)
-        self.state["installed"] = {**self.record(), "expires_at": expires.isoformat()}
-        self.state.pop("install_failure", None)
-        self.state.pop("overdue_notified_at", None)
-        self.save()
-        self.outcome = "installed"
-        self.phase = None
-        self.notify(f"iPhone: installed {self.version} ({self.short})",
-                    f"Installed {BRANCH} at {self.short}, based on v{self.version}.\n"
-                    f"Install time: {self.state['installed']['at']}.\n"
-                    f"Signature expires: {expires.isoformat()}.\n"
-                    "No action is needed beyond a one-line acknowledgement.")
+        native = REPO / "apps/mobile/ios"
+        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="t3-sidestore-") as folder:
+            payload = Path(folder) / "Payload"
+            copied = payload / app.name
+            shutil.copytree(app, copied, symlinks=True)
+            widget, = (copied / "PlugIns").glob("*.appex")
+            for bundle in (copied, widget):
+                info = plistlib.loads((bundle / "Info.plist").read_bytes())
+                if info["CFBundleVersion"] != self.version:
+                    raise RuntimeError(
+                        f"{bundle.name} has CFBundleVersion {info['CFBundleVersion']}; expected {self.version}")
+                expected_group = f"group.{BUNDLE_ID}.{TEAM}"
+                if info.get("ExpoWidgetsAppGroupIdentifier") != expected_group:
+                    raise RuntimeError(f"{bundle.name} does not use SideStore App Group {expected_group}")
+            # SideStore reads the source signature's entitlements when provisioning.
+            # Ad-hoc signatures preserve them without an Apple signing certificate.
+            self.command("codesign", "--force", "--deep", "--sign", "-", copied)
+            for bundle, entitlements in (
+                (widget, native / "ExpoWidgetsTarget/ExpoWidgetsTarget.entitlements"),
+                (copied, native / f"{app.stem}/{app.stem}.entitlements"),
+            ):
+                self.command("codesign", "--force", "--sign", "-", "--entitlements", entitlements, bundle)
+            self.command("codesign", "--verify", "--deep", "--strict", copied)
+            ipa = ARTIFACT_DIR / "T3Code.ipa.tmp"
+            self.command("ditto", "-c", "-k", "--keepParent", "--norsrc", payload, ipa)
+            ipa.replace(ARTIFACT_DIR / "T3Code.ipa")
 
     def run(self):
         self.step = "power check"
@@ -307,7 +275,7 @@ class Runner:
             return
         path = STATE_DIR / "state.json"
         self.state = json.loads(path.read_text()) if path.exists() else {}
-        for key in ("built", "installed", "build_failure", "install_failure", "integration_failure"):
+        for key in ("packaged", "build_failure", "integration_failure"):
             if key in self.state:
                 record = self.state[key]
                 if not re.fullmatch(r"[0-9a-f]{7,40}", record["revision"]):
@@ -323,8 +291,8 @@ class Runner:
         # integrates, so this names the release the build is based on.
         self.version = self.capture("git", "describe", "--tags", "--abbrev=0", "--exclude", "*-*",
                                     "--match", "v[0-9]*.[0-9]*.[0-9]*", self.revision).strip()[1:]
-        built = self.state.get("built")
-        if built is None or built["revision"] != self.revision:
+        packaged = self.state.get("packaged")
+        if packaged is None or packaged["revision"] != self.revision:
             if cooling_down(self.state.get("build_failure"), self.revision):
                 self.outcome = "build failure cooldown"
                 return
@@ -332,31 +300,16 @@ class Runner:
             self.log.write_text("")
             self.build()
             self.outcome = "built"
-        self.phase = "install_failure"
-        installed = self.state.get("installed")
-        if installed and installed["revision"] == self.revision and elapsed(installed["at"]) < RENEW_AFTER:
-            self.outcome = "up to date"
-            return
-        if cooling_down(self.state.get("install_failure"), self.revision):
-            self.outcome = "install failure cooldown"
-            return
-        self.step = "phone reachability"
-        blocker = self.phone_blocker()
-        if blocker:
-            self.outcome = f"phone {blocker}"
-            due = elapsed((installed or self.state["built"])["at"]) >= RENEW_AFTER
-            notified = self.state.get("overdue_notified_at")
-            if due and (notified is None or elapsed(notified) >= DAY):
-                expiry = installed["expires_at"] if installed else "No app installed yet"
-                title = f"iPhone build expires {expiry[:10]}" if installed else "iPhone: first install overdue"
-                self.notify(title, f"The phone is {blocker}.\n"
-                            f"Signature expiry: {expiry}.\nConnect the phone to the Mac and unlock it; "
-                            "this is the only action needed.")
-                self.state["overdue_notified_at"] = now().isoformat()
-                self.save()
-                self.outcome = "overdue notification"
-            return
-        self.install()
+        self.phase = None
+        if self.state.get("notified_revision") != self.revision:
+            self.notify(f"iPhone: SideStore update {self.version} ({self.short})",
+                        f"Widget-enabled IPA ready: {ARTIFACT_DIR / 'T3Code.ipa'}.\n"
+                        f"Built {BRANCH} at {self.short}, based on v{self.version}.\n"
+                        "Tell Adrian to import this IPA into SideStore and keep its widget extension. "
+                        "SideStore owns signing and renewal. Do not install it with Xcode or devicectl.")
+            self.state["notified_revision"] = self.revision
+            self.save()
+        self.outcome = "IPA ready"
 
 
 def main():

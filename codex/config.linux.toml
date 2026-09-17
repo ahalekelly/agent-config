@@ -1,5 +1,9 @@
 model = "gpt-6-astra"
 
+[mcp_servers.playwright]
+command = "/home/akelly/.local/bin/node"
+args = ["/home/akelly/.agents/browser-swarm/src/launch.ts", "chromium"]
+
 [permissions.workspace_sandbox.filesystem]
 ":minimal" = "read"
 "~/.agents" = "read"

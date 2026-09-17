@@ -30,6 +30,10 @@ approval_mode = "approve"
 [mcp_servers.fusion]
 url = "http://127.0.0.1:27182/mcp"
 
+[mcp_servers.playwright]
+command = "/opt/homebrew/bin/node"
+args = ["/Users/akelly/.agents/browser-swarm/src/launch.ts", "chromium"]
+
 [mcp_servers.paper-search]
 command = "sh"
 args = ["-c", "exec uv run --directory \"$HOME/Git/paper-search-mcp\" paper-search-mcp"]
