@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -43,6 +44,17 @@ def fake_home(tmp_path):
         stub = bin_dir / name
         stub.write_text("#!/bin/sh\nexit 0\n")
         stub.chmod(0o755)
+    (bin_dir / "launchctl").write_text(
+        f"#!{sys.executable}\n"
+        '# /// script\n# requires-python = ">=3.11"\n# ///\n'
+        "import sys\nfrom pathlib import Path\n"
+        "command, target, *paths = sys.argv[1:]\n"
+        "label = Path(paths[0]).stem if paths else target.rsplit('/', 1)[-1]\n"
+        "state = Path(__file__).parent / label\n"
+        "if command == 'print': sys.exit(0 if state.exists() else 113)\n"
+        "if command == 'bootstrap': state.touch()\n"
+        "if command == 'bootout': state.unlink()\n"
+    )
     (bin_dir / "schtasks.cmd").write_text("@echo off\nexit /b 0\n")
     environment = os.environ | {
         "HOME": str(home),
@@ -247,6 +259,37 @@ def sync_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.mark.parametrize("removal_status", [113, 5, 0])
+def test_launchd_reload_waits_for_removal(tmp_path, monkeypatch, sync_module, removal_status):
+    source = tmp_path / "repo/macos/Library/LaunchAgents/example.plist"
+    source.parent.mkdir(parents=True)
+    source.write_text("new definition")
+    monkeypatch.setattr(sync_module, "REPO", tmp_path / "repo")
+    monkeypatch.setattr(sync_module, "HOME", tmp_path / "home")
+    monkeypatch.setattr(sync_module.shutil, "which", lambda _: "launchctl")
+    statuses = iter([0, 0, removal_status])
+    ticks = iter([0, 0, 31])
+    monkeypatch.setattr(time, "monotonic", lambda: next(ticks))
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+    commands = []
+
+    def run(args, **kwargs):
+        command = args[1]
+        commands.append(command)
+        status = next(statuses) if command == "print" else 0
+        return subprocess.CompletedProcess(args, status)
+
+    monkeypatch.setattr(sync_module.subprocess, "run", run)
+    if removal_status == 113:
+        sync_module.install_pull_schedule("macos")
+        assert commands == ["print", "bootout", "print", "print", "bootstrap"]
+    else:
+        error = subprocess.CalledProcessError if removal_status == 5 else sync_module.SyncError
+        with pytest.raises(error):
+            sync_module.install_pull_schedule("macos")
+        assert "bootstrap" not in commands
 
 
 @pytest.fixture
