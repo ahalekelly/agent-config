@@ -32,9 +32,9 @@ def now() -> str:
 
 def mint_access_token(origin: str, label: str) -> str:
     version = json.loads((T3 / "runtime/service-state.json").read_text())["activeVersion"]
-    bin_mjs = T3 / "runtime/versions" / version / "node_modules/t3/dist/bin.mjs"
+    executable = T3 / "runtime/versions" / version / "t3"
     out = subprocess.run(
-        ["node", str(bin_mjs), "pair", "--base-dir", str(T3), "--ttl", "5m", "--label", label],
+        [str(executable), "pair", "--base-dir", str(T3), "--ttl", "5m", "--label", label],
         capture_output=True, text=True, check=True, cwd=Path.home(),
     ).stdout
     pairing_token = re.search(r"^Token: (\S+)$", out, re.M).group(1)
