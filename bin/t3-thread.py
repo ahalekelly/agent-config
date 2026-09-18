@@ -7,6 +7,7 @@ Usage: t3-thread.py new <project-dir> <title> <model> <prompt-file>
        t3-thread.py resume <thread-id> <prompt-file>
 
 Thread ids are listed by GET /api/orchestration/snapshot.
+Run against a ready T3 server; T3CODE_HOME selects its data directory (default ~/.t3).
 
 Auth: mint a short-lived pairing token with `t3 pair`, exchange it for an
 access token, then dispatch commands to the local T3 server.
@@ -61,7 +62,14 @@ def main() -> None:
         title = f"resume {thread_id[:8]}"
     else:
         raise SystemExit(__doc__)
-    origin = json.loads((T3 / "userdata/server-runtime.json").read_text())["origin"]
+    runtime = T3 / "userdata/server-runtime.json"
+    if not runtime.is_file():
+        raise SystemExit(
+            f"T3 server runtime file is missing: {runtime}\n"
+            "Check that T3CODE_HOME points to the server's data directory "
+            "and the server is running and ready before sending a prompt."
+        )
+    origin = json.loads(runtime.read_text())["origin"]
     headers = {"authorization": f"Bearer {mint_access_token(origin, title)}", "content-type": "application/json"}
 
     def get(path: str):
