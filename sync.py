@@ -446,11 +446,20 @@ def install_pull_schedule(platform: str) -> None:
         )
     elif platform == "macos":
         launchctl = shutil.which("launchctl")
+        watcher_source = REPO / "macos/t3-keepalive.swift"
+        watcher = HOME / "Library/Application Support/t3-keepalive/watcher"
+        rebuild_watcher = not watcher.exists() or watcher_source.stat().st_mtime > watcher.stat().st_mtime
+        if rebuild_watcher:
+            watcher.parent.mkdir(parents=True, exist_ok=True)
+            compiled = watcher.with_suffix(".new")
+            subprocess.run(["/usr/bin/swiftc", "-O", str(watcher_source), "-o", str(compiled)], check=True)
+            compiled.replace(watcher)
         for source in sorted((REPO / "macos/Library/LaunchAgents").glob("*.plist")):
             plist = HOME / "Library/LaunchAgents" / source.name
             label = f"gui/{os.getuid()}/{source.stem}"
             loaded = subprocess.run([launchctl, "print", label], capture_output=True)
-            if loaded.returncode == 0 and plist.exists() and plist.read_bytes() == source.read_bytes():
+            changed_watcher = source.stem == "com.akelly.t3-keepalive" and rebuild_watcher
+            if loaded.returncode == 0 and plist.exists() and plist.read_bytes() == source.read_bytes() and not changed_watcher:
                 continue
             # launchd requires a regular plist file.
             subprocess.run([launchctl, "bootout", label], capture_output=True)

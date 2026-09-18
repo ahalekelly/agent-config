@@ -60,7 +60,9 @@ It installs the sandbox and trash dependencies, configures AppArmor for Bubblewr
 
 The browser AppArmor rule covers the current user's standard agent-browser, Playwright, and Puppeteer caches. Custom browser locations need a matching rule. On Linux ARM64, install Chromium through the system package manager.
 
-On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile. On Windows, rerun sync after enabling Developer Mode if symlink creation fails, and install `jq` (`winget install jqlang.jq`) for the prompt hooks. Windows paths and native Codex settings live in `codex/config.windows.toml`.
+On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile. The `com.akelly.t3-keepalive` launch agent reopens T3 Code after it quits and hides its startup window; existing windows stay untouched. It requires Xcode command-line tools. Logs are in `~/Library/Logs/t3-keepalive.log`. Stop it with `launchctl bootout gui/$(id -u)/com.akelly.t3-keepalive`; running sync installs it again.
+
+On Windows, rerun sync after enabling Developer Mode if symlink creation fails, and install `jq` (`winget install jqlang.jq`) for the prompt hooks. Windows paths and native Codex settings live in `codex/config.windows.toml`.
 
 Every Claude Code launch, terminal or T3 Code, goes through a per-profile launcher in `bin/`: `claude-token` for the personal profile (the `claude` shell function) and `claudew` for the work profile, which uses `~/.claude-work` while sharing config and runtime data with the personal profile. Each authenticates with a one-year token from `command claude setup-token`, stored as `CLAUDE_CODE_OAUTH_TOKEN=<token>` in the gitignored `~/.agents/claude-token.env` or `~/.agents/claudew-token.env`, so no session depends on a refreshable login. Token sessions can't use claude.ai connectors or Remote Control. See `claude/second-profile-setup.md`.
 
