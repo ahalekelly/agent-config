@@ -23,6 +23,10 @@ from filelock import FileLock
 
 REPO = Path(__file__).resolve().parent
 HOME = Path.home().resolve()
+# Upstream skills that stay unlinked, by name.
+SKIPPED_UPSTREAM_SKILLS = {
+    "code-review",  # shadows Claude Code's bundled skill of the same name
+}
 WORK_PROFILE_ENTRIES = (
     "agents",
     "backups",
@@ -419,9 +423,7 @@ def sync_mattpocock_skills() -> None:
         raise SyncError(f"{upstream}: upstream skills have local edits; resolve them before syncing")
     git(upstream, "pull", "--ff-only")
     manifest = json.loads((upstream / ".claude-plugin" / "plugin.json").read_text())
-    # A user skill named like one of Claude Code's bundled skills shadows it.
-    shadowing = {"code-review"}
-    sources = [upstream / path for path in manifest["skills"] if Path(path).name not in shadowing]
+    sources = [upstream / path for path in manifest["skills"] if Path(path).name not in SKIPPED_UPSTREAM_SKILLS]
     names = {source.name for source in sources}
     if len(names) != len(sources):
         raise SyncError(f"{upstream}: duplicate skill names in plugin manifest")

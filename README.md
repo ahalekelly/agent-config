@@ -29,7 +29,7 @@ Sync also quarantines fresh package releases: uv, npm, and pnpm refuse versions 
 
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
-Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream checkout lives in `skills/.mattpocock/`, outside version control; links in `skills/` expose its skills to all agents, except `code-review`, which would shadow Claude Code's bundled skill of that name. Keep upstream files unmodified so updates can fast-forward.
+Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream checkout lives in `skills/.mattpocock/`, outside version control; links in `skills/` expose its skills to all agents; to leave one out, add its name to `SKIPPED_UPSTREAM_SKILLS` in `sync.py`. Keep upstream files unmodified so updates can fast-forward.
 
 Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the shared part of the live config with `~/.codex/config.toml.rendered`, or with the fresh render on a machine that has none, so an existing Codex config survives the first sync. Changed keys enter the OS overlay and keys Codex removed leave it; the shared base changes only by hand. Project trust, hook trust hashes, marketplace timestamps, and reasoning effort stay only in the live file and are never imported. Linux and macOS Codex commands use `/tmp/uv-cache-akelly` for uv caching so workspace sandboxes can write to it; temporary-file cleanup may evict cached packages.
 
