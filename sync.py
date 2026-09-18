@@ -198,7 +198,7 @@ def install_npm_cooldown() -> None:
 
     settings = {
         "min-release-age": "3",
-        "min-release-age-exclude": "npm,@openai/codex,@anthropic-ai/claude-code,@earendil-works/*,@mariozechner/*",
+        "min-release-age-exclude": "npm,t3,@openai/codex,@anthropic-ai/claude-code,@earendil-works/*,@mariozechner/*",
     }
     keys = list(settings)
     current = subprocess.run(
