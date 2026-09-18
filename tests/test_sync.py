@@ -266,6 +266,10 @@ def test_launchd_reload_waits_for_removal(tmp_path, monkeypatch, sync_module, re
     source = tmp_path / "repo/macos/Library/LaunchAgents/example.plist"
     source.parent.mkdir(parents=True)
     source.write_text("new definition")
+    (tmp_path / "repo/macos/t3-keepalive.swift").touch()
+    watcher = tmp_path / "home/Library/Application Support/t3-keepalive/watcher"
+    watcher.parent.mkdir(parents=True)
+    watcher.touch()
     monkeypatch.setattr(sync_module, "REPO", tmp_path / "repo")
     monkeypatch.setattr(sync_module, "HOME", tmp_path / "home")
     monkeypatch.setattr(sync_module.shutil, "which", lambda _: "launchctl")
