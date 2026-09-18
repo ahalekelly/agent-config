@@ -15,6 +15,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
@@ -462,7 +463,17 @@ def install_pull_schedule(platform: str) -> None:
             if loaded.returncode == 0 and plist.exists() and plist.read_bytes() == source.read_bytes() and not changed_watcher:
                 continue
             # launchd requires a regular plist file.
-            subprocess.run([launchctl, "bootout", label], capture_output=True)
+            if loaded.returncode == 0:
+                subprocess.run([launchctl, "bootout", label], check=True, capture_output=True)
+                deadline = time.monotonic() + 30
+                while True:
+                    state = subprocess.run([launchctl, "print", label], capture_output=True)
+                    if state.returncode == 113:  # launchd no longer has the service.
+                        break
+                    state.check_returncode()
+                    if time.monotonic() >= deadline:
+                        raise SyncError(f"{label}: launchd did not remove the service within 30 seconds")
+                    time.sleep(0.1)
             plist.parent.mkdir(parents=True, exist_ok=True)
             plist.write_bytes(source.read_bytes())
             subprocess.run([launchctl, "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True)
