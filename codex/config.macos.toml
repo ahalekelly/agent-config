@@ -56,7 +56,6 @@ default_tools_approval_mode = "approve"
 disabled_tools = ["patentsview_search_patents", "patentsview_search_by_ipc", "patentsview_get_patent"]
 
 [mcp_servers.node_repl]
-args = []
 command = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node_repl"
 startup_timeout_sec = 120
 
