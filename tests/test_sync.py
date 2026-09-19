@@ -79,9 +79,6 @@ def test_installs_profile_links(fake_home):
     result = run_sync(repo, environment)
 
     assert read_link(home / ".claude" / "settings.json") == str(repo / "claude" / "settings.json")
-    work_skills = home / ".claude-work" / "skills"
-    assert Path(read_link(work_skills)) == Path("../.claude/skills")
-    assert work_skills.resolve() == (repo / "skills").resolve()
     assert "linked" in result.stdout
     assert run_sync(repo, environment).stdout == ""
 

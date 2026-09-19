@@ -26,8 +26,9 @@ _patched_claude() {
   _scrub_secrets "$bin" "$@"
 }
 
-# Both profiles are executables under ~/.agents/bin so T3 can spawn them too;
-# each authenticates with its own setup token. The work profile is claudew.
-claude() { "$HOME/.agents/bin/claude-token" "$@"; }
+# One launcher, two accounts: each function exports the token and profile from
+# its env file (see README.md) and runs bin/claude-launch.
+claude()  { (set -a; source "$HOME/.agents/claude-token.env";  set +a; exec "$HOME/.agents/bin/claude-launch" "$@"); }
+claudew() { (set -a; source "$HOME/.agents/claudew-token.env"; set +a; exec "$HOME/.agents/bin/claude-launch" "$@"); }
 ca() { claude agents "$@"; }
 caw() { claudew agents "$@"; }
