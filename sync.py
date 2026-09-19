@@ -27,30 +27,6 @@ HOME = Path.home().resolve()
 SKIPPED_UPSTREAM_SKILLS = {
     "code-review",  # shadows Claude Code's bundled skill of the same name
 }
-WORK_PROFILE_ENTRIES = (
-    "agents",
-    "backups",
-    "cache",
-    "debug",
-    "downloads",
-    "file-history",
-    "history.jsonl",
-    "ide",
-    "output-styles",
-    "paste-cache",
-    "plans",
-    "plugins",
-    "projects",
-    "scripts",
-    "session-env",
-    "settings.local.json",
-    "shell-snapshots",
-    "skills",
-    "statsig",
-    "tasks",
-    "telemetry",
-    "todos",
-)
 
 
 class SyncError(Exception):
@@ -125,15 +101,13 @@ def link(target: Path, link_text: str, is_directory: bool) -> None:
 
 def install_links(platform: str) -> None:
     claude = HOME / ".claude"
-    work = HOME / ".claude-work"
     codex = HOME / ".codex"
     pi = HOME / ".pi" / "agent"
     git = HOME / ".config" / "git"
 
-    for profile in (claude, work):
-        for name in ("CLAUDE.md", "settings.json", "statusline.py", "tab-title.py"):
-            source = REPO / "claude" / name
-            link(profile / name, str(source), source.is_dir())
+    for name in ("CLAUDE.md", "settings.json", "statusline.py", "tab-title.py"):
+        source = REPO / "claude" / name
+        link(claude / name, str(source), source.is_dir())
 
     static = {
         claude / "skills": REPO / "skills",
@@ -146,7 +120,6 @@ def install_links(platform: str) -> None:
         git / "ignore": REPO / "shell" / "gitignore-global",
     }
     if platform in {"linux", "macos"}:
-        static[HOME / ".local" / "bin" / "claudew"] = REPO / "bin" / "claudew"
         static[HOME / ".config" / "uv" / "uv.toml"] = REPO / "uv" / "uv.toml"
     else:
         static[Path(os.environ["APPDATA"]) / "uv" / "uv.toml"] = REPO / "uv" / "uv.toml"
@@ -178,13 +151,6 @@ def install_links(platform: str) -> None:
 
     for target, source in static.items():
         link(target, str(source), source.is_dir())
-
-    for name in WORK_PROFILE_ENTRIES:
-        link(
-            work / name,
-            f"../.claude/{name}",
-            name not in {"history.jsonl", "settings.local.json"},
-        )
 
 
 def install_npm_cooldown() -> None:
@@ -490,7 +456,6 @@ def main() -> None:
     sync_mattpocock_skills()
     for directory in (
         HOME / ".claude",
-        HOME / ".claude-work",
         HOME / ".codex",
         HOME / ".pi" / "agent",
         HOME / ".config" / "git",
