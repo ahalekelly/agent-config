@@ -4,7 +4,7 @@ This repository is the source of truth for Adrian's Claude Code, Codex, Pi, shel
 
 ## Installation model
 
-`sync.py` links static files from `claude/`, `pi/`, `skills/`, `hooks/`, and `shell/` into each tool's runtime directory. It also recreates the work Claude profile's links to shared personal-profile state. `AGENTS.md` supplies common instructions; `claude/CLAUDE.md` adds Claude-specific guidance.
+`sync.py` links static files from `claude/`, `pi/`, `skills/`, `hooks/`, and `shell/` into each tool's runtime directory. `AGENTS.md` supplies common instructions; `claude/CLAUDE.md` adds Claude-specific guidance.
 
 Codex config cannot be linked because Codex edits it. Sync deep-merges `codex/config.toml` with the current OS overlay into `~/.codex/config.toml`, recording the result at `~/.codex/config.toml.rendered`. On later runs, changed or added live keys move into the shared base before rendering. Project trust records and marketplace timestamps remain machine state.
 
@@ -18,7 +18,7 @@ Codex config cannot be linked because Codex edits it. Sync deep-merges `codex/co
 ## Components
 
 - Claude uses sandbox permissions, an `rm` hook, shared skills, a Python status line, and terminal tab-state hooks.
-- The `claude` and `claudew` launchers select separate account identities while sharing configuration and project state.
+- The `claude` and `claudew` shell functions run one launcher with different account tokens; all sessions share `~/.claude`, so configuration and project state are common.
 - Codex uses a workspace-write sandbox, local MCP servers, plugins, desktop settings where available, and the shared `rm` hook.
 - Pi stores project sessions under `.agents/sessions` and loads `hooks/prevent-rm-pi.ts` as an extension.
 - `pi-for-claude` manages delegated Pi sessions and worktrees.

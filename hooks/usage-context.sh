@@ -15,9 +15,8 @@
 # limits[] entry with kind "weekly_scoped" and scope.model.display_name
 # "Fable", measured against half the all-models budget. Opus/Sonnet gets the
 # other half, so its usage is 2 * all-models - Fable, as a percent of that half.
-# The OAuth token lives in the macOS Keychain under a service name
-# scoped to the profile: "Claude Code-credentials" plus, when
-# CLAUDE_CONFIG_DIR is set, "-" + the first 8 hex chars of its sha256.
+# The token is the login stored in ~/.claude, which is the personal account, so
+# the two Claude lines appear only in personal sessions.
 # Codex comes from GET chatgpt.com/backend-api/wham/usage (the same zero-token
 # endpoint the codex CLI polls) with the token in ~/.codex/auth.json.
 #
@@ -36,25 +35,21 @@ cache_dir="$HOME/.cache/claude-usage"
 ttl=900
 week_secs=$((7 * 24 * 3600))
 
-profile="personal"
-[[ "${CLAUDE_CONFIG_DIR:-}" == *claude-work* ]] && profile="work"
-claude_cache="$cache_dir/oauth-usage.$profile.json"
+profile="${CLAUDE_PROFILE:-personal}"
+claude_cache="$cache_dir/oauth-usage.json"
 codex_cache="$cache_dir/codex-usage.json"
 codex_auth="$HOME/.codex/auth.json"
 
 refresh_claude() {
-  local svc token ver tmp
+  local token ver tmp
   if command -v security >/dev/null 2>&1; then
-    # macOS: the token is in the Keychain (see header comment).
-    svc="Claude Code-credentials"
-    [ -n "${CLAUDE_CONFIG_DIR:-}" ] &&
-      svc+="-$(printf %s "$CLAUDE_CONFIG_DIR" | shasum -a 256 | cut -c1-8)"
-    token=$(security find-generic-password -a "$USER" -s "$svc" -w 2>/dev/null |
+    # macOS: the token is in the Keychain.
+    token=$(security find-generic-password -a "$USER" -s "Claude Code-credentials" -w 2>/dev/null |
       jq -r '.claudeAiOauth.accessToken // empty')
   else
-    # Linux: Claude Code keeps it in <config dir>/.credentials.json.
+    # Linux: Claude Code keeps it in ~/.claude/.credentials.json.
     token=$(jq -r '.claudeAiOauth.accessToken // empty' \
-      "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json" 2>/dev/null)
+      "$HOME/.claude/.credentials.json" 2>/dev/null)
   fi
   [ -z "$token" ] && return
   # Without a claude-code User-Agent the endpoint rate-limits aggressively.
@@ -103,6 +98,8 @@ refresh_codex() {
 # A cache that is missing reads as an empty array through /dev/null.
 claude_in=$claude_cache
 codex_in=$codex_cache
+# Only the personal account has a stored login with the user:profile scope the usage endpoint needs; setup tokens lack it.
+[ "$profile" = personal ] || claude_in=/dev/null
 [ -f "$claude_in" ] || claude_in=/dev/null
 [ -f "$codex_in" ] || codex_in=/dev/null
 
@@ -140,7 +137,7 @@ lines=$(jq -rn --argjson ttl "$ttl" --argjson week "$week_secs" \
 
 while IFS= read -r line; do
   case $line in
-    @claude) refresh_claude >/dev/null 2>&1 & ;;
+    @claude) [ "$profile" = personal ] && refresh_claude >/dev/null 2>&1 & ;;
     @codex) [ -f "$codex_auth" ] && refresh_codex >/dev/null 2>&1 & ;;
     *) printf '%s\n' "$line" ;;
   esac

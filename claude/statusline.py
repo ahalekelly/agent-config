@@ -85,7 +85,7 @@ if usage is not None:
         reset = f" {datetime.fromtimestamp(int(resets_at)).astimezone():%H:%M}"
     usage_part = f"5h: {round(usage)}%{reset}"
 
-profile = "work" if "claude-work" in os.environ.get("CLAUDE_CONFIG_DIR", "") else "personal"
+profile = os.environ.get("CLAUDE_PROFILE", "personal")
 
 print(
     " | ".join(
