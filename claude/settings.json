@@ -9,7 +9,9 @@
     "allow": [
       "WebSearch",
       "WebFetch",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(/home/akelly/.agents/browser-swarm/swarm:*)",
+      "Bash(/Users/akelly/.agents/browser-swarm/swarm:*)"
     ],
     "deny": [
       "Read(~/.pi/agent/auth.json)"
