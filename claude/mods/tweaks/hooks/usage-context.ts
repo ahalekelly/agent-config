@@ -46,6 +46,13 @@ const failures = new Map<string, string>()
  */
 const inFlight = new Set<string>()
 
+/**
+ * A number the endpoint wrote, refused when it wrote something else: a
+ * snapshot is stored only when every field of it reads.
+ *
+ * @param value what the endpoint wrote
+ * @returns the number
+ */
 const number = (value: unknown): number => {
   const it = Number(value)
   if (!Number.isFinite(it)) throw new Error('the answer carried no number where one was needed')

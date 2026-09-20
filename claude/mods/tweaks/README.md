@@ -67,3 +67,6 @@ Four limits shaped the code:
 - `$` may not be passed across an import: a function that takes it lives in the file that hooks with it. That is why the machine probes sit in usage-context.ts.
 - `$.http.fetch` takes neither a timeout nor an abort signal, so a refresh cannot be time-bounded; a hung fetch is held until the module reloads, and a single-flight guard keeps the timer from starting another.
 - A hook that fails takes its plugin's other hooks on that event with it, not just itself. A feature that gathers several inputs therefore catches each one of them.
+- `$.http.fetch` is refused outright where `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set, and the usage lines then read as unavailable, naming that refusal.
+
+A `prompt.submit` hook's context reaches the model inside a `<system-reminder>`, led by `prompt.submit hook additional context: `. Nothing carries a `hook success:` envelope, which is what the shell hooks needed stripping for.

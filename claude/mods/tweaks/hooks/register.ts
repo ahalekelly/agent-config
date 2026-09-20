@@ -7,15 +7,6 @@ import { todoCapture } from './todo-capture.js'
 import { usageContext } from './usage-context.js'
 
 /**
- * The tools named by `pinnedTools`, as the manifest hands the option over.
- *
- * @param pinned the option's value
- * @returns the tool names
- */
-const pinnedOf = (pinned: unknown): readonly string[] =>
-  Array.isArray(pinned) ? pinned.filter(name => typeof name === 'string') : []
-
-/**
  * What a `task_reminder` attachment says above the session's task list. The
  * reminder without it is a nag about a list that holds nothing.
  */
@@ -50,9 +41,9 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  * @param options the plugin's options
  */
 export const register: Register = (on, options) => {
-  const pinned = pinnedOf(options.pinnedTools)
+  const pinned = options.pinnedTools
 
-  if (pinned.length > 0)
+  if (Array.isArray(pinned) && pinned.length > 0)
     on('tool.describe', { tool: pinned }, async ($, e, next) => ({
       ...(await next(e)),
       isDeferred: false,
