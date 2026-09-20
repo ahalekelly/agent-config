@@ -1,4 +1,4 @@
-import type { On } from 'claude-code'
+import type { HttpInit, On } from 'claude-code'
 import type { MockClock } from 'claude-code/testing'
 import { mock } from 'claude-code/testing'
 
@@ -22,11 +22,41 @@ export const ROOMY_DISK = [
   '/dev/sda1 1000000000 100000000 900000000 11% /',
 ].join('\n')
 
+/**
+ * The home directory the mocked environment gives, the two stored logins under
+ * it, and the lock a session takes to refresh the Claude one.
+ *
+ * The home is not under `/home`: macOS maps that to the automounter, and the
+ * engine refuses a path there as a network location before any hook sees it.
+ */
+export const HOME = '/u/a'
+export const LOGIN_PATH = `${HOME}/.claude/.credentials.json`
+export const CODEX_PATH = `${HOME}/.codex/auth.json`
+export const LOCK = `${HOME}/.cache/claude-usage/login.lock`
+
+/**
+ * A stored Claude Code login, its token good until 2030. `organizationUuid`
+ * stands for the keys kept beside the OAuth block, which a refresh leaves as
+ * they are.
+ *
+ * @param expiresAt when the access token expires
+ * @returns the stored JSON
+ */
+export const login = (expiresAt = Date.parse('2030-01-01T00:00:00Z')): string =>
+  JSON.stringify({
+    claudeAiOauth: {
+      accessToken: 'claude-token',
+      refreshToken: 'claude-refresh',
+      expiresAt,
+      scopes: ['user:inference', 'user:profile'],
+      subscriptionType: 'max',
+    },
+    organizationUuid: 'org-1',
+  })
+
 export const CREDENTIALS: Readonly<Record<string, string>> = {
-  '/home/a/.claude/.credentials.json': JSON.stringify({
-    claudeAiOauth: { accessToken: 'claude-token' },
-  }),
-  '/home/a/.codex/auth.json': JSON.stringify({
+  [LOGIN_PATH]: login(),
+  [CODEX_PATH]: JSON.stringify({
     tokens: { access_token: 'codex-token', account_id: 'acct-1' },
   }),
 }
@@ -71,8 +101,11 @@ export type World = {
   clock: MockClock
   runs: string[][]
   stdin: string[]
-  urls: string[]
+  fetches: { url: string; init?: HttpInit }[]
+  writes: { path: string; text: string }[]
   files: Record<string, string>
+  keychain: string
+  lock: { held: boolean; mtimeMs: number }
   responses: Record<string, { status: number; text: string }>
   host: string
   df: string
@@ -83,8 +116,8 @@ export type World = {
 
 /**
  * The world beneath the plugin: a clock and a store in memory, an
- * environment, a filesystem of the files given, a host whose commands answer
- * from `world`, and the two usage endpoints.
+ * environment, a filesystem of the files given, a Keychain and a lock
+ * directory the host's commands work on, and the endpoints it fetches.
  *
  * Every call is recorded, and every answer can be rewritten by the test
  * before the call that reads it.
@@ -105,8 +138,11 @@ export const world = (
     clock: mock.clock(on, { now }),
     runs: [],
     stdin: [],
-    urls: [],
+    fetches: [],
+    writes: [],
     files: { ...HEALTHY_PROC, ...CREDENTIALS },
+    keychain: login(),
+    lock: { held: false, mtimeMs: now },
     responses: {},
     host: 'Linux',
     df: ROOMY_DISK,
@@ -116,7 +152,7 @@ export const world = (
   }
 
   mock.store(on, stored)
-  mock.env(on, { HOME: '/home/a', USER: 'a', CLAUDE_PROFILE: profile })
+  mock.env(on, { HOME, USER: 'a', CLAUDE_PROFILE: profile })
 
   on('fs.read', ($, e) => {
     const text = it.files[e.path]
@@ -125,6 +161,19 @@ export const world = (
       ? { deny: `no such file: ${e.path}` }
       : { value: text }
   })
+
+  on('fs.write', ($, e) => {
+    it.writes.push({ path: e.path, text: e.text })
+    it.files[e.path] = e.text
+
+    return { value: undefined }
+  })
+
+  on('fs.stat', ($, e, next) =>
+    e.path === LOCK
+      ? { value: { kind: 'dir' as const, size: 0, mtimeMs: it.lock.mtimeMs, isLink: false } }
+      : next(e),
+  )
 
   on('fs.list', ($, e) =>
     e.path.endsWith('/versions')
@@ -152,6 +201,28 @@ export const world = (
         : { value: { exitCode: 0, stdout: it.df, stderr: '' } }
     if (e.argv[0] === 'sysctl')
       return { value: { exitCode: 0, stdout: it.sysctl, stderr: '' } }
+    if (e.argv[0] === 'mkdir' && e.argv[1] === LOCK) {
+      if (it.lock.held) return { value: { exitCode: 1, stdout: '', stderr: 'File exists' } }
+      it.lock = { held: true, mtimeMs: it.clock.now() }
+
+      return { value: { exitCode: 0, stdout: '', stderr: '' } }
+    }
+    if (e.argv[0] === 'rmdir') {
+      it.lock = { ...it.lock, held: false }
+
+      return { value: { exitCode: 0, stdout: '', stderr: '' } }
+    }
+    if (e.argv[0] === 'security') {
+      if (e.argv[1] === 'add-generic-password') it.keychain = e.argv.at(-1) ?? ''
+
+      return {
+        value: {
+          exitCode: 0,
+          stdout: e.argv[1] === 'find-generic-password' ? it.keychain : '',
+          stderr: '',
+        },
+      }
+    }
 
     return {
       value: {
@@ -163,7 +234,7 @@ export const world = (
   })
 
   on('http.fetch', ($, e) => {
-    it.urls.push(e.url)
+    it.fetches.push({ url: e.url, init: e.init })
     const answer = it.responses[e.url]
     if (answer === undefined) return { deny: `nothing answers ${e.url}` }
 

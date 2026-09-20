@@ -1,13 +1,27 @@
+import type { HttpInit } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 import { describe, expect, test } from 'claude-code/testing'
 
-import { claudeUsage, codexUsage, world } from './world.js'
+import type { World } from './world.js'
+import { claudeUsage, CODEX_PATH, codexUsage, LOCK, login, LOGIN_PATH, world } from './world.js'
 
 const NOW = Date.parse('2026-09-19T12:00:00Z')
 const RESETS = '2026-09-21T12:00:00Z'
 const TWO_DAYS = 2 * 24 * 3600 * 1000
 const CLAUDE_URL = 'https://api.anthropic.com/api/oauth/usage'
 const CODEX_URL = 'https://chatgpt.com/backend-api/wham/usage'
+const TOKEN_URL = 'https://platform.claude.com/v1/oauth/token'
+
+/**
+ * What platform.claude.com/v1/oauth/token answers: a renewed pair, good for
+ * eight hours, carrying the scopes the login asked for.
+ */
+const RENEWED = JSON.stringify({
+  access_token: 'fresh-token',
+  refresh_token: 'fresh-refresh',
+  expires_in: 28_800,
+  scope: 'user:inference user:profile',
+})
 
 /**
  * A snapshot as a good fetch leaves it, both windows resetting in two days.
@@ -43,6 +57,33 @@ const linesOf = async ($: Engine): Promise<string[]> => {
   return (context?.at(-1) ?? '').split('\n')
 }
 
+/**
+ * The URLs a world was asked for, in the order they were asked.
+ *
+ * @param seen the world
+ * @returns the URLs
+ */
+const urlsOf = (seen: World): string[] => seen.fetches.map(it => it.url)
+
+/**
+ * What a world was sent to one URL.
+ *
+ * @param seen the world
+ * @param url the URL
+ * @returns the requests, one per fetch of it
+ */
+const sentTo = (seen: World, url: string): (HttpInit | undefined)[] =>
+  seen.fetches.filter(it => it.url === url).map(it => it.init)
+
+/**
+ * What a world ran against the refresh lock, the parent directory's own
+ * `mkdir -p` left out.
+ *
+ * @param seen the world
+ * @returns the command lines
+ */
+const lockRuns = (seen: World): string[][] => seen.runs.filter(argv => argv[1] === LOCK)
+
 describe('usage-context', () => {
   test('a warm start shows the stored snapshots, fetching nothing', async ($, on) => {
     const seen = world(on, NOW, { claude: CLAUDE_SNAPSHOT, codex: CODEX_SNAPSHOT })
@@ -52,7 +93,7 @@ describe('usage-context', () => {
       'Fable weekly: 41% used, 71% of week elapsed',
       'Codex weekly: 12% used, 71% of week elapsed',
     ])
-    expect(seen.urls).toEqual([])
+    expect(urlsOf(seen)).toEqual([])
   })
 
   test('the prompt opens with the local date and time', async ($, on) => {
@@ -71,7 +112,7 @@ describe('usage-context', () => {
     await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
     await seen.clock.settle()
 
-    expect([...seen.urls].sort()).toEqual([CLAUDE_URL, CODEX_URL])
+    expect(urlsOf(seen).sort()).toEqual([CLAUDE_URL, CODEX_URL])
     expect((await linesOf($)).slice(1)).toEqual([
       'Opus/Sonnet weekly: 11% used, 71% of week elapsed',
       'Fable weekly: 41% used, 71% of week elapsed',
@@ -80,11 +121,11 @@ describe('usage-context', () => {
 
     await seen.clock.advance(899_999)
 
-    expect(seen.urls.length).toBe(2)
+    expect(seen.fetches).toHaveLength(2)
 
     await seen.clock.advance(1)
 
-    expect([...seen.urls].sort()).toEqual([CLAUDE_URL, CLAUDE_URL, CODEX_URL, CODEX_URL])
+    expect(urlsOf(seen).sort()).toEqual([CLAUDE_URL, CLAUDE_URL, CODEX_URL, CODEX_URL])
   })
 
   test('a snapshot another session wrote later is not overwritten', async ($, on) => {
@@ -151,15 +192,15 @@ describe('usage-context', () => {
 
   test('with no stored credential the line names the missing file', async ($, on) => {
     const seen = world(on, NOW)
-    delete seen.files['/home/a/.claude/.credentials.json']
-    delete seen.files['/home/a/.codex/auth.json']
+    delete seen.files[LOGIN_PATH]
+    delete seen.files[CODEX_PATH]
 
     await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
     await seen.clock.settle()
 
     expect((await linesOf($)).slice(1)).toEqual([
-      'Claude usage unavailable: no snapshot, tweaks: $.fs.read: no such file: /home/a/.claude/.credentials.json',
-      'Codex usage unavailable: no snapshot, tweaks: $.fs.read: no such file: /home/a/.codex/auth.json',
+      `Claude usage unavailable: no snapshot, tweaks: $.fs.read: no such file: ${LOGIN_PATH}`,
+      `Codex usage unavailable: no snapshot, tweaks: $.fs.read: no such file: ${CODEX_PATH}`,
     ])
   })
 
@@ -222,9 +263,128 @@ describe('usage-context', () => {
     await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
     await seen.clock.settle()
 
-    expect(seen.urls).toEqual([CODEX_URL])
+    expect(urlsOf(seen)).toEqual([CODEX_URL])
     expect((await linesOf($)).slice(1)).toEqual([
       'Codex weekly: 12% used, 71% of week elapsed',
     ])
+  })
+
+  test('a live stored token is used as it stands, refreshing nothing', async ($, on) => {
+    const seen = world(on, NOW)
+    seen.responses[CLAUDE_URL] = { status: 200, text: claudeUsage(RESETS) }
+
+    await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
+    await seen.clock.settle()
+
+    expect(sentTo(seen, TOKEN_URL)).toEqual([])
+    expect(sentTo(seen, CLAUDE_URL)[0]?.headers?.authorization).toBe('Bearer claude-token')
+  })
+
+  test('an expired token is renewed and the whole login written back', async ($, on) => {
+    const seen = world(on, NOW)
+    seen.files[LOGIN_PATH] = login(NOW)
+    seen.responses[TOKEN_URL] = { status: 200, text: RENEWED }
+    seen.responses[CLAUDE_URL] = { status: 200, text: claudeUsage(RESETS) }
+
+    await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
+    await seen.clock.settle()
+
+    expect(sentTo(seen, TOKEN_URL)).toEqual([
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'refresh_token',
+          refresh_token: 'claude-refresh',
+          client_id: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
+          scope: 'user:inference user:profile',
+        }),
+      },
+    ])
+    expect(seen.writes.map(it => it.path)).toEqual([LOGIN_PATH])
+    expect(JSON.parse(seen.writes[0]?.text ?? '')).toEqual({
+      claudeAiOauth: {
+        accessToken: 'fresh-token',
+        refreshToken: 'fresh-refresh',
+        expiresAt: NOW + 28_800_000,
+        scopes: ['user:inference', 'user:profile'],
+        subscriptionType: 'max',
+      },
+      organizationUuid: 'org-1',
+    })
+    expect(sentTo(seen, CLAUDE_URL)[0]?.headers?.authorization).toBe('Bearer fresh-token')
+    expect(lockRuns(seen)).toEqual([['mkdir', LOCK], ['rmdir', LOCK]])
+  })
+
+  test('on macOS the renewed login goes back into the Keychain', async ($, on) => {
+    const seen = world(on, NOW)
+    seen.host = 'Darwin'
+    seen.keychain = login(NOW)
+    seen.responses[TOKEN_URL] = { status: 200, text: RENEWED }
+    seen.responses[CLAUDE_URL] = { status: 200, text: claudeUsage(RESETS) }
+
+    await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
+    await seen.clock.settle()
+
+    const item = ['-a', 'a', '-s', 'Claude Code-credentials']
+
+    expect(seen.runs.filter(argv => argv[0] === 'security')).toEqual([
+      ['security', 'find-generic-password', ...item, '-w'],
+      ['security', 'add-generic-password', '-U', ...item, '-w', seen.keychain],
+    ])
+    expect(JSON.parse(seen.keychain).claudeAiOauth.accessToken).toBe('fresh-token')
+    expect(seen.writes).toEqual([])
+  })
+
+  test('a refused renewal stores nothing and says what refused it', async ($, on) => {
+    const seen = world(on, NOW)
+    seen.files[LOGIN_PATH] = login(NOW)
+    seen.responses[TOKEN_URL] = { status: 400, text: 'invalid_grant' }
+
+    await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
+    await seen.clock.settle()
+
+    expect(seen.writes).toEqual([])
+    expect(sentTo(seen, CLAUDE_URL)).toEqual([])
+    expect((await linesOf($))[1]).toBe(
+      'Claude usage unavailable: no snapshot, oauth/token returned 400',
+    )
+    expect(lockRuns(seen)).toEqual([['mkdir', LOCK], ['rmdir', LOCK]])
+  })
+
+  test('a lock another session holds leaves the renewal to it', async ($, on) => {
+    const seen = world(on, NOW)
+    seen.files[LOGIN_PATH] = login(NOW)
+    seen.lock = { held: true, mtimeMs: NOW - 60_000 }
+    seen.responses[TOKEN_URL] = { status: 200, text: RENEWED }
+
+    await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
+    await seen.clock.settle()
+
+    expect(sentTo(seen, TOKEN_URL)).toEqual([])
+    expect(lockRuns(seen)).toEqual([['mkdir', LOCK]])
+    expect((await linesOf($))[1]).toBe(
+      'Claude usage unavailable: no snapshot, another session is refreshing the login',
+    )
+  })
+
+  test('a lock a session left behind is taken over', async ($, on) => {
+    const seen = world(on, NOW)
+    seen.files[LOGIN_PATH] = login(NOW)
+    seen.lock = { held: true, mtimeMs: NOW - 60_001 }
+    seen.responses[TOKEN_URL] = { status: 200, text: RENEWED }
+    seen.responses[CLAUDE_URL] = { status: 200, text: claudeUsage(RESETS) }
+
+    await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
+    await seen.clock.settle()
+
+    expect(lockRuns(seen)).toEqual([
+      ['mkdir', LOCK],
+      ['rmdir', LOCK],
+      ['mkdir', LOCK],
+      ['rmdir', LOCK],
+    ])
+    expect(sentTo(seen, TOKEN_URL)).toHaveLength(1)
+    expect(sentTo(seen, CLAUDE_URL)[0]?.headers?.authorization).toBe('Bearer fresh-token')
   })
 })

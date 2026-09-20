@@ -1,7 +1,7 @@
 import type { Engine } from 'claude-code/testing'
 import { describe, expect, test } from 'claude-code/testing'
 
-import { world } from './world.js'
+import { HOME, world } from './world.js'
 
 const NOW = Date.parse('2026-09-19T12:00:00Z')
 
@@ -35,7 +35,7 @@ const df = (available: number, capacity: string): string =>
   [
     'Filesystem 1024-blocks Used Available Capacity Mounted on',
     `/dev/sda1 1000000000 100000000 ${available} ${capacity} /`,
-    `/dev/sda1 1000000000 100000000 ${available} ${capacity} /home/a`,
+    `/dev/sda1 1000000000 100000000 ${available} ${capacity} ${HOME}`,
   ].join('\n')
 
 describe('machine signals', () => {
@@ -111,11 +111,11 @@ describe('machine signals', () => {
     seen.df = [
       'Filesystem 1024-blocks Used Available Capacity Mounted on',
       `/dev/sda1 1000000000 100000000 ${9 * 1048576} 89% /`,
-      `/dev/sdb1 1000000000 100000000 ${1 * 1048576} 99% /home/a`,
+      `/dev/sdb1 1000000000 100000000 ${1 * 1048576} 99% ${HOME}`,
     ].join('\n')
 
     expect(await notesOf($)).toEqual([
-      'Low disk: / has 9.0 GiB free (89% used), /home/a has 1.0 GiB free (99% used)',
+      `Low disk: / has 9.0 GiB free (89% used), ${HOME} has 1.0 GiB free (99% used)`,
     ])
   })
 

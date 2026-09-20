@@ -11,7 +11,7 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 - **context-envelope** — context a hook attached reads as `additional context:` on its own line, without the hook's name.
 - **cron-label** — a scheduled task's prompt carries a line saying the scheduler fired it.
 - **todo-capture** — a prompt typed as `todo: <item>` is appended to `todo.md` in the session's root and runs no turn.
-- **usage-context** — every prompt the person sends carries the local time, what the Claude and Codex weekly budgets have left, and what the machine is short of.
+- **usage-context** — every prompt the person sends carries the local time, what the Claude and Codex weekly budgets have left, and what the machine is short of. The Claude figures come from the stored personal login, which the hook keeps refreshed.
 - **task-provenance** — every task-notification says what started the run it reports: the agent's launch, a `SendMessage` this session's model sent, or something this session cannot account for.
 - **spawn-guard** — a subagent spawned without a model is refused, since an omitted model silently inherits the caller's. A fork inherits by design and passes.
 - **read-guard** — a Fable or Opus loop reading a file over its token budget has the call paged down to what fits, or refused with the way to read less.

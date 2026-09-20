@@ -150,33 +150,99 @@ const profileOf = async ($: EngineInterface): Promise<string> =>
   (await $.env.get('CLAUDE_PROFILE')) ?? 'personal'
 
 /**
- * The Claude Code login's access token: the Keychain on macOS, the stored
- * credentials on Linux. Never refreshed here — this reads what is there.
+ * The host's kind, read once per module load: `Darwin` or `Linux`.
+ */
+let host: Promise<string> | undefined
+
+const hostOf = ($: EngineInterface): Promise<string> =>
+  (host ??= $.process.run(['uname']).then(({ stdout }) => stdout.trim()))
+
+/**
+ * Claude Code's own OAuth client, the one the token endpoint answers to.
+ */
+const CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e'
+
+/**
+ * The Claude Code login's access token, live. The login is stored in the
+ * Keychain on macOS and in `~/.claude/.credentials.json` on Linux; a session
+ * runs on a setup token and never renews it, so a stored token within a minute
+ * of expiry is refreshed here and the renewed login written back where it came
+ * from.
+ *
+ * Sessions refresh on timers of their own and each renewal answers with a new
+ * refresh token that replaces the stored one, so two sessions renewing at once
+ * would overwrite each other's; the renewal runs under a lock directory, which
+ * one `mkdir` claims. A session that finds it held leaves this round to whoever
+ * holds it, and its own timer tries again. A lock a minute old was left by a
+ * session that died, and is taken over.
  *
  * @param $ the engine
  * @returns the token
  */
 const claudeToken = async ($: EngineInterface): Promise<string> => {
   const home = await $.env.get('HOME')
-  const stored =
-    (await $.process.run(['uname'])).stdout.trim() === 'Darwin'
-      ? (
-          await $.process.run([
-            'security',
-            'find-generic-password',
-            '-a',
-            (await $.env.get('USER')) ?? '',
-            '-s',
-            'Claude Code-credentials',
-            '-w',
-          ])
-        ).stdout
-      : await $.fs.read(`${home}/.claude/.credentials.json`)
-  const token: unknown = JSON.parse(stored)?.claudeAiOauth?.accessToken
-  if (typeof token !== 'string' || token === '')
+  const isDarwin = (await hostOf($)) === 'Darwin'
+  const path = `${home}/.claude/.credentials.json`
+  const item = ['-a', (await $.env.get('USER')) ?? '', '-s', 'Claude Code-credentials']
+  const login = JSON.parse(
+    isDarwin
+      ? (await $.process.run(['security', 'find-generic-password', ...item, '-w'])).stdout
+      : await $.fs.read(path),
+  )
+  const oauth = login.claudeAiOauth
+  const now = await $.clock.now()
+  if (typeof oauth?.accessToken !== 'string')
     throw new Error('the stored Claude login carries no access token')
+  if (oauth.expiresAt > now + 60_000) return oauth.accessToken
 
-  return token
+  const lock = `${home}/.cache/claude-usage/login.lock`
+  const take = async (): Promise<boolean> =>
+    (await $.process.run(['mkdir', lock])).exitCode === 0
+
+  await $.process.run(['mkdir', '-p', `${home}/.cache/claude-usage`])
+  let taken = await take()
+  if (!taken && (await $.fs.stat(lock)).mtimeMs < now - 60_000) {
+    await $.process.run(['rmdir', lock])
+    taken = await take()
+  }
+  if (!taken) throw new Error('another session is refreshing the login')
+
+  try {
+    const response = await $.http.fetch('https://platform.claude.com/v1/oauth/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'refresh_token',
+        refresh_token: oauth.refreshToken,
+        client_id: CLIENT_ID,
+        scope: oauth.scopes.join(' '),
+      }),
+    })
+    if (!response.ok) throw new Error(`oauth/token returned ${response.status}`)
+
+    const fresh = JSON.parse(response.text)
+    const json = JSON.stringify({
+      ...login,
+      claudeAiOauth: {
+        ...oauth,
+        accessToken: fresh.access_token,
+        refreshToken: fresh.refresh_token,
+        expiresAt: now + fresh.expires_in * 1000,
+        scopes: fresh.scope.split(' '),
+      },
+    })
+
+    if (isDarwin) {
+      const { exitCode, stderr } = await $.process.run([
+        'security', 'add-generic-password', '-U', ...item, '-w', json,
+      ])
+      if (exitCode !== 0) throw new Error(`security add-generic-password: ${stderr.trim()}`)
+    } else await $.fs.write(path, json)
+
+    return fresh.access_token
+  } finally {
+    await $.process.run(['rmdir', lock])
+  }
 }
 
 /**
@@ -347,14 +413,6 @@ const codexLines = async ($: EngineInterface, now: number): Promise<string[]> =>
     `Codex weekly: ${Math.round(snapshot.usedPercent)}% used, ${elapsed(snapshot.resetsAt, snapshot.windowMs, now)}% of week elapsed`,
   ]
 }
-
-/**
- * The host's kind, read once per module load: `Darwin` or `Linux`.
- */
-let host: Promise<string> | undefined
-
-const hostOf = ($: EngineInterface): Promise<string> =>
-  (host ??= $.process.run(['uname']).then(({ stdout }) => stdout.trim()))
 
 /**
  * The lines of a `df -Pk` report, its header dropped.
