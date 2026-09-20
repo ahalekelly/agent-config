@@ -2,6 +2,7 @@ import type { Register } from 'claude-code'
 
 import { promptTrim } from './prompt-trim.js'
 import { readGuard } from './read-guard.js'
+import { sandboxNotice } from './sandbox-notice.js'
 import { taskProvenance } from './task-provenance.js'
 import { todoCapture } from './todo-capture.js'
 import { usageContext } from './usage-context.js'
@@ -32,6 +33,7 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  *   prompt, whatever the engine and the tool decided about deferring them
  *   behind ToolSearch. The description beneath stands.
  * - prompt-trim: see prompt-trim.ts.
+ * - sandbox-notice: see sandbox-notice.ts.
  * - task-reminder: the periodic reminder to use the task tools reaches the
  *   model only while the session has tasks to be reminded about.
  * - context-envelope: context a hook attached reads as `additional context:` on its own
@@ -59,6 +61,7 @@ export const register: Register = (on, options) => {
     }))
 
   promptTrim(on)
+  sandboxNotice(on)
 
   on('prompt.attachment', { type: 'task_reminder' }, async ($, e, next) => {
     const { text } = await next(e)

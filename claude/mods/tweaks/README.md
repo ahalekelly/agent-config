@@ -6,6 +6,7 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 
 - **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`).
 - **prompt-trim** — drops the standing context nothing reads: the `userEmail` and `currentDate` context blocks, the `date` attachment, the model-family table from the `# Environment` section, and the environment attachment's `Platform:` and `Shell:` lines.
+- **sandbox-notice** — the sandbox notice's filesystem policy drops Claude Code's own state under `~/.claude` and the `/dev/` handles, which makes room to name what the engine truncated away.
 - **task-reminder** — the periodic nag to use the task tools reaches the model only while the session has tasks.
 - **context-envelope** — context a hook attached reads as `additional context:` on its own line, without the hook's name.
 - **cron-label** — a scheduled task's prompt carries a line saying the scheduler fired it.
@@ -59,7 +60,7 @@ What a discovery run settled, on Claude Code 2.1.278. Each answer is pinned by a
 - A notification's text is a `<task-notification>` element whose `<task-id>` is the agent's id and whose `<tool-use-id>` names the call that started the run that just stopped: the `Agent` call for the launch, the `SendMessage` call for a resume. Some notifications carry no `<tool-use-id>` at all, so its absence is reported as an unattributable run rather than guessed at.
 - A subagent's loop raises no `prompt.submit` of its own, so a hook on that event is the main conversation's alone. Its attachments and tool calls carry `agentId`.
 - `agent.spawn`'s result carries the new agent's `agentId` beside the model it resolved.
-- The first user message's context blocks are `claudeMd`, `currentDate`, `gitStatus` and — with an account logged in — `userEmail`. The engine's own injected messages arrive at `prompt.attachment` as `date`, `environment`, `model`, `deferred_tools_delta`, `agent_listing_delta`, `skill_listing`, `total_tokens_reminder`, `queued_command` and `task_reminder`.
+- The first user message's context blocks are `claudeMd`, `currentDate`, `gitStatus` and — with an account logged in — `userEmail`. The engine's own injected messages arrive at `prompt.attachment` as `date`, `environment`, `model`, `deferred_tools_delta`, `agent_listing_delta`, `skill_listing`, `total_tokens_reminder`, `queued_command`, `sandbox_instructions` and `task_reminder`.
 - The system prompt's `# Environment` section is `prompt.section` `env_info_simple` and carries the model-family table. The `Platform:`, `Shell:` and `OS Version:` lines are not in it: they belong to the `environment` attachment.
 - A `task_reminder` attachment carries the session's task list under `Here are the existing tasks:` while the list holds anything, and the nag alone while it does not — so an attachment-local decision tells the two apart.
 - `$.session.root()` is where the session started, which is what `CLAUDE_PROJECT_DIR` gives a settings hook.
