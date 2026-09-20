@@ -53,9 +53,9 @@ If you find a bug in one place in the code, look for other places where that sam
 
 Identify the machine by hostname. Notes specific to each:
 
-For connections between machines, try the local network first and use the tailnet only when the local connection is unavailable. Apply this order to SSH, file serving, and other network services.
+For SSH between machines, try the local network first, then Tailscale. Use Tailscale endpoints for dashboards and file servers that restrict LAN access.
 
-The desktop's local network (LAN) is a trusted environment. Desktop dashboards and file servers may serve task-authorized data to LAN devices without a separate login. The laptop may join untrusted networks, so keep LAN-accessible listeners on the desktop and use the laptop as a client.
+Treat LAN devices as untrusted. Restrict unauthenticated dashboards and file servers to localhost and Tailscale. Host these services on the desktop and use the laptop as a client.
 
 ### akelly-desktop (Linux, headless)
 
