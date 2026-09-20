@@ -33,3 +33,6 @@ __pycache__/
 /.mcp.json
 /.idea
 /.vscode
+
+# Claude Code synced-plugin cache, machine-local
+skills/synced/
