@@ -32,7 +32,7 @@ url = "http://127.0.0.1:27182/mcp"
 
 [mcp_servers.playwright]
 command = "/opt/homebrew/bin/node"
-args = ["/Users/akelly/.agents/browser-swarm/src/launch.ts", "chromium"]
+args = ["/Users/akelly/.agents/browser-swarm/src/cli.ts", "mcp", "chromium"]
 
 [mcp_servers.paper-search]
 command = "sh"
