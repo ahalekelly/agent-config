@@ -10,6 +10,9 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 - **cron-label** — a scheduled task's prompt carries a line saying the scheduler fired it.
 - **todo-capture** — a prompt typed as `todo: <item>` is appended to `todo.md` in the session's root and runs no turn.
 - **usage-context** — every prompt the person sends carries the local time, what the Claude and Codex weekly budgets have left, and what the machine is short of.
+- **task-provenance** — every task-notification says what started the run it reports: the agent's launch, a `SendMessage` this session's model sent, or something this session cannot account for.
+- **spawn-guard** — a subagent spawned without a model is refused, since an omitted model silently inherits the caller's. A fork inherits by design and passes.
+- **read-guard** — a Fable or Opus loop reading a file over its token budget has the call paged down to what fits, or refused with the way to read less.
 
 ## Options
 
@@ -50,7 +53,7 @@ A local-path marketplace is the other way to load it, and is not used: `claude p
 What a discovery run settled, on Claude Code 2.1.278. Each answer is pinned by a test.
 
 - A scheduled task's prompt arrives at `prompt.submit` with `origin.kind` `scheduled-trigger`; a background agent's notification arrives there too, with `task-notification`. `session.receive` fires for neither.
-- A notification's text is a `<task-notification>` element whose `<task-id>` is the agent's id and whose `<tool-use-id>` names the call that started the run that just stopped: the `Agent` call for the launch, the `SendMessage` call for a resume.
+- A notification's text is a `<task-notification>` element whose `<task-id>` is the agent's id and whose `<tool-use-id>` names the call that started the run that just stopped: the `Agent` call for the launch, the `SendMessage` call for a resume. Some notifications carry no `<tool-use-id>` at all, so its absence is reported as an unattributable run rather than guessed at.
 - A subagent's loop raises no `prompt.submit` of its own, so a hook on that event is the main conversation's alone. Its attachments and tool calls carry `agentId`.
 - `agent.spawn`'s result carries the new agent's `agentId` beside the model it resolved.
 - The first user message's context blocks are `claudeMd`, `currentDate`, `gitStatus` and — with an account logged in — `userEmail`. The engine's own injected messages arrive at `prompt.attachment` as `date`, `environment`, `model`, `deferred_tools_delta`, `agent_listing_delta`, `skill_listing`, `total_tokens_reminder`, `queued_command` and `task_reminder`.
@@ -60,7 +63,7 @@ What a discovery run settled, on Claude Code 2.1.278. Each answer is pinned by a
 
 Four limits shaped the code:
 
-- A `prompt.submit` hook's rewritten `text` does not reach the model on the scheduled-trigger path, though `next` resolves with it; `context` does reach the model. Hence cron-label rides as context. Whether the fired prompt is drawn in the transcript is not a plugin's to decide — the engine queues it as a meta message and no event exposes that — so it stays invisible, and the label is what tells the model.
+- A `prompt.submit` hook's rewritten `text` does not reach the model on the scheduled-trigger path, though `next` resolves with it; `context` does reach the model. Hence cron-label rides as context. On the task-notification path both land, so the `<trigger>` element is prepended to the notification itself. Whether the fired prompt is drawn in the transcript is not a plugin's to decide — the engine queues it as a meta message and no event exposes that — so it stays invisible, and the label is what tells the model.
 - `$` may not be passed across an import: a function that takes it lives in the file that hooks with it. That is why the machine probes sit in usage-context.ts.
 - `$.http.fetch` takes neither a timeout nor an abort signal, so a refresh cannot be time-bounded; a hung fetch is held until the module reloads, and a single-flight guard keeps the timer from starting another.
 - A hook that fails takes its plugin's other hooks on that event with it, not just itself. A feature that gathers several inputs therefore catches each one of them.

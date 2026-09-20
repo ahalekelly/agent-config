@@ -1,6 +1,8 @@
 import type { Register } from 'claude-code'
 
 import { promptTrim } from './prompt-trim.js'
+import { readGuard } from './read-guard.js'
+import { taskProvenance } from './task-provenance.js'
 import { todoCapture } from './todo-capture.js'
 import { usageContext } from './usage-context.js'
 
@@ -39,6 +41,10 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  * - todo-capture: see todo-capture.ts. Registered before usage-context, so a
  *   prompt it takes gathers nothing.
  * - usage-context: see usage-context.ts.
+ * - task-provenance: see task-provenance.ts.
+ * - spawn-guard: a subagent is spawned with a model named, since an omitted
+ *   model silently inherits the caller's. A fork inherits by design.
+ * - read-guard: see read-guard.ts.
  *
  * @param on the engine's registrar
  * @param options the plugin's options
@@ -69,4 +75,16 @@ export const register: Register = (on, options) => {
 
   todoCapture(on)
   usageContext(on)
+
+  on('agent.spawn', { fork: false }, ($, e, next) =>
+    e.model === undefined
+      ? {
+          deny: `Agent spawns must name a model (opus for code, sonnet for mechanical work); omitting it would inherit ${e.parentModel}.`,
+        }
+      : next(e),
+  )
+
+  taskProvenance(on)
+
+  readGuard(on, options)
 }
