@@ -4,7 +4,12 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 
 ## Features
 
-- **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`). Default: WebFetch, WebSearch.
+- **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`).
+- **prompt-trim** — drops the standing context nothing reads: the `userEmail` and `currentDate` context blocks, the `date` attachment, the model-family table from the `# Environment` section, and the environment attachment's `Platform:` and `Shell:` lines.
+- **task-reminder** — the periodic nag to use the task tools reaches the model only while the session has tasks.
+- **cron-label** — a scheduled task's prompt carries a line saying the scheduler fired it.
+- **todo-capture** — a prompt typed as `todo: <item>` is appended to `todo.md` in the session's root and runs no turn.
+- **usage-context** — every prompt the person sends carries the local time, what the Claude and Codex weekly budgets have left, and what the machine is short of.
 
 ## Options
 
@@ -30,10 +35,32 @@ CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test ~/.agents/claude/mods/twe
 tsc -p ~/.agents/claude/mods/tweaks    # against the generated types
 ```
 
-`types/` is generated and gitignored: never hand-edit it, regenerate it.
+`types/` is generated and gitignored: never hand-edit it, regenerate it. `plugin test` needs Claude Code 2.1.274 or newer and is hidden from `claude plugin --help`.
+
+The tests pin the engine's own wording — the trimmed lines, the task reminder, the usage endpoints' fields. A release that rewords one fails its test, which is the signal to read the release and follow it.
 
 ## Loading
 
 The plugin loads from this checkout through `--plugin-dir`, in `claude-launch` and in `process-wrapper.sh` (T3 and daemon launches execute the binary directly, so a launcher flag alone would miss them).
 
 A local-path marketplace is the other way to load it, and is not used: `claude plugin install` copies the folder into `<config>/plugins/cache/<marketplace>/<plugin>/<version>/` and serves the copy, so edits to the checkout do nothing until the version changes — `claude plugin update` at the same version re-copies nothing. One loading path only: loading the same plugin twice registers every hook twice.
+
+## What the engine does
+
+What a discovery run settled, on Claude Code 2.1.278. Each answer is pinned by a test.
+
+- A scheduled task's prompt arrives at `prompt.submit` with `origin.kind` `scheduled-trigger`; a background agent's notification arrives there too, with `task-notification`. `session.receive` fires for neither.
+- A notification's text is a `<task-notification>` element whose `<task-id>` is the agent's id and whose `<tool-use-id>` names the call that started the run that just stopped: the `Agent` call for the launch, the `SendMessage` call for a resume.
+- A subagent's loop raises no `prompt.submit` of its own, so a hook on that event is the main conversation's alone. Its attachments and tool calls carry `agentId`.
+- `agent.spawn`'s result carries the new agent's `agentId` beside the model it resolved.
+- The first user message's context blocks are `claudeMd`, `currentDate`, `gitStatus` and — with an account logged in — `userEmail`. The engine's own injected messages arrive at `prompt.attachment` as `date`, `environment`, `model`, `deferred_tools_delta`, `agent_listing_delta`, `skill_listing`, `total_tokens_reminder`, `queued_command` and `task_reminder`.
+- The system prompt's `# Environment` section is `prompt.section` `env_info_simple` and carries the model-family table. The `Platform:`, `Shell:` and `OS Version:` lines are not in it: they belong to the `environment` attachment.
+- A `task_reminder` attachment carries the session's task list under `Here are the existing tasks:` while the list holds anything, and the nag alone while it does not — so an attachment-local decision tells the two apart.
+- `$.session.root()` is where the session started, which is what `CLAUDE_PROJECT_DIR` gives a settings hook.
+
+Four limits shaped the code:
+
+- A `prompt.submit` hook's rewritten `text` does not reach the model on the scheduled-trigger path, though `next` resolves with it; `context` does reach the model. Hence cron-label rides as context. Whether the fired prompt is drawn in the transcript is not a plugin's to decide — the engine queues it as a meta message and no event exposes that — so it stays invisible, and the label is what tells the model.
+- `$` may not be passed across an import: a function that takes it lives in the file that hooks with it. That is why the machine probes sit in usage-context.ts.
+- `$.http.fetch` takes neither a timeout nor an abort signal, so a refresh cannot be time-bounded; a hung fetch is held until the module reloads, and a single-flight guard keeps the timer from starting another.
+- A hook that fails takes its plugin's other hooks on that event with it, not just itself. A feature that gathers several inputs therefore catches each one of them.
