@@ -30,10 +30,7 @@ fi
 
 mkdir -p "$HOME/Git"
 systemctl --user daemon-reload
-systemctl --user enable --now \
-  claude-remote-control.service \
-  claude-patching-autoport.path \
-  claude-patching-autoport.service
+systemctl --user enable --now claude-remote-control.service
 sudo loginctl enable-linger "$USER"
 
 echo 'Restart your shell, then run `claude` once in ~/Git and `claude remote-control` once.'

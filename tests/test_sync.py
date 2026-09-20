@@ -22,7 +22,7 @@ def fake_home(tmp_path):
     shutil.copy2(ROOT / "sync.py", repo / "sync.py")
     for name in ("claude", "codex", "pi", "shell", "linux", "macos"):
         shutil.copytree(ROOT / name, repo / name, symlinks=True)
-    for name in ("skills", "hooks", "claude-patching"):
+    for name in ("skills", "hooks"):
         (repo / name).mkdir()
     upstream = tmp_path / "upstream"
     upstream.mkdir()
@@ -108,7 +108,7 @@ def test_process_wrapper_lives_in_local_settings(fake_home):
     if PLATFORM == "windows":
         assert "processWrapper" not in settings
     else:
-        assert settings["processWrapper"] == str(repo / "claude-patching" / "process-wrapper.sh")
+        assert settings["processWrapper"] == str(repo / "bin" / "claude-process-wrapper")
 
 
 def test_codex_round_trip_keeps_local_state_and_routes_drift(fake_home):

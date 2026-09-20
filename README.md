@@ -11,7 +11,7 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 - `linux/`, `macos/` — OS-specific service and application files.
 - `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills. `bin/t3-thread.py` sends prompts to the local T3 service.
 - `sync.py` — cross-platform config installer.
-- `pi-for-claude/`, `claude-patching/`, `browser-swarm/` — submodules.
+- `pi-for-claude/`, `browser-swarm/` — submodules.
 
 Runtime state, credentials, caches, and `~/.codex/config.toml.rendered` remain outside the repo.
 
@@ -33,7 +33,7 @@ Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream
 
 Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex/config.<os>.toml`. It compares the shared part of the live config with `~/.codex/config.toml.rendered`, or with the fresh render on a machine that has none, so an existing Codex config survives the first sync. Changed keys enter the OS overlay and keys Codex removed leave it; the shared base changes only by hand. Project trust, hook trust hashes, marketplace timestamps, and reasoning effort stay only in the live file and are never imported. Linux and macOS Codex commands use `/tmp/uv-cache-akelly` for uv caching so workspace sandboxes can write to it; temporary-file cleanup may evict cached packages.
 
-`claude/settings.json` holds only portable settings. Machine-specific ones go in `~/.claude/settings.local.json`, which Claude Code layers on top: sync writes `processWrapper` there on Linux and macOS, and hooks for tools installed on one machine (Herdr's session-start hook on akelly-desktop) belong there too. Sandbox filesystem rules are the exception: Claude Code ignores `sandbox` in the local file, so machine-specific entries such as akelly-desktop's NTFS mounts in `denyRead` live in `claude/settings.json`; the sandbox skips paths that don't exist on a machine.
+`claude/settings.json` holds only portable settings. Machine-specific ones go in `~/.claude/settings.local.json`, which Claude Code layers on top: sync writes `processWrapper` there on Linux and macOS so background sessions load the tweaks mod through `bin/claude-process-wrapper`, and hooks for tools installed on one machine (Herdr's session-start hook on akelly-desktop) belong there too. Sandbox filesystem rules are the exception: Claude Code ignores `sandbox` in the local file, so machine-specific entries such as akelly-desktop's NTFS mounts in `denyRead` live in `claude/settings.json`; the sandbox skips paths that don't exist on a machine.
 
 `codex/model-instructions.md` replaces Codex's base prompt for all models. It uses the GPT-6-Astra template with file-link formatting delegated to the user's machine-specific instructions. Maintain this prompt manually; model catalog updates do not refresh it. Start a new session after editing it.
 
@@ -56,7 +56,7 @@ On Debian/Ubuntu with systemd, run the system setup after sync:
 bash ~/.agents/linux/setup.sh
 ```
 
-It installs the sandbox and trash dependencies, configures AppArmor for Bubblewrap and cached Chromium, enables the Claude Remote Control and claude-patching autoport user units, enables linger, and sources `shell/bashrc.agents` from `~/.bashrc`. Install claude-patching's dependency with `(cd ~/.agents/claude-patching && npm ci)`. Run `claude` once in `~/Git` to accept trust, then `claude remote-control` once to enable remote control.
+It installs the sandbox and trash dependencies, configures AppArmor for Bubblewrap and cached Chromium, enables the Claude Remote Control user unit, enables linger, and sources `shell/bashrc.agents` from `~/.bashrc`. Run `claude` once in `~/Git` to accept trust, then `claude remote-control` once to enable remote control.
 
 The browser AppArmor rule covers the current user's standard agent-browser, Playwright, and Puppeteer caches. Custom browser locations need a matching rule. On Linux ARM64, install Chromium through the system package manager.
 

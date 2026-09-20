@@ -139,8 +139,6 @@ def install_links(platform: str) -> None:
             units / "claude-remote-control.service": REPO / "linux" / "claude-remote-control.service",
             units / "trash-empty.service": REPO / "linux" / "trash-empty.service",
             units / "trash-empty.timer": REPO / "linux" / "trash-empty.timer",
-            units / "claude-patching-autoport.path": REPO / "claude-patching" / "claude-patching-autoport.path",
-            units / "claude-patching-autoport.service": REPO / "claude-patching" / "claude-patching-autoport.service",
         }
     elif platform == "macos":
         static |= {
@@ -320,14 +318,14 @@ def render_codex(platform: str) -> None:
 
 
 def install_process_wrapper(platform: str) -> None:
-    """Point background Claude sessions at claude-patching's wrapper where it can run.
+    """Load the tweaks mod in background Claude sessions, which bypass claude-launch.
 
     The wrapper is a bash script, so it stays out of the shared settings.json and
     lands in settings.local.json, which Claude Code layers on top and Windows skips.
     """
     if platform == "windows":
         return
-    wrapper = str(REPO / "claude-patching" / "process-wrapper.sh")
+    wrapper = str(REPO / "bin" / "claude-process-wrapper")
     path = HOME / ".claude" / "settings.local.json"
     settings = json.loads(path.read_text()) if path.exists() else {}
     if settings.get("processWrapper") == wrapper:
