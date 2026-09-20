@@ -38,7 +38,9 @@ CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test ~/.agents/claude/mods/twe
 tsc -p ~/.agents/claude/mods/tweaks    # against the generated types
 ```
 
-`types/` is generated and gitignored: never hand-edit it, regenerate it. `plugin test` needs Claude Code 2.1.274 or newer and is hidden from `claude plugin --help`.
+`types/` is generated and gitignored: never hand-edit it, regenerate it. `plugin test` is hidden from `claude plugin --help`.
+
+The mod needs Claude Code 2.1.278 or newer: `prompt.attachment` and `session.root` are not events in 2.1.274, and a release without them refuses the whole module at load.
 
 The tests pin the engine's own wording — the trimmed lines, the task reminder, the usage endpoints' fields. A release that rewords one fails its test, which is the signal to read the release and follow it.
 
