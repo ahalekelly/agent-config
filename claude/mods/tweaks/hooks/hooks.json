@@ -1,0 +1,4 @@
+{
+  "description": "Adrian's tweaks: pinned tools, trimmed standing context, labelled cron prompts, usage context, todo: capture, task-notification provenance, the spawn model guard and the read size guard",
+  "modules": ["./register.ts"]
+}

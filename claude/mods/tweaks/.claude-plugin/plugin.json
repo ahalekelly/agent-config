@@ -1,0 +1,35 @@
+{
+  "name": "tweaks",
+  "version": "0.1.0",
+  "description": "Adrian's Claude Code tweaks: tools pinned into the prompt, standing context trimmed, cron prompts labelled, usage and machine pressure on every prompt, todo: capture, task-notification provenance, and guards for spawning without a model and reading a large file whole.",
+  "author": {
+    "name": "Adrian Kelly"
+  },
+  "userConfig": {
+    "pinnedTools": {
+      "type": "string",
+      "multiple": true,
+      "title": "Tools listed in full",
+      "description": "Tools whose full schema ships in the prompt instead of being deferred behind ToolSearch.",
+      "required": false,
+      "default": [
+        "WebFetch",
+        "WebSearch"
+      ]
+    },
+    "readGuardTokensFable": {
+      "type": "number",
+      "title": "Read guard: Fable tokens",
+      "description": "Most tokens one Read may return to a Fable loop before the guard pages or refuses it.",
+      "required": false,
+      "default": 4000
+    },
+    "readGuardTokensOpus": {
+      "type": "number",
+      "title": "Read guard: Opus tokens",
+      "description": "Most tokens one Read may return to an Opus loop before the guard pages or refuses it.",
+      "required": false,
+      "default": 15000
+    }
+  }
+}
