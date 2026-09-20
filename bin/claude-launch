@@ -8,11 +8,11 @@
 # keys its macOS Keychain entry on whether the variable is set, so setting it
 # even to the default would split state from tools that launch `claude` bare.
 # Auto-update stays off because concurrent sessions installing the same version
-# into the shared version store raced and corrupted an install once, and
-# claude-patching reconciles versions itself.
+# into the shared version store raced and corrupted an install once; update by
+# hand with `command claude install latest`.
 if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
   echo "claude-launch: CLAUDE_CODE_OAUTH_TOKEN is unset; use the claude or claudew shell function, or set it from ~/.agents/claude-token.env or ~/.agents/claudew-token.env" >&2
   exit 1
 fi
 source "$HOME/.agents/shell/agent-wrappers.sh"
-DISABLE_AUTOUPDATER=1 _patched_claude "$@"
+DISABLE_AUTOUPDATER=1 _scrub_secrets "$HOME/.agents/bin/claude-process-wrapper" claude "$@"

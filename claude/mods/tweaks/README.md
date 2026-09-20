@@ -46,7 +46,7 @@ The tests pin the engine's own wording — the trimmed lines, the task reminder,
 
 ## Loading
 
-The plugin loads from this checkout through `--plugin-dir`, in `claude-launch` and in `process-wrapper.sh` (T3 and daemon launches execute the binary directly, so a launcher flag alone would miss them).
+The plugin loads from this checkout through `--plugin-dir`, passed by `bin/claude-process-wrapper`. `claude-launch` runs that wrapper for terminal and T3 sessions, and Claude Code runs it as its `processWrapper` for background sessions, which spawn the binary directly and would miss a launcher flag.
 
 A local-path marketplace is the other way to load it, and is not used: `claude plugin install` copies the folder into `<config>/plugins/cache/<marketplace>/<plugin>/<version>/` and serves the copy, so edits to the checkout do nothing until the version changes — `claude plugin update` at the same version re-copies nothing. One loading path only: loading the same plugin twice registers every hook twice.
 

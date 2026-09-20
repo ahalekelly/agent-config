@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Claude Code's `processWrapper`: an argv prefix Claude Code puts in front of
+# every process it spawns for itself, as
+#   claude-process-wrapper <claude-binary> <args...>
+# Background sessions — the background-agent supervisor, the sessions and
+# workers it hosts — name the binary by absolute path and so never pass through
+# claude-launch; this wrapper is where they pick up the tweaks mod.
+#
+# Two hard constraints:
+#   - The child's stdio is the session's stdio, so nothing may be written to
+#     stdout or stderr and the script must end in exec.
+#   - Claude Code refuses to start background sessions when the wrapper path is
+#     not an existing executable file: keep this script executable and in place,
+#     and keep its path free of spaces.
+exec "$1" --plugin-dir "$HOME/.agents/claude/mods/tweaks" "${@:2}"
