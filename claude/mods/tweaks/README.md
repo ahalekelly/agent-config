@@ -7,6 +7,7 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 - **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`).
 - **prompt-trim** — drops the standing context nothing reads: the `userEmail` and `currentDate` context blocks, the `date` attachment, the model-family table from the `# Environment` section, and the environment attachment's `Platform:` and `Shell:` lines.
 - **task-reminder** — the periodic nag to use the task tools reaches the model only while the session has tasks.
+- **context-envelope** — context a hook attached reads as `additional context: …`, without the hook's name in front of it.
 - **cron-label** — a scheduled task's prompt carries a line saying the scheduler fired it.
 - **todo-capture** — a prompt typed as `todo: <item>` is appended to `todo.md` in the session's root and runs no turn.
 - **usage-context** — every prompt the person sends carries the local time, what the Claude and Codex weekly budgets have left, and what the machine is short of.
@@ -71,4 +72,4 @@ Four limits shaped the code:
 - A hook that fails takes its plugin's other hooks on that event with it, not just itself. A feature that gathers several inputs therefore catches each one of them.
 - `$.http.fetch` is refused outright where `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set, and the usage lines then read as unavailable, naming that refusal.
 
-A `prompt.submit` hook's context reaches the model inside a `<system-reminder>`, led by `prompt.submit hook additional context: `. Nothing carries a `hook success:` envelope, which is what the shell hooks needed stripping for.
+A hook's context reaches the model as a `hook_additional_context` attachment inside a `<system-reminder>`, led by `${hookName} hook additional context: ` — a plugin's chain event, a settings hook's event name. The lead-in sits inside the attachment's `text`, so a `prompt.attachment` hook rewrites it. Nothing carries a `hook success:` envelope, which is what the shell hooks needed stripping for.

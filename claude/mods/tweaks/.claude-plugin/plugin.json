@@ -1,7 +1,7 @@
 {
   "name": "tweaks",
   "version": "0.1.0",
-  "description": "Adrian's Claude Code tweaks: tools pinned into the prompt, standing context trimmed, cron prompts labelled, usage and machine pressure on every prompt, todo: capture, task-notification provenance, and guards for spawning without a model and reading a large file whole.",
+  "description": "Adrian's Claude Code tweaks: tools pinned into the prompt, standing context trimmed, hook names dropped from attached context, cron prompts labelled, usage and machine pressure on every prompt, todo: capture, task-notification provenance, and guards for spawning without a model and reading a large file whole.",
   "author": {
     "name": "Adrian Kelly"
   },
