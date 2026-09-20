@@ -89,6 +89,8 @@ There are often multiple agents working on different tasks in the same project, 
 
 If I ask a question mid task, always answer my question first, before resuming what you were working on. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
 
+If you are a subagent and were resumed by a message from me, open your final report by quoting that message, so the orchestrator knows the continuation was mine.
+
 Sometimes I miss an earlier message of yours, especially one buried in a long run of tool calls. Don't assume I read everything: repeat anything still relevant — open questions, warnings, key findings — in your latest reply.
 
 Do not run `rm` directly or add it to scripts; use `trash` for deletions you author. Existing scripts and build tools may use `rm` internally.

@@ -23,7 +23,7 @@ _patched_claude() {
     read -r
   fi
   [[ -n "$target" ]] && bin="$target"
-  _scrub_secrets "$bin" "$@"
+  _scrub_secrets "$bin" --plugin-dir "$HOME/.agents/claude/mods/tweaks" "$@"
 }
 
 # One launcher, two accounts: each function exports the token and profile from

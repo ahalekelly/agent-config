@@ -3,7 +3,7 @@
   "env": {
     "BASH_MAX_OUTPUT_LENGTH": "10000",
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
-    "CLAUDE_CODE_IMMEDIATE_TOOLS": "WebFetch,WebSearch"
+    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
   },
   "permissions": {
     "allow": [
@@ -100,22 +100,6 @@
           {
             "type": "command",
             "command": "uv run ~/.claude/tab-title.py"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.agents/hooks/todo-capture.sh"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.agents/hooks/usage-context.sh"
           }
         ]
       },
@@ -245,5 +229,6 @@
       "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi-for-claude`) are routine"
     ]
   },
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "autoUpdatesChannel": "latest"
 }
