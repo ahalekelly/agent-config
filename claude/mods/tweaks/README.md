@@ -6,7 +6,7 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 
 - **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`).
 - **prompt-trim** — drops the standing context nothing reads: the `userEmail` and `currentDate` context blocks, the `date` attachment, the model-family table from the `# Environment` section, and the environment attachment's `Platform:` and `Shell:` lines.
-- **sandbox-notice** — the sandbox notice's filesystem policy drops Claude Code's own state under `~/.claude` and the `/dev/` handles, which makes room to name what the engine truncated away.
+- **sandbox-notice** — the sandbox notice's filesystem policy keeps the entries that change what a task does: Claude Code's own state, the `/dev/` handles and paths another entry already covers go, and what the engine truncated away is named in words.
 - **task-reminder** — the periodic nag to use the task tools reaches the model only while the session has tasks.
 - **context-envelope** — context a hook attached reads as `additional context:` on its own line, without the hook's name.
 - **cron-label** — a scheduled task's prompt carries a line saying the scheduler fired it.

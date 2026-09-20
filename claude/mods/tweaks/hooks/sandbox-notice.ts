@@ -7,41 +7,79 @@ import type { On } from 'claude-code'
 const FILESYSTEM = 'Filesystem: '
 
 /**
- * What the engine writes in place of the deny entries it cut to keep the
- * notice short. The cut entries are the ones a task touches, so the summary
- * below says what they are rather than counting them.
+ * The session transcripts, the one place under the user's `.claude` a task
+ * does read.
  */
-const TRUNCATED = /^\.\.\. and \d+ more/
+const TRANSCRIPTS = '~/.claude/projects'
+
+/**
+ * What tells the model nothing about what a task may do: the harness's own
+ * state wherever it keeps it, and the handles every process writes to.
+ */
+const NOISE = [
+  /^\.\.\. and \d+ more/, // where the engine cut entries to keep the notice short
+  /\/\.claude(\/|$)/, // Claude Code's own state, and a project's own config
+  /\/\.cc-writes$/,
+  /^\/etc\/claude-code/, // the managed settings
+  /^(\/private)?\/tmp\/claude-\d+\//, // the scratch root the harness hands out
+  /^\/dev\//,
+  /^~\/\.npm\/_logs/,
+]
 
 /**
  * What the dropped deny entries amount to, in words the model can act on.
  */
 const SUMMARY = [
-  "Claude Code's own state under ~/.claude",
+  "Claude Code's own state under ~/.claude and /etc/claude-code",
   "the project's .claude/ config and .mcp.json",
 ]
 
 /**
- * The filesystem policy as the engine writes it. `read` crosses untouched,
- * whatever it holds.
+ * The filesystem policy as the engine writes it.
  */
 type Policy = {
-  read: unknown
+  read: { denyOnly: string[]; allowWithinDeny: string[] }
   write: { allowOnly: string[]; denyWithinAllow: string[] }
 }
 
 /**
- * Whether the path is Claude Code's own state: anything under the user's
- * `.claude` but the session transcripts, which a task does read.
+ * The path with the user's home directory written as `~`, however the engine
+ * spelled it, so one rule covers all three spellings.
  *
  * @param path one entry of the policy
  * @param home the user's home directory
- * @returns whether the entry tells the model nothing
+ * @returns the path
  */
-const ownState = (path: string, home: string): boolean => {
-  const dir = [`${home}/.claude/`, '~/.claude/', '$HOME/.claude/'].find(it => path.startsWith(it))
+const athome = (path: string, home: string): string => {
+  const dir = [`${home}/`, '$HOME/'].find(it => path.startsWith(it))
 
-  return dir !== undefined && !path.slice(dir.length).startsWith('projects')
+  return dir === undefined ? path : `~/${path.slice(dir.length)}`
+}
+
+/**
+ * The list's entries that change what a task does: everything but the
+ * harness's own state, a `/private` duplicate of a path already listed, and a
+ * path some other entry's directory already covers.
+ *
+ * @param list one of the policy's four path lists
+ * @param home the user's home directory
+ * @returns the entries the model reads
+ */
+const acted = (list: string[], home: string): string[] => {
+  const paths = list.map(path => athome(path, home))
+
+  return list.filter((path, at) => {
+    const it = paths[at] as string
+
+    return (
+      it.startsWith(TRANSCRIPTS) ||
+      !(
+        NOISE.some(noise => noise.test(it)) ||
+        (it.startsWith('/private/') && paths.includes(it.slice('/private'.length))) ||
+        paths.some(other => other !== it && it.startsWith(`${other}/`))
+      )
+    )
+  })
 }
 
 /**
@@ -54,18 +92,16 @@ const ownState = (path: string, home: string): boolean => {
  */
 const trimmed = (line: string, home: string): string => {
   try {
-    const policy = JSON.parse(line.slice(FILESYSTEM.length)) as Policy
+    const { read, write } = JSON.parse(line.slice(FILESYSTEM.length)) as Policy
 
     return `${FILESYSTEM}${JSON.stringify({
-      read: policy.read,
+      read: {
+        denyOnly: acted(read.denyOnly, home),
+        allowWithinDeny: acted(read.allowWithinDeny, home),
+      },
       write: {
-        allowOnly: policy.write.allowOnly.filter(path => !path.startsWith('/dev/')),
-        denyWithinAllow: [
-          ...policy.write.denyWithinAllow.filter(
-            path => !TRUNCATED.test(path) && !ownState(path, home),
-          ),
-          ...SUMMARY,
-        ],
+        allowOnly: acted(write.allowOnly, home),
+        denyWithinAllow: [...acted(write.denyWithinAllow, home), ...SUMMARY],
       },
     })}`
   } catch {
@@ -77,11 +113,12 @@ const trimmed = (line: string, home: string): string => {
  * The sandbox notice whose filesystem policy names the paths a task can act
  * on, and the notice as it came where it carries no such line.
  *
- * The engine spends most of that line on Claude Code's own state under
- * `~/.claude` — the daemon, the shell snapshots, the signed policy files —
+ * The engine spends most of that line on Claude Code's own state — the
+ * daemon, the shell snapshots, the signed policy files, the scratch root —
  * and then truncates away the entries that decide what a session may write:
- * the project's `.claude/` config and `.mcp.json`. Dropping its own state
- * leaves room for those, and the `/dev/` write handles go with it.
+ * the project's `.claude/` config and `.mcp.json`. Dropping the state leaves
+ * room to name those, and the paths already covered by a listed directory go
+ * with it.
  *
  * @param text the notice the engine wrote
  * @param home the user's home directory

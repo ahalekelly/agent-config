@@ -14,16 +14,9 @@ const policy = (text: string): string =>
 
 describe('sandbox-notice', () => {
   test('the policy keeps the paths a task acts on', () => {
-    const line = policy(trimPolicy(SANDBOX_INSTRUCTIONS, '/home/akelly'))
-
-    expect(line).toContain('/home/akelly/.claude/projects')
-    expect(line).toContain('/home/akelly/.agents/claude/settings.json')
-    expect(line).toContain('/home/akelly/.pi/agent/auth.json')
-    expect(line).toContain("Claude Code's own state under ~/.claude")
-    expect(line).toContain("the project's .claude/ config and .mcp.json")
-    expect(line).not.toContain('/dev/')
-    expect(line).not.toContain('truncated')
-    expect(line).not.toContain('/home/akelly/.claude/daemon')
+    expect(policy(trimPolicy(SANDBOX_INSTRUCTIONS, '/home/akelly'))).toBe(
+      `Filesystem: {"read":{"denyOnly":["~/.pi/agent/auth.json","/mnt/960PRO","/mnt/WD20EZRZ","/mnt/ST4000DX001"],"allowWithinDeny":["/home/akelly/.pi/agent/auth.json"]},"write":{"allowOnly":["/tmp/claude",".","$TMPDIR","/home/akelly/.agents","/home/akelly/.t3/userdata/attachments","/home/akelly/.cache/uv","/home/akelly/.Trash","/home/akelly/.local/share/Trash","/tmp/.Trash-1000","/home/akelly/.pi/agent/auth.json","/home/akelly/.pi/agent/auth.json.lock","/var/lib/plocate"],"denyWithinAllow":["/home/akelly/.agents/claude/settings.json","/home/akelly/.agents/skills","/home/akelly/.agents/claude/output-styles","/home/akelly/.agents/claude/CLAUDE.md","/home/akelly/.claude/projects","Claude Code's own state under ~/.claude and /etc/claude-code","the project's .claude/ config and .mcp.json"]}}`,
+    )
   })
 
   test('the rest of the notice is untouched', () => {
@@ -36,16 +29,14 @@ describe('sandbox-notice', () => {
     )
   })
 
-  test('a home written as a tilde is read as the same directory', () => {
-    const line = policy(
+  test('a duplicate, a covered path and the three home spellings all go', () => {
+    expect(
       trimPolicy(
-        'Filesystem: {"read":{},"write":{"allowOnly":["/dev/null","/repo"],"denyWithinAllow":["~/.claude/daemon","~/.claude/projects","/repo/.mcp.json"]}}',
+        `Filesystem: {"read":{"denyOnly":["$HOME/.claude/ide"],"allowWithinDeny":[]},"write":{"allowOnly":["/tmp/claude","/private/tmp/claude","~/.agents","~/.agents/.git","~/.npm/_logs"],"denyWithinAllow":["/home/akelly/.claude/daemon","~/.claude/projects","/repo/.claude/settings.json","/repo/claude/settings.json"]}}`,
         '/home/akelly',
       ),
-    )
-
-    expect(line).toBe(
-      `Filesystem: {"read":{},"write":{"allowOnly":["/repo"],"denyWithinAllow":["~/.claude/projects","/repo/.mcp.json","Claude Code's own state under ~/.claude","the project's .claude/ config and .mcp.json"]}}`,
+    ).toBe(
+      `Filesystem: {"read":{"denyOnly":[],"allowWithinDeny":[]},"write":{"allowOnly":["/tmp/claude","~/.agents"],"denyWithinAllow":["~/.claude/projects","/repo/claude/settings.json","Claude Code's own state under ~/.claude and /etc/claude-code","the project's .claude/ config and .mcp.json"]}}`,
     )
   })
 
@@ -54,6 +45,7 @@ describe('sandbox-notice', () => {
       '## Bash command sandbox\nEverything is allowed.',
     )
     expect(trimPolicy('Filesystem: not json', '/home/akelly')).toBe('Filesystem: not json')
+    expect(trimPolicy('Filesystem: {"read":{}}', '/home/akelly')).toBe('Filesystem: {"read":{}}')
   })
 
   test('the attachment reaches the model rewritten', async ($, on) => {
