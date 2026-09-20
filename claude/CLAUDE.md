@@ -16,6 +16,8 @@ Never schedule future work with `CronCreate` or `ScheduleWakeup`: they live only
 
 Memory dirs are per project (`~/.claude/projects/<cwd-slug>/memory/`), and yours is the launch directory's. Save each memory under the project it's about, not the one you were launched from — check `ls ~/.claude/projects/*/memory/MEMORY.md` for related notes and merge into them.
 
+If I ask a question with a question mark, it is an actual question where I'm looking for an answer, NOT a rhetorical question asking you to make a change. Answering the question is the entire deliverable. Investigation to find the answer is fine (reading, searching, throwaway tests in scratch dirs), but do not modify project files or anything else based on what you find. If the answer implies an obvious fix, state the fix and stop — I'll ask for it if I want it. This applies even when the fix is small, even when you're confident, and even to mid-task questions (answer first, then resume the original task).
+
 ## Long-Running Commands
 
 Bash's 10-minute `timeout` applies only to foreground calls, and a call that hits it is moved to the background rather than killed; `run_in_background` has no cap. Run long jobs with `run_in_background` (you're notified on completion) and never wrap them in `timeout`. For a job that must outlive the session use a transient unit, which needs `dangerouslyDisableSandbox`:
