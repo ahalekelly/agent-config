@@ -12,7 +12,7 @@ describe('context-envelope', () => {
         text: 'prompt.submit hook additional context: Time: Saturday 2026-09-20 10:36 PDT',
         origin: { kind: 'plugin', event: 'prompt.submit' },
       }),
-    ).toEqual({ text: 'additional context: Time: Saturday 2026-09-20 10:36 PDT' })
+    ).toEqual({ text: 'additional context:\nTime: Saturday 2026-09-20 10:36 PDT' })
   })
 
   test("a settings hook's context loses its event name", async ($, on) => {
@@ -24,6 +24,6 @@ describe('context-envelope', () => {
         text: 'UserPromptSubmit hook additional context: the branch is behind its remote',
         origin: { kind: 'hook', event: 'UserPromptSubmit' },
       }),
-    ).toEqual({ text: 'additional context: the branch is behind its remote' })
+    ).toEqual({ text: 'additional context:\nthe branch is behind its remote' })
   })
 })

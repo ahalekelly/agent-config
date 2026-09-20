@@ -34,8 +34,8 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  * - prompt-trim: see prompt-trim.ts.
  * - task-reminder: the periodic reminder to use the task tools reaches the
  *   model only while the session has tasks to be reminded about.
- * - context-envelope: context a hook attached reads as `additional context:`,
- *   without the hook's name in front.
+ * - context-envelope: context a hook attached reads as `additional context:` on its own
+ *   line, without the hook's name.
  * - cron-label: a scheduled task's prompt tells the model the scheduler fired
  *   it.
  * - todo-capture: see todo-capture.ts. Registered before usage-context, so a
@@ -67,7 +67,7 @@ export const register: Register = (on, options) => {
   })
 
   on('prompt.attachment', { type: 'hook_additional_context' }, ($, e, next) =>
-    next({ ...e, text: e.text.replace(HOOK_ENVELOPE, 'additional context: ') }),
+    next({ ...e, text: e.text.replace(HOOK_ENVELOPE, 'additional context:\n') }),
   )
 
   // The label rides as context: a rewritten `text` reaches the screen but not
