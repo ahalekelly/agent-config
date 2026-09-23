@@ -52,12 +52,13 @@ export const attachment = (type: string, text: string) => ({
 })
 
 /**
- * The engine's own answer beneath the plugin: the text, the blocks and the
- * prompt as the chain left them.
+ * The engine's own answer beneath the plugin: the session's model, and the
+ * text, the blocks and the prompt as the chain left them.
  *
  * @param on the test's `on`
  */
 export const engineAnswers = (on: On): void => {
+  on('session.model', () => ({ value: 'claude-opus-5' }))
   on('prompt.section', ($, e) => ({ text: e.text }))
   on('prompt.attachment', ($, e) => ({ text: e.text }))
   on('prompt.context', ($, e) => ({

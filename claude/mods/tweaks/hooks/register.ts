@@ -1,5 +1,6 @@
 import type { Register } from 'claude-code'
 
+import { modelScope } from './model-scope.js'
 import { promptTrim } from './prompt-trim.js'
 import { readGuard } from './read-guard.js'
 import { sandboxNotice } from './sandbox-notice.js'
@@ -33,6 +34,7 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  *   prompt, whatever the engine and the tool decided about deferring them
  *   behind ToolSearch. The description beneath stands.
  * - prompt-trim: see prompt-trim.ts.
+ * - model-scope: see model-scope.ts.
  * - sandbox-notice: see sandbox-notice.ts.
  * - task-reminder: the periodic reminder to use the task tools reaches the
  *   model only while the session has tasks to be reminded about.
@@ -61,6 +63,7 @@ export const register: Register = (on, options) => {
     }))
 
   promptTrim(on)
+  modelScope(on)
   sandboxNotice(on)
 
   on('prompt.attachment', { type: 'task_reminder' }, async ($, e, next) => {

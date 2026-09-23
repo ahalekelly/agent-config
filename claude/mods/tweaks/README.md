@@ -6,6 +6,7 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 
 - **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`).
 - **prompt-trim** — drops the standing context nothing reads: the `userEmail` and `currentDate` context blocks, the `date` attachment, the model-family table from the `# Environment` section, and the environment attachment's `Platform:` and `Shell:` lines.
+- **model-scope** — a `<model: fable, opus>` … `</model>` block in CLAUDE.md, or in a file it imports, reaches the families it names and nobody else.
 - **sandbox-notice** — the sandbox notice's filesystem policy keeps the entries that change what a task does: Claude Code's own state, the `/dev/` handles and paths another entry already covers go, and what the engine truncated away is named in words.
 - **task-reminder** — the periodic nag to use the task tools reaches the model only while the session has tasks.
 - **context-envelope** — context a hook attached reads as `additional context:` on its own line, without the hook's name.
@@ -54,7 +55,7 @@ A local-path marketplace is the other way to load it, and is not used: `claude p
 
 ## What the engine does
 
-What a discovery run settled, on Claude Code 2.1.278. Each answer is pinned by a test.
+What a discovery run settled, on Claude Code 2.1.278. A test pins each answer a hook computes against.
 
 - A scheduled task's prompt arrives at `prompt.submit` with `origin.kind` `scheduled-trigger`; a background agent's notification arrives there too, with `task-notification`. `session.receive` fires for neither.
 - A notification's text is a `<task-notification>` element whose `<task-id>` is the agent's id and whose `<tool-use-id>` names the call that started the run that just stopped: the `Agent` call for the launch, the `SendMessage` call for a resume. Some notifications carry no `<tool-use-id>` at all, so its absence is reported as an unattributable run rather than guessed at.
@@ -64,13 +65,16 @@ What a discovery run settled, on Claude Code 2.1.278. Each answer is pinned by a
 - The system prompt's `# Environment` section is `prompt.section` `env_info_simple` and carries the model-family table. The `Platform:`, `Shell:` and `OS Version:` lines are not in it: they belong to the `environment` attachment.
 - A `task_reminder` attachment carries the session's task list under `Here are the existing tasks:` while the list holds anything, and the nag alone while it does not — so an attachment-local decision tells the two apart.
 - `$.session.root()` is where the session started, which is what `CLAUDE_PROJECT_DIR` gives a settings hook.
+- An instruction file's HTML comments never reach a hook: neither the `claudeMd` text nor `instructionFiles`' `content` carries them, so a block written for one model family is marked with tags.
+- `prompt.context` fires once for the session. A subagent's loop reads the blocks the main conversation computed, and `$.session.model()` answers the main loop's model wherever it is called, so a subagent reads its parent's variant of the instructions.
 
-Four limits shaped the code:
+The limits that shaped the code:
 
 - A `prompt.submit` hook's rewritten `text` does not reach the model on the scheduled-trigger path, though `next` resolves with it; `context` does reach the model. Hence cron-label rides as context. On the task-notification path both land, so the `<trigger>` element is prepended to the notification itself. Whether the fired prompt is drawn in the transcript is not a plugin's to decide — the engine queues it as a meta message and no event exposes that — so it stays invisible, and the label is what tells the model.
 - `$` may not be passed across an import: a function that takes it lives in the file that hooks with it. That is why the machine probes sit in usage-context.ts.
 - `$.http.fetch` takes neither a timeout nor an abort signal, so a refresh cannot be time-bounded; a hung fetch is held until the module reloads, and a single-flight guard keeps the timer from starting another.
 - A hook that fails takes its plugin's other hooks on that event with it, not just itself. A feature that gathers several inputs therefore catches each one of them.
+- The context blocks stand in the conversation's first user message, which the transcript then keeps, so nothing re-scopes them later: after a `/model` switch the session reads the variant it started with. `$.ui.invalidate('prompt.context')` reaches only the next conversation the engine builds, and a compaction or `/clear` rebuilds one anyway.
 - `$.http.fetch` is refused outright where `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set, and the usage lines then read as unavailable, naming that refusal.
 
 A hook's context reaches the model as a `hook_additional_context` attachment inside a `<system-reminder>`, led by `${hookName} hook additional context: ` — a plugin's chain event, a settings hook's event name. The lead-in sits inside the attachment's `text`, so a `prompt.attachment` hook rewrites it. Nothing carries a `hook success:` envelope, which is what the shell hooks needed stripping for.

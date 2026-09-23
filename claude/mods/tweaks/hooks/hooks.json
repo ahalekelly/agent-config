@@ -1,4 +1,4 @@
 {
-  "description": "Adrian's tweaks: pinned tools, trimmed standing context, a sandbox policy cut to the paths a task acts on, hook names dropped from attached context, labelled cron prompts, usage context, todo: capture, task-notification provenance, the spawn model guard and the read size guard",
+  "description": "Adrian's tweaks: pinned tools, trimmed standing context, instructions scoped to a model family, a sandbox policy cut to the paths a task acts on, hook names dropped from attached context, labelled cron prompts, usage context, todo: capture, task-notification provenance, the spawn model guard and the read size guard",
   "modules": ["./register.ts"]
 }
