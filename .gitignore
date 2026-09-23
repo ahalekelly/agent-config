@@ -36,3 +36,7 @@ __pycache__/
 
 # Claude Code synced-plugin cache, machine-local
 skills/synced/
+
+# Linked worktrees of the submodules, checked out beside them.
+/pi-for-claude-*/
+/browser-swarm-*/
