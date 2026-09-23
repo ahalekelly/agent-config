@@ -17,7 +17,6 @@ IMAGE = "T3 Code (Alpha).exe"
 EXE = Path(os.environ["LOCALAPPDATA"]) / "Programs/t3code" / IMAGE
 LOG = Path(os.environ["LOCALAPPDATA"]) / "t3-keepalive/t3-keepalive.log"
 SW_MINIMIZE = 6
-SW_SHOWMINNOACTIVE = 7
 
 user32 = ctypes.WinDLL("user32")
 EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
@@ -51,15 +50,12 @@ while True:
     if not any(p.info["name"] == IMAGE for p in psutil.process_iter(["name"])):
         # T3 holds Electron's single-instance lock, so a launch that races its self-update restart just quits.
         try:
-            startup = subprocess.Popen(
-                [EXE],
-                startupinfo=subprocess.STARTUPINFO(dwFlags=subprocess.STARTF_USESHOWWINDOW, wShowWindow=SW_SHOWMINNOACTIVE),
-            )
+            startup = subprocess.Popen([EXE])
         except OSError as error:
             log(f"Cannot launch T3: {error}")
             sys.exit(1)
         log(f"Launched T3 (PID {startup.pid}); waiting to minimize its window")
-        # Electron ignores the STARTUPINFO show state, so its window flashes open until minimized here.
+        # Electron ignores a STARTUPINFO show state, so the window opens visible until minimized here.
         for _ in range(600):
             hwnd = visible_window(startup.pid)
             if hwnd or startup.poll() is not None:
@@ -69,8 +65,6 @@ while True:
             log(f"T3 exited with code {startup.returncode} before showing a window")
         elif not hwnd:
             log("T3 showed no window within 60 seconds")
-        elif user32.IsIconic(hwnd):
-            log("T3 started minimized")
         else:
             user32.ShowWindow(hwnd, SW_MINIMIZE)
             log("T3 opened visible and is now minimized"
