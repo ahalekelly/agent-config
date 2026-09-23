@@ -1,4 +1,5 @@
-notify = ["C:\\Users\\akelly\\AppData\\Local\\OpenAI\\Codex\\runtimes\\cua_node\\f8d2abcb7481383b\\bin\\node_modules\\@oai\\sky\\bin\\windows\\codex-computer-use.exe", "turn-ended"]
+notify = [ "C:\\Users\\akelly\\AppData\\Local\\OpenAI\\Codex\\runtimes\\cua_node\\6f12e0ef1c6e5061\\bin\\node_modules\\@oai\\sky\\bin\\windows\\codex-computer-use.exe", "turn-ended" ]
+model = "gpt-6-astra"
 
 [windows]
 sandbox = "elevated"
@@ -47,32 +48,30 @@ enabled = true
 [plugins."visualize@openai-bundled"]
 enabled = true
 
-[plugins."sites@openai-bundled"]
-enabled = true
-
 [plugins."computer-use@openai-bundled"]
 enabled = true
 
 [mcp_servers.node_repl]
 args = []
-command = "C:\\Users\\akelly\\AppData\\Local\\OpenAI\\Codex\\runtimes\\cua_node\\f8d2abcb7481383b\\bin\\node_repl.exe"
+command = 'C:\Users\akelly\AppData\Local\OpenAI\Codex\runtimes\cua_node\6f12e0ef1c6e5061\bin\node_repl.exe'
 startup_timeout_sec = 120
 
 [mcp_servers.node_repl.env]
 NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
-NODE_REPL_NODE_MODULE_DIRS = "C:\\Users\\akelly\\AppData\\Local\\OpenAI\\Codex\\runtimes\\cua_node\\f8d2abcb7481383b\\bin\\node_modules"
-NODE_REPL_NODE_PATH = "C:\\Users\\akelly\\AppData\\Local\\OpenAI\\Codex\\runtimes\\cua_node\\f8d2abcb7481383b\\bin\\node.exe"
-NODE_REPL_TRUSTED_CODE_PATHS = 'C:\Users\akelly\.codex'
+NODE_REPL_NODE_MODULE_DIRS = 'C:\Users\akelly\AppData\Local\OpenAI\Codex\runtimes\cua_node\6f12e0ef1c6e5061\bin\node_modules'
+NODE_REPL_NODE_PATH = 'C:\Users\akelly\AppData\Local\OpenAI\Codex\runtimes\cua_node\6f12e0ef1c6e5061\bin\node.exe'
+NODE_REPL_TRUSTED_CODE_PATHS = 'C:\Users\akelly\.codex;C:\Users\akelly\AppData\Local\OpenAI\Codex\runtimes\cua_node\6f12e0ef1c6e5061\bin\node_modules'
 CODEX_HOME = 'C:\Users\akelly\.codex'
 NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "7ed52dae165c3bc22b6d24f282e2c1fbc87f6949fbbe037767a7418d8f517f01,e13fd947e846d3d306e9249dd3c73d14931b6494803dbafb16cef85e6add9506"
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.721.41059"
+BROWSER_USE_CODEX_APP_VERSION = "26.908.70816"
 SKY_CUA_NATIVE_PIPE = "1"
-SKY_CUA_NATIVE_PIPE_DIRECTORY = "\\\\.\\pipe\\codex-computer-use-830b9985-d299-462e-a445-d6b6d6c2c46f"
-CODEX_CLI_PATH = "C:\\Users\\akelly\\AppData\\Local\\OpenAI\\Codex\\bin\\69066b736e1e17a4\\codex.exe"
+SKY_CUA_NATIVE_PIPE_DIRECTORY = '\\.\pipe\codex-computer-use-f3a0575f-1cbf-47ec-a471-c64755c93e65'
+CODEX_CLI_PATH = 'C:\Users\akelly\AppData\Local\OpenAI\Codex\bin\12219cbfbcbddde7\codex.exe'
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"C:/Users/akelly/.codex/plugins/cache/openai-bundled/browser/26.908.70816/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
 
 [shell_environment_policy.set]
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
