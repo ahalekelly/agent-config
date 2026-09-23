@@ -11,7 +11,7 @@ const CLOSE = /^\s*<\/model>\s*$/
 
 /**
  * The instructions `model` should read: a block whose family list names it
- * keeps its content without the markers, and one it does not names is gone,
+ * keeps its content without the markers, and one it does not name is gone,
  * markers and the blank line beneath them included.
  *
  * @param text the `claudeMd` block, files and framing as the engine wrote it
