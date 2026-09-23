@@ -16,10 +16,7 @@ import psutil
 IMAGE = "T3 Code (Alpha).exe"
 EXE = Path(os.environ["LOCALAPPDATA"]) / "Programs/t3code" / IMAGE
 LOG = Path(os.environ["LOCALAPPDATA"]) / "t3-keepalive/t3-keepalive.log"
-# T3 restarts itself during updates; wait this many polls before relaunching.
-GRACE_POLLS = 5
 SW_MINIMIZE = 6
-SW_SHOWMINNOACTIVE = 7
 
 user32 = ctypes.WinDLL("user32")
 EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
@@ -48,46 +45,29 @@ def visible_window(pid: int) -> int | None:
 
 
 # Only minimize launches initiated here; opening T3 from the Start menu stays visible.
-startup: subprocess.Popen | None = None
-minimized_window: int | None = None
-missing_polls = 0
 log("Watching T3; existing windows remain unchanged")
 while True:
-    time.sleep(1)
-    if startup:
-        if startup.poll() is not None:
-            startup = None
-            minimized_window = None
-        elif minimized_window:
-            log(f"T3 is minimized (PID {startup.pid})"
-                if user32.IsIconic(minimized_window)
-                else "T3 is visible after the minimize request; leaving its window alone")
-            startup = None
-            minimized_window = None
-            continue
-        else:
+    if not any(p.info["name"] == IMAGE for p in psutil.process_iter(["name"])):
+        # T3 holds Electron's single-instance lock, so a launch that races its self-update restart just quits.
+        try:
+            startup = subprocess.Popen([EXE])
+        except OSError as error:
+            log(f"Cannot launch T3: {error}")
+            sys.exit(1)
+        log(f"Launched T3 (PID {startup.pid}); waiting to minimize its window")
+        # Electron ignores a STARTUPINFO show state, so the window opens visible until minimized here.
+        for _ in range(600):
             hwnd = visible_window(startup.pid)
-            if hwnd:
-                if not user32.IsIconic(hwnd):
-                    user32.ShowWindow(hwnd, SW_MINIMIZE)
-                # Observe the result on the next poll, like the macOS watcher.
-                minimized_window = hwnd
-            continue
-
-    if any(p.info["name"] == IMAGE for p in psutil.process_iter(["name"])):
-        missing_polls = 0
-        continue
-    missing_polls += 1
-    if missing_polls < GRACE_POLLS:
-        continue
-
-    missing_polls = 0
-    try:
-        startup = subprocess.Popen(
-            [EXE],
-            startupinfo=subprocess.STARTUPINFO(dwFlags=subprocess.STARTF_USESHOWWINDOW, wShowWindow=SW_SHOWMINNOACTIVE),
-        )
-    except OSError as error:
-        log(f"Cannot launch T3: {error}")
-        sys.exit(1)
-    log(f"Launched T3 (PID {startup.pid}); waiting to minimize its window")
+            if hwnd or startup.poll() is not None:
+                break
+            time.sleep(0.1)
+        if startup.poll() is not None:
+            log(f"T3 exited with code {startup.returncode} before showing a window")
+        elif not hwnd:
+            log("T3 showed no window within 60 seconds")
+        else:
+            user32.ShowWindow(hwnd, SW_MINIMIZE)
+            log("T3 opened visible and is now minimized"
+                if user32.IsIconic(hwnd)
+                else "T3 is visible after the minimize request; leaving its window alone")
+    time.sleep(300)
