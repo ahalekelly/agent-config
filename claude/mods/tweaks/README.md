@@ -6,7 +6,7 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 
 - **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`).
 - **prompt-trim** — drops the standing context nothing reads: the `userEmail` and `currentDate` context blocks, the `date` attachment, the model-family table from the `# Environment` section, and the environment attachment's `Platform:` and `Shell:` lines.
-- **model-scope** — a `<model: fable, opus>` … `</model>` block in CLAUDE.md, or in a file it imports, reaches the families it names and nobody else.
+- **model-scope** — a `<model: fable, opus>` … `</model>` block in CLAUDE.md, or in a file it imports, leaves the instructions every loop reads and rides to the main loop as prompt context when the model it names is the one running, so a subagent reads the shared text alone.
 - **sandbox-notice** — the sandbox notice's filesystem policy keeps the entries that change what a task does: Claude Code's own state, the `/dev/` handles and paths another entry already covers go, and what the engine truncated away is named in words.
 - **task-reminder** — the periodic nag to use the task tools reaches the model only while the session has tasks.
 - **context-envelope** — context a hook attached reads as `additional context:` on its own line, without the hook's name.
@@ -66,7 +66,7 @@ What a discovery run settled, on Claude Code 2.1.278. A test pins each answer a 
 - A `task_reminder` attachment carries the session's task list under `Here are the existing tasks:` while the list holds anything, and the nag alone while it does not — so an attachment-local decision tells the two apart.
 - `$.session.root()` is where the session started, which is what `CLAUDE_PROJECT_DIR` gives a settings hook.
 - An instruction file's HTML comments never reach a hook: neither the `claudeMd` text nor `instructionFiles`' `content` carries them, so a block written for one model family is marked with tags.
-- `prompt.context` fires once for the session. A subagent's loop reads the blocks the main conversation computed, and `$.session.model()` answers the main loop's model wherever it is called, so a subagent reads its parent's variant of the instructions.
+- `prompt.context` fires before the session's first `prompt.submit`, and again after a compaction rebuilds the conversation. A subagent's loop reads the blocks the main conversation computed, and `$.session.model()` answers the main loop's model wherever it is called, so instructions a subagent should not read have to leave the context blocks altogether.
 
 The limits that shaped the code:
 
@@ -74,7 +74,7 @@ The limits that shaped the code:
 - `$` may not be passed across an import: a function that takes it lives in the file that hooks with it. That is why the machine probes sit in usage-context.ts.
 - `$.http.fetch` takes neither a timeout nor an abort signal, so a refresh cannot be time-bounded; a hung fetch is held until the module reloads, and a single-flight guard keeps the timer from starting another.
 - A hook that fails takes its plugin's other hooks on that event with it, not just itself. A feature that gathers several inputs therefore catches each one of them.
-- The context blocks stand in the conversation's first user message, which the transcript then keeps, so nothing re-scopes them later: after a `/model` switch the session reads the variant it started with. `$.ui.invalidate('prompt.context')` reaches only the next conversation the engine builds, and a compaction or `/clear` rebuilds one anyway.
+- The context blocks stand in the conversation's first user message, which the transcript then keeps, so nothing rewrites them later: text delivered as prompt context stays on the turn it rode in on, and a `/model` switch adds the new model's instructions rather than replacing the old ones.
 - `$.http.fetch` is refused outright where `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set, and the usage lines then read as unavailable, naming that refusal.
 
 A hook's context reaches the model as a `hook_additional_context` attachment inside a `<system-reminder>`, led by `${hookName} hook additional context: ` — a plugin's chain event, a settings hook's event name. The lead-in sits inside the attachment's `text`, so a `prompt.attachment` hook rewrites it. Nothing carries a `hook success:` envelope, which is what the shell hooks needed stripping for.

@@ -49,6 +49,7 @@ const send = (toolUseId: string) => ({
  * @param on the test's `on`
  */
 const engine = (on: On): void => {
+  on('session.model', () => ({ value: 'claude-opus-5' }))
   on('agent.spawn', ($, e) => ({ model: e.model ?? e.parentModel, agentId: 'agent-1' }))
   on('tool.call', () => ({ result: { success: true } }))
   on('prompt.submit', ($, e) => ({ text: e.text, context: e.context, origin: e.origin }))
@@ -93,6 +94,7 @@ describe('task-provenance', () => {
   })
 
   test('a refused send leaves no trace', async ($, on) => {
+    on('session.model', () => ({ value: 'claude-opus-5' }))
     on('agent.spawn', ($, e) => ({ model: e.model ?? e.parentModel, agentId: 'agent-1' }))
     on('tool.call', () => ({ deny: 'that agent is not yours to message' }))
     on('prompt.submit', ($, e) => ({ text: e.text, context: e.context, origin: e.origin }))
@@ -104,6 +106,7 @@ describe('task-provenance', () => {
   })
 
   test('a refused spawn leaves no trace', async ($, on) => {
+    on('session.model', () => ({ value: 'claude-opus-5' }))
     on('agent.spawn', () => ({ deny: 'no' }))
     on('prompt.submit', ($, e) => ({ text: e.text, context: e.context, origin: e.origin }))
 

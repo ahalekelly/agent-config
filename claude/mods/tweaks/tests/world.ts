@@ -252,6 +252,7 @@ export const world = (
   on('prompt.submit', ($, e) => ({ text: e.text, context: e.context, origin: e.origin }))
   on('ui.toast', () => ({ value: undefined }))
   on('session.root', () => ({ value: '/repo' }))
+  on('session.model', () => ({ value: 'claude-opus-5' }))
 
   return it
 }

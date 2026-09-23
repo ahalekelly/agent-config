@@ -34,7 +34,6 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  *   prompt, whatever the engine and the tool decided about deferring them
  *   behind ToolSearch. The description beneath stands.
  * - prompt-trim: see prompt-trim.ts.
- * - model-scope: see model-scope.ts.
  * - sandbox-notice: see sandbox-notice.ts.
  * - task-reminder: the periodic reminder to use the task tools reaches the
  *   model only while the session has tasks to be reminded about.
@@ -42,8 +41,9 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  *   line, without the hook's name.
  * - cron-label: a scheduled task's prompt tells the model the scheduler fired
  *   it.
- * - todo-capture: see todo-capture.ts. Registered before usage-context, so a
- *   prompt it takes gathers nothing.
+ * - todo-capture: see todo-capture.ts. Registered before model-scope and
+ *   usage-context, so a prompt it takes gathers nothing.
+ * - model-scope: see model-scope.ts.
  * - usage-context: see usage-context.ts.
  * - task-provenance: see task-provenance.ts.
  * - spawn-guard: a subagent is spawned with a model named, since an omitted
@@ -63,7 +63,6 @@ export const register: Register = (on, options) => {
     }))
 
   promptTrim(on)
-  modelScope(on)
   sandboxNotice(on)
 
   on('prompt.attachment', { type: 'task_reminder' }, async ($, e, next) => {
@@ -84,6 +83,7 @@ export const register: Register = (on, options) => {
   )
 
   todoCapture(on)
+  modelScope(on)
   usageContext(on)
 
   on('agent.spawn', { fork: false }, ($, e, next) =>
