@@ -432,13 +432,19 @@ def install_pull_schedule(platform: str) -> None:
             subprocess.run([launchctl, "bootstrap", f"gui/{os.getuid()}", str(plist)], check=True)
             print(f"installed launchd agent {plist}")
     elif platform == "windows":
+        schtasks = shutil.which("schtasks")
         # uvw is uv without a console window, so the task runs without a terminal popping up.
         command = subprocess.list2cmdline([shutil.which("uvw"), "run", "--quiet", str(REPO / "sync.py"), "pull"])
         subprocess.run(
-            [shutil.which("schtasks"), "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/TR", command],
+            [schtasks, "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/TR", command],
             check=True,
             capture_output=True,
         )
+        subprocess.run([schtasks, "/Create", "/F", "/TN", "T3 keepalive", "/XML", str(REPO / "windows/t3-keepalive.xml")], check=True, capture_output=True)
+        status = subprocess.run([schtasks, "/Query", "/TN", "T3 keepalive", "/FO", "LIST"], check=True, capture_output=True, text=True)
+        if "Running" not in status.stdout:
+            subprocess.run([schtasks, "/Run", "/TN", "T3 keepalive"], check=True, capture_output=True)
+            print("installed scheduled task T3 keepalive")
 
 
 def main() -> None:

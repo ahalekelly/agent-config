@@ -43,7 +43,8 @@ def fake_home(tmp_path):
         stub = bin_dir / name
         stub.write_text("#!/bin/sh\nexit 0\n")
         stub.chmod(0o755)
-    (bin_dir / "schtasks.cmd").write_text("@echo off\nexit /b 0\n")
+    # Reports every task as running, so sync never starts the keepalive task.
+    (bin_dir / "schtasks.cmd").write_text("@echo off\necho Status: Running\n")
     environment = os.environ | {
         "HOME": str(home),
         "USERPROFILE": str(home),
