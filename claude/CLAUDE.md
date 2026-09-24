@@ -49,14 +49,6 @@ Delegate to no more than a handful of subagents at a time.
 </model>
 
 <model: subagent>
-Do your task yourself rather than delegating further, unless your prompt makes you an orchestrator.
-</model>
-
-<model: orchestrator>
-Delegate to no more than a handful of subagents at a time.
-</model>
-
-<model: subagent>
 Do the work yourself rather than delegating further; spawn subagents only when your task explicitly makes you an orchestrator.
 </model>
 
