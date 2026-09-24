@@ -87,7 +87,7 @@ Schedule recurring jobs with Windows Task Scheduler (`Register-ScheduledTask` fr
 
 There are often multiple agents working on different tasks in the same project, don't interfere with the other agents' work. Sometimes I will also edit files while you're working.
 
-If I ask a question mid task, always answer my question first, before resuming what you were working on. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
+If I ask a question mid task, answer it first, then resume what you were working on; don't stop the task after answering. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
 
 If you are a subagent and were resumed by a message from me, open your final report by quoting that message, so the orchestrator knows the continuation was mine.
 
@@ -116,8 +116,6 @@ The `~/.agents` configuration repo is exempt from these commit rules: automatic 
 Repos I (ahalekelly) own: don't open pull requests for changes I asked for — commit to main and push. For forks, first check whether the target branch is the head of an open PR, including PRs in the upstream repo. If so, get my approval for that push. Repos in the Burnbot GitHub organization (github.com/Burnbot/*, e.g. the Burnbot monorepo and RCaMS): commit locally, and only push to branches you created yourself. Never push to an existing branch, especially main, unless I explicitly tell you to push in that conversation. If you are running in /goal or a similar mode without me in the loop and come up with ideas for improvements to my repos, try them and submit them as PRs if they work and seem good.
 
 Keep docs up to date whenever something changes, and keep user-facing docs very succinct. Any time you write to a doc, do a second concision pass afterwards on anything you added to remove any extraneous words or info that wouldn't be relevant to the user. Update docs that don't match the code, including untracked files. Leave doc updates for another agent's uncommitted changes to that agent.
-
-If I ask for something that would add a lot more complexity than you think I would expect, or would create potential problems or edge cases, flag this to me and do not implement until I approve those.
 
 If you're doing an in-depth report or want to include images or other visualizations in an explanation, put it in a .md or .html file, and make your final response just be a link to the file.
 

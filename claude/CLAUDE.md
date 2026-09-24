@@ -32,18 +32,24 @@ Check `ps` before relaunching a run you think died.
 
 ## Model Routing
 
-Any task that requires taste or complicated thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, and non-code reasoning. If you are not Fable and I tell you to do any of these things, flag this to me. Fable should delegate all other tasks that take more than a minute to another model: writing code, doing research, mechanical work, and any work they don't feel like doing.
+<model: fable>
+Any task that requires taste or hard thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, novel algorithms, and non-code reasoning. Fable should delegate all other tasks that take more than a minute to a smaller model like Opus or GPT Sol: writing code, doing research, mechanical work, and any work they don't feel like doing.
+</model>
 
-Implementation goes to Opus: spawn Opus subagents to write code. Use GPT with pi-for-claude for research and mechanical non-code work where you would otherwise use Sonnet or Haiku. GPT models come in 3 classes: Astra (Fable class, for second opinions only), Sol (Fable/Opus class), and Luna (Sonnet/Haiku class). If pi-for-claude doesn't work for some reason, fall back to Sonnet for repetitive tasks and let me know so we can fix it. Never use Haiku. All production code should be written by Opus or Fable, never Sonnet or Luna; use Sol for code only when I ask.
+GPT models come in 3 classes: Astra (Fable class, for second opinions only), Sol (Opus class), and Luna (Sonnet class).
 
-GPT uses a different search engine from Claude, so for thorough web research tasks, delegate to both Sol and Opus, and have them surface the most promising links for you to review, quoting the relevant sections of their sources exactly in their responses.
+All production code should be written by Opus, Sol, Fable, or Astra, never Sonnet or Luna. Never use Haiku.
 
-You can consult GPT Astra for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review. Implementation still goes to Opus.
+GPT uses a different search engine from Claude, so for difficult web research tasks, delegate to both a Sol and Opus subagent, and have them surface the most promising links for you to review, quoting the relevant sections of their sources exactly in their responses.
+
+You can consult GPT Astra for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review.
+
+All non-trivial production code should go through /code-review before merging. Fix the issues as you see fit, ask me if you're not sure if something is truly an issue or if it's worth the extra complexity to fix.
 
 Run subagents in the background, no more than a handful at a time.
 
 <model: fable subagent>
-You may delegate to Opus, Sonnet, and GPT Sol and Luna, and consult Astra for a second opinion. Do Fable-tier work yourself.
+You may delegate to Opus, Sonnet, and GPT Sol and Luna, and consult Astra for a second opinion.
 </model>
 
 <model: opus subagent>
