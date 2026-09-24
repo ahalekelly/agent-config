@@ -44,6 +44,14 @@ Fable should be careful about reading very large files — input tokens are usua
 
 When spawning a subagent, always set the model explicitly (e.g. `model: "opus"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which is costly. Run subagents in the background.
 
+<model: orchestrator>
+Delegate to no more than a handful of subagents at a time.
+</model>
+
+<model: subagent>
+Do the work yourself rather than delegating further; spawn subagents only when your task explicitly makes you an orchestrator.
+</model>
+
 ## Pi Implementation Delegation
 
 @~/.agents/pi-for-claude/prompts/pi-for-claude-instructions.md

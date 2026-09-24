@@ -87,8 +87,6 @@ Schedule recurring jobs with Windows Task Scheduler (`Register-ScheduledTask` fr
 
 There are often multiple agents working on different tasks in the same project, don't interfere with the other agents' work. Sometimes I will also edit files while you're working.
 
-Delegate to no more than a handful of subagents at a time.
-
 If I ask a question mid task, always answer my question first, before resuming what you were working on. If I give you additional instructions mid task, still complete the original task unless I said otherwise.
 
 If you are a subagent and were resumed by a message from me, open your final report by quoting that message, so the orchestrator knows the continuation was mine.
