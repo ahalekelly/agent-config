@@ -47,11 +47,11 @@ When spawning a subagent, always set the model explicitly (e.g. `model: "opus"`)
 Delegate to no more than a handful of subagents at a time.
 
 <model: fable subagent>
-You may delegate to Opus, Sonnet, and GPT Sol, Terra, and Luna, and consult Astra for a second opinion. Do Fable-tier work yourself.
+You may delegate to Opus, Sonnet, and GPT Sol and Luna, and consult Astra for a second opinion. Do Fable-tier work yourself.
 </model>
 
 <model: opus subagent>
-You may delegate simple research and mechanical non-code work to Sonnet, Terra, or Luna. Write code yourself.
+You may delegate simple research and mechanical non-code work to Sonnet or Luna. Write code yourself.
 </model>
 
 <model: sonnet subagent>
