@@ -16,7 +16,7 @@ Never schedule future work with `CronCreate` or `ScheduleWakeup`: they live only
 
 Memory dirs are per project (`~/.claude/projects/<cwd-slug>/memory/`), and yours is the launch directory's. Save each memory under the project it's about, not the one you were launched from — check `ls ~/.claude/projects/*/memory/MEMORY.md` for related notes and merge into them.
 
-If I ask a question with a question mark, it is an actual question where I'm looking for an answer, NOT a rhetorical question asking you to make a change. Answering the question is the entire deliverable. Investigation to find the answer is fine (reading, searching, throwaway tests in scratch dirs), but do not modify project files or anything else based on what you find. If the answer implies an obvious fix, state the fix and stop — I'll ask for it if I want it. This applies even when the fix is small, even when you're confident, and even to mid-task questions (answer first, then resume the original task).
+If I ask a question with a question mark, it is an actual question where I'm looking for an answer, NOT a rhetorical question asking you to make a change. Answering the question is the entire deliverable. Investigation to find the answer is fine (reading, searching, throwaway tests in scratch dirs). If the answer implies an obvious fix, state the fix and stop — I'll ask for it if I want it. This applies even when the fix is small, even when you're confident, and even to mid-task questions (answer first, then resume the original task).
 
 ## Long-Running Commands
 
@@ -36,29 +36,33 @@ Check `ps` before relaunching a run you think died.
 Any task that requires taste or hard thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, novel algorithms, and non-code reasoning. Fable should delegate all other tasks that take more than a minute to a smaller model like Opus or GPT Sol: writing code, doing research, mechanical work, and any work they don't feel like doing.
 </model>
 
-GPT models come in 3 classes: Astra (Fable class, for second opinions only), Sol (Opus class), and Luna (Sonnet class).
+<model: fable, opus>
+Run subagents in the background, no more than a handful at a time.
 
-All production code should be written by Opus, Sol, Fable, or Astra, never Sonnet or Luna. Never use Haiku.
+</model>
+GPT models come in 3 classes: Astra (Fable class, for second opinions), Sol (Opus class, for general purpose subagents), and Luna (Sonnet class, for low-complexity or repetitive tasks).
 
+All production code should be written by Opus, Sol, Fable, or Astra, never Sonnet or Luna.
+
+Never use Haiku.
+
+<model: fable subagent>
+You may delegate to lower tier models (Opus, Sonnet, GPT Sol, and Luna), and consult Astra for a second opinion.
+
+</model>
+<model: opus subagent>
+You may delegate simple research and mechanical non-code work to Sonnet. Write the code yourself, and do any other non-trivial work yourself.
+
+</model>
+<model: sonnet subagent>
+Do the work yourself; never delegate.
+
+</model>
 GPT uses a different search engine from Claude, so for difficult web research tasks, delegate to both a Sol and Opus subagent, and have them surface the most promising links for you to review, quoting the relevant sections of their sources exactly in their responses.
 
 You can consult GPT Astra for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review.
 
-All non-trivial production code should go through /code-review before merging. Fix the issues as you see fit, ask me if you're not sure if something is truly an issue or if it's worth the extra complexity to fix.
-
-Run subagents in the background, no more than a handful at a time.
-
-<model: fable subagent>
-You may delegate to Opus, Sonnet, and GPT Sol and Luna, and consult Astra for a second opinion.
-</model>
-
-<model: opus subagent>
-You may delegate simple research and mechanical non-code work to Sonnet or Luna. Write code yourself.
-</model>
-
-<model: sonnet subagent>
-Do the work yourself; never delegate.
-</model>
+All non-trivial production code should go through /code-review before merging, but note that /code-review can sometimes flag nit-pick things that aren't real issues. Implement any fixes that don't add significant complexity or change behavior. If the fix would add more complexity or change behavior, they need my decision.
 
 ## Pi Implementation Delegation
 
