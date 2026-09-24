@@ -40,11 +40,7 @@ GPT uses a different search engine from Claude, so for thorough web research tas
 
 You can consult GPT Astra for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review. Implementation still goes to Opus.
 
-Fable should be careful about reading very large files — input tokens are usually the majority of inference cost. Set the Read tool's line limit to a reasonable number, a few hundred max, and instead of reading large files, use `rg`, the Explore tool, or a Sonnet or Opus subagent to find where the relevant info is.
-
-When spawning a subagent, always set the model explicitly (e.g. `model: "opus"`). Omitting the model parameter makes the subagent silently inherit the caller's model, which is costly. Run subagents in the background.
-
-Delegate to no more than a handful of subagents at a time.
+Run subagents in the background, no more than a handful at a time.
 
 <model: fable subagent>
 You may delegate to Opus, Sonnet, and GPT Sol and Luna, and consult Astra for a second opinion. Do Fable-tier work yourself.
