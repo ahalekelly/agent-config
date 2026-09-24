@@ -10,10 +10,11 @@ import { describe, expect, test } from 'claude-code/testing'
  * @param on the test's `on`
  * @param model what the main loop runs, as `/model` shows it
  * @param logs where the logged lines are collected
- * @returns `switchTo`, the session's `/model`
+ * @returns `switchTo`, the session's `/model`, and the tasks its spawns carry
  */
 const engine = (on: On, model: string, logs: string[] = []) => {
   let running = model
+  const tasks: string[] = []
 
   on('session.model', () => ({ value: running }))
   on('ui.log', ($, e) => {
@@ -23,9 +24,36 @@ const engine = (on: On, model: string, logs: string[] = []) => {
   })
   on('prompt.context', ($, e) => ({ blocks: e.blocks, instructionFiles: e.instructionFiles }))
   on('prompt.submit', ($, e) => ({ text: e.text, context: e.context, origin: e.origin }))
+  on('agent.spawn', ($, e) => {
+    tasks.push(e.prompt)
 
-  return (next: string) => {
-    running = next
+    return { model: e.model ?? e.parentModel, agentId: 'agent-1' }
+  })
+
+  return {
+    switchTo: (next: string) => {
+      running = next
+    },
+    tasks,
+    /**
+     * Starts a subagent the caller named `model` for, or a fork of the loop.
+     *
+     * @param $ the test's world
+     * @param model what the call names, absent for a fork
+     */
+    spawn: async ($: Engine, model?: string): Promise<void> => {
+      await $.agent.spawn({
+        tool_use_id: 'toolu_spawn',
+        prompt: 'Do the task.',
+        description: 'a task',
+        subagentType: model === undefined ? 'fork' : 'general-purpose',
+        provider: { plugin: 'engine', tier: 'core' },
+        model,
+        parentModel: running,
+        background: false,
+        fork: model === undefined,
+      })
+    },
   }
 }
 
@@ -109,7 +137,7 @@ describe('model-scope', () => {
   })
 
   test('a model switch delivers the new family its own blocks', async ($, on) => {
-    const switchTo = engine(on, 'claude-opus-5')
+    const { switchTo } = engine(on, 'claude-opus-5')
 
     await shared($, SCOPED)
     await delivered($)
@@ -136,6 +164,93 @@ describe('model-scope', () => {
     await shared($, SCOPED)
 
     expect(await delivered($)).toEqual(['Opus and Sonnet read this.'])
+  })
+
+  test("a subagent's task opens with the blocks its own model reads", async ($, on) => {
+    const { tasks, spawn } = engine(on, 'claude-fable-5-1')
+
+    await shared($, SCOPED)
+    await spawn($, 'opus')
+
+    expect(tasks).toEqual(['Opus and Sonnet read this.\n\nDo the task.'])
+  })
+
+  test('a subagent no block names is started with the task alone', async ($, on) => {
+    const { tasks, spawn } = engine(on, 'claude-fable-5-1')
+
+    await shared($, SCOPED)
+    await spawn($, 'haiku')
+
+    expect(tasks).toEqual(['Do the task.'])
+  })
+
+  test("a fork is given the blocks the parent's model reads", async ($, on) => {
+    const { tasks, spawn } = engine(on, 'claude-fable-5-1')
+
+    await shared($, SCOPED)
+    await spawn($)
+
+    expect(tasks).toEqual(['Fable reads this.\n\nDo the task.'])
+  })
+
+  test('instructions with no blocks leave every spawn as it was', async ($, on) => {
+    const { tasks, spawn } = engine(on, 'claude-fable-5-1')
+
+    await shared($, 'Shared line.')
+    await spawn($, 'opus')
+
+    expect(tasks).toEqual(['Do the task.'])
+  })
+
+  test('a block scoped to a role reaches every loop in it', async ($, on) => {
+    const { tasks, spawn } = engine(on, 'claude-fable-5-1')
+
+    const text = [
+      '<model: orchestrator>',
+      'The session reads this.',
+      '</model>',
+      '',
+      '<model: subagent>',
+      'Every subagent reads this.',
+      '</model>',
+    ].join('\n')
+
+    await shared($, text)
+
+    expect(await delivered($)).toEqual(['The session reads this.'])
+
+    await spawn($, 'haiku')
+    await spawn($)
+
+    expect(tasks).toEqual([
+      'Every subagent reads this.\n\nDo the task.',
+      'Every subagent reads this.\n\nDo the task.',
+    ])
+  })
+
+  test('an alternative of a family and a role holds only for both', async ($, on) => {
+    const { tasks, spawn } = engine(on, 'claude-opus-5')
+
+    const text = ['<model: opus subagent, fable>', 'Opus under someone, or Fable.', '</model>'].join(
+      '\n',
+    )
+
+    await shared($, text)
+
+    expect(await delivered($)).toEqual([])
+
+    await spawn($, 'opus')
+    await spawn($, 'sonnet')
+
+    expect(tasks).toEqual(['Opus under someone, or Fable.\n\nDo the task.', 'Do the task.'])
+  })
+
+  test('a role alternative reaches the orchestrator the family names', async ($, on) => {
+    engine(on, 'claude-fable-5-1')
+
+    await shared($, ['<model: opus subagent, fable>', 'Fable too.', '</model>'].join('\n'))
+
+    expect(await delivered($)).toEqual(['Fable too.'])
   })
 
   test("a block's own blank lines and the context beside it stand", async ($, on) => {

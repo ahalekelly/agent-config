@@ -10,16 +10,60 @@ const OPEN = /^\s*<model:(.*)>\s*$/
 const CLOSE = /^\s*<\/model>\s*$/
 
 /**
- * One block of the instructions and the families that read it.
+ * The two roles a loop runs in: the session's own, and every subagent it
+ * spawns, a fork included.
  */
-type Block = { families: readonly string[]; text: string }
+const ROLES = new Set(['orchestrator', 'subagent'])
+type Role = 'orchestrator' | 'subagent'
+
+/**
+ * One block of the instructions and the alternatives that read it, as
+ * `<model: opus subagent, fable>` lists them: a loop reads the block when
+ * every term of one alternative holds — a role, or a family its model's name
+ * carries.
+ */
+type Block = { alternatives: readonly (readonly string[])[]; text: string }
 
 /**
  * The scoped blocks of the instructions as they were last read, in file order,
- * and the model the last delivery was for — nothing until a delivery is owed.
+ * and the model the main loop was last given them for — nothing until a
+ * delivery is owed.
  */
 let blocks: readonly Block[] = []
 let deliveredTo: string | null = null
+
+/**
+ * The blocks a loop reads, as one text; empty when it reads none.
+ *
+ * @param model the loop's model, in any spelling
+ * @param role what the loop is
+ * @returns the text
+ */
+const blocksFor = (model: string, role: Role): string =>
+  blocks
+    .filter(block =>
+      block.alternatives.some(terms =>
+        terms.every(term =>
+          ROLES.has(term) ? term === role : model.toLowerCase().includes(term),
+        ),
+      ),
+    )
+    .map(block => block.text)
+    .join('\n\n')
+
+/**
+ * The task a subagent runs: the blocks its loop reads, then the task as the
+ * caller wrote it.
+ *
+ * @param model what the subagent runs
+ * @param prompt the task the caller wrote
+ * @returns the prompt the subagent is started with
+ */
+const taskFor = (model: string, prompt: string): string => {
+  const mine = blocksFor(model, 'subagent')
+
+  return mine === '' ? prompt : `${mine}\n\n${prompt}`
+}
 
 /**
  * The instructions every loop reads, and the blocks written for one family or
@@ -27,14 +71,13 @@ let deliveredTo: string | null = null
  * all go, so the shared text reads as though the blocks were never there.
  *
  * @param text the `claudeMd` block, files and framing as the engine wrote it
- * @param model the session's model, lowercased
  * @returns the shared text and the scoped blocks, or what is malformed
  */
 const scoped = (text: string): { text: string; blocks: Block[] } | { error: string } => {
   const lines = text.split('\n')
   const shared: string[] = []
   const found: Block[] = []
-  let families: readonly string[] = []
+  let alternatives: readonly (readonly string[])[] = []
   let body: string[] = []
   let inside = -1
   let blankFollows = false
@@ -55,11 +98,11 @@ const scoped = (text: string): { text: string; blocks: Block[] } | { error: stri
         }
 
       inside = index
-      families = opened
+      alternatives = opened
         .toLowerCase()
         .split(',')
-        .map(family => family.trim())
-        .filter(family => family !== '')
+        .map(alternative => alternative.split(/\s+/).filter(term => term !== ''))
+        .filter(alternative => alternative.length > 0)
       body = []
       continue
     }
@@ -67,7 +110,7 @@ const scoped = (text: string): { text: string; blocks: Block[] } | { error: stri
     if (CLOSE.test(line)) {
       if (inside < 0) return { error: `line ${index + 1} closes a model block nothing opened` }
 
-      found.push({ families, text: body.join('\n') })
+      found.push({ alternatives, text: body.join('\n') })
       blankFollows = true
       inside = -1
       continue
@@ -83,17 +126,17 @@ const scoped = (text: string): { text: string; blocks: Block[] } | { error: stri
 }
 
 /**
- * model-scope: instructions written for one model family reach that family's
- * main loop alone.
+ * model-scope: instructions written for one kind of loop reach that loop
+ * alone.
  *
  * A `<model: fable>` … `</model>` block anywhere in CLAUDE.md or a file it
  * imports leaves the instructions every loop is given and is delivered to the
- * main loop as prompt context instead, on the first prompt after the
- * instructions were read — which is the session's first, and the first after
- * each compaction — and again whenever the model changes under them. So
- * the orchestrator reads the paragraph written for it, and a subagent — which
- * shares the instruction blocks but raises no prompt of its own — reads the
- * shared text and nothing else.
+ * loops its list names instead: as prompt context for the main loop, on the
+ * first prompt after the instructions were read — the session's first, and the
+ * first after each compaction — and again whenever the model changes under it;
+ * and ahead of the task each matching subagent is spawned with. So a Fable
+ * orchestrator reads the paragraph written for Fable while the Opus subagent
+ * under it reads the one written for Opus, and both read the shared text.
  *
  * A delivery stands in the transcript as the turn it rode on, so a `/model`
  * switch adds the new family's paragraph rather than replacing the old one.
@@ -135,12 +178,20 @@ export const modelScope = (on: On): void => {
     if (model === deliveredTo) return next(e)
 
     deliveredTo = model
-    const mine = blocks
-      .filter(block => block.families.some(family => model.includes(family)))
-      .map(block => block.text)
+    const mine = blocksFor(model, 'orchestrator')
 
-    return mine.length === 0
-      ? next(e)
-      : next({ ...e, context: [...(e.context ?? []), mine.join('\n\n')] })
+    return mine === '' ? next(e) : next({ ...e, context: [...(e.context ?? []), mine] })
   })
+
+  // The model the call names decides a subagent's blocks, not the one the
+  // spawn resolves: the prompt is fixed on the way down, and an alias carries
+  // its family as plainly as a full id does (`opus`, `fable[1m]`,
+  // `claude-sonnet-5`). A fork ignores that parameter and runs the parent's.
+  on('agent.spawn', { fork: false }, ($, e, next) =>
+    next({ ...e, prompt: taskFor(e.model ?? e.parentModel, e.prompt) }),
+  )
+
+  on('agent.spawn', { fork: true }, ($, e, next) =>
+    next({ ...e, prompt: taskFor(e.parentModel, e.prompt) }),
+  )
 }

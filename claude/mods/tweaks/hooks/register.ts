@@ -43,11 +43,12 @@ const CRON_LABEL = 'CronJob: the scheduler fired this prompt; the user did not t
  *   it.
  * - todo-capture: see todo-capture.ts. Registered before model-scope and
  *   usage-context, so a prompt it takes gathers nothing.
- * - model-scope: see model-scope.ts.
  * - usage-context: see usage-context.ts.
  * - task-provenance: see task-provenance.ts.
  * - spawn-guard: a subagent is spawned with a model named, since an omitted
  *   model silently inherits the caller's. A fork inherits by design.
+ *   Registered before model-scope, so a refused spawn is given nothing.
+ * - model-scope: see model-scope.ts.
  * - read-guard: see read-guard.ts.
  *
  * @param on the engine's registrar
@@ -83,7 +84,6 @@ export const register: Register = (on, options) => {
   )
 
   todoCapture(on)
-  modelScope(on)
   usageContext(on)
 
   on('agent.spawn', { fork: false }, ($, e, next) =>
@@ -94,6 +94,7 @@ export const register: Register = (on, options) => {
       : next(e),
   )
 
+  modelScope(on)
   taskProvenance(on)
 
   readGuard(on, options)

@@ -6,7 +6,7 @@ Adrian's Claude Code mod: one function-hooks plugin carrying the prompt-side fix
 
 - **pinned-tools** — the tools `pinnedTools` names ship their whole schema in the prompt instead of waiting behind ToolSearch (`tool.describe`, `isDeferred: false`).
 - **prompt-trim** — drops the standing context nothing reads: the `userEmail` and `currentDate` context blocks, the `date` attachment, the model-family table from the `# Environment` section, and the environment attachment's `Platform:` and `Shell:` lines.
-- **model-scope** — a `<model: fable, opus>` … `</model>` block in CLAUDE.md, or in a file it imports, leaves the instructions every loop reads and rides to the main loop as prompt context when the model it names is the one running, so a subagent reads the shared text alone.
+- **model-scope** — a `<model: ...>` … `</model>` block in CLAUDE.md, or in a file it imports, leaves the instructions every loop reads and is delivered to the loops its list names: to the main loop as prompt context, to a subagent ahead of its task. A term is a model family (`<model: fable>`) or a role (`<model: subagent>`, `<model: orchestrator>`); a comma separates alternatives and a space means both (`<model: opus subagent, fable>` — an Opus subagent, or any Fable loop).
 - **sandbox-notice** — the sandbox notice's filesystem policy keeps the entries that change what a task does: Claude Code's own state, the `/dev/` handles and paths another entry already covers go, and what the engine truncated away is named in words.
 - **task-reminder** — the periodic nag to use the task tools reaches the model only while the session has tasks.
 - **context-envelope** — context a hook attached reads as `additional context:` on its own line, without the hook's name.
@@ -60,13 +60,13 @@ What a discovery run settled, on Claude Code 2.1.278. A test pins each answer a 
 - A scheduled task's prompt arrives at `prompt.submit` with `origin.kind` `scheduled-trigger`; a background agent's notification arrives there too, with `task-notification`. `session.receive` fires for neither.
 - A notification's text is a `<task-notification>` element whose `<task-id>` is the agent's id and whose `<tool-use-id>` names the call that started the run that just stopped: the `Agent` call for the launch, the `SendMessage` call for a resume. Some notifications carry no `<tool-use-id>` at all, so its absence is reported as an unattributable run rather than guessed at.
 - A subagent's loop raises no `prompt.submit` of its own, so a hook on that event is the main conversation's alone. Its attachments and tool calls carry `agentId`.
-- `agent.spawn`'s result carries the new agent's `agentId` beside the model it resolved.
+- `agent.spawn`'s result carries the new agent's `agentId` beside the model it resolved. Every Agent call raises it — a subagent, a named teammate, a fork — and the transcript keeps the call as the caller wrote it, whatever the hook rewrote on the way down.
 - The first user message's context blocks are `claudeMd`, `currentDate`, `gitStatus` and — with an account logged in — `userEmail`. The engine's own injected messages arrive at `prompt.attachment` as `date`, `environment`, `model`, `deferred_tools_delta`, `agent_listing_delta`, `skill_listing`, `total_tokens_reminder`, `queued_command`, `sandbox_instructions` and `task_reminder`.
 - The system prompt's `# Environment` section is `prompt.section` `env_info_simple` and carries the model-family table. The `Platform:`, `Shell:` and `OS Version:` lines are not in it: they belong to the `environment` attachment.
 - A `task_reminder` attachment carries the session's task list under `Here are the existing tasks:` while the list holds anything, and the nag alone while it does not — so an attachment-local decision tells the two apart.
 - `$.session.root()` is where the session started, which is what `CLAUDE_PROJECT_DIR` gives a settings hook.
 - An instruction file's HTML comments never reach a hook: neither the `claudeMd` text nor `instructionFiles`' `content` carries them, so a block written for one model family is marked with tags.
-- `prompt.context` fires before the session's first `prompt.submit`, and again after a compaction rebuilds the conversation. A subagent's loop reads the blocks the main conversation computed, and `$.session.model()` answers the main loop's model wherever it is called, so instructions a subagent should not read have to leave the context blocks altogether.
+- `prompt.context` fires before the session's first `prompt.submit`, and again after a compaction rebuilds the conversation. A subagent's loop reads the blocks the main conversation computed, and `$.session.model()` answers the main loop's model wherever it is called, so text meant for one loop and not another travels on the two per-loop paths instead: `prompt.submit` context for the main loop, `agent.spawn`'s `prompt` for a subagent.
 
 The limits that shaped the code:
 
@@ -75,6 +75,7 @@ The limits that shaped the code:
 - `$.http.fetch` takes neither a timeout nor an abort signal, so a refresh cannot be time-bounded; a hung fetch is held until the module reloads, and a single-flight guard keeps the timer from starting another.
 - A hook that fails takes its plugin's other hooks on that event with it, not just itself. A feature that gathers several inputs therefore catches each one of them.
 - The context blocks stand in the conversation's first user message, which the transcript then keeps, so nothing rewrites them later: text delivered as prompt context stays on the turn it rode in on, and a `/model` switch adds the new model's instructions rather than replacing the old ones.
+- An agent a Workflow script starts raises no `agent.spawn`, so it reads the instructions every loop reads and nothing a hook would hand a subagent.
 - `$.http.fetch` is refused outright where `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set, and the usage lines then read as unavailable, naming that refusal.
 
 A hook's context reaches the model as a `hook_additional_context` attachment inside a `<system-reminder>`, led by `${hookName} hook additional context: ` — a plugin's chain event, a settings hook's event name. The lead-in sits inside the attachment's `text`, so a `prompt.attachment` hook rewrites it. Nothing carries a `hook success:` envelope, which is what the shell hooks needed stripping for.
