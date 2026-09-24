@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -308,8 +309,10 @@ def test_auto_sync_leaves_feature_branches_untouched(repositories, sync_module):
     assert sync_module.git(first, "diff", "--name-only") == "config.txt"
 
 
-def test_sync_initializes_submodules_and_publishes_edits(repositories, sync_module, tmp_path, monkeypatch):
-    first, second = repositories
+@pytest.fixture
+def parent_repository(repositories, sync_module, tmp_path, monkeypatch):
+    """The config repository, with the first clone recorded as its `child` submodule."""
+    first, _ = repositories
     parent = tmp_path / "parent"
     parent.mkdir()
     git = sync_module.git
@@ -319,11 +322,39 @@ def test_sync_initializes_submodules_and_publishes_edits(repositories, sync_modu
     git(parent, "update-index", "--add", "--cacheinfo", "160000", git(first, "rev-parse", "HEAD"), "child")
     monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "file")
     monkeypatch.setattr(sync_module, "REPO", parent)
+    return parent
+
+
+def test_sync_initializes_submodules_and_publishes_edits(repositories, sync_module, parent_repository):
+    _, second = repositories
+    git = sync_module.git
     sync_module.sync_submodules()
-    child = parent / "child"
+    child = parent_repository / "child"
     git(child, "config", "user.name", "Sync test")
     git(child, "config", "user.email", "sync@example.test")
     (child / "new.txt").write_text("shared\n")
     sync_module.sync_submodules()
     sync_module.sync_repository(second)
     assert (second / "new.txt").read_text() == "shared\n"
+
+
+def test_stale_lock_is_removed(sync_module, parent_repository):
+    lock = parent_repository / ".git" / "config.lock"
+    lock.touch()
+    stale = time.time() - 1200
+    os.utime(lock, (stale, stale))
+
+    sync_module.sync_submodules()
+
+    assert not lock.exists()
+    assert (parent_repository / "child" / "config.txt").exists()
+
+
+def test_fresh_lock_stops_the_sync(sync_module, parent_repository):
+    lock = parent_repository / ".git" / "config.lock"
+    lock.touch()
+
+    with pytest.raises(sync_module.SyncError, match="could not lock"):
+        sync_module.sync_submodules()
+
+    assert lock.exists()

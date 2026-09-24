@@ -15,6 +15,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from filelock import FileLock
 
 REPO = Path(__file__).resolve().parent
 HOME = Path.home().resolve()
+STALE_LOCK_SECONDS = 600
 # Upstream skills that stay unlinked, by name.
 SKIPPED_UPSTREAM_SKILLS = {
     "code-review",  # shadows Claude Code's bundled skill of the same name
@@ -342,8 +344,22 @@ def git(repo: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def remove_stale_locks(repo: Path) -> None:
+    """Delete leftover lock files, which Git never clears when a process dies mid-write.
+
+    A lock older than the sync interval can only be stale.
+    """
+    git_dir = Path(git(repo, "rev-parse", "--absolute-git-dir"))
+    cutoff = time.time() - STALE_LOCK_SECONDS
+    for lock in (*git_dir.glob("*.lock"), *(git_dir / "refs").rglob("*.lock")):
+        if lock.stat().st_mtime < cutoff:
+            lock.unlink()
+            print(f"removed stale lock {lock}")
+
+
 def sync_repository(repo: Path) -> None:
     """Commit local edits, merge upstream, and publish without rewriting history."""
+    remove_stale_locks(repo)
     for name in ("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD", "sequencer"):
         if Path(git(repo, "rev-parse", "--path-format=absolute", "--git-path", name)).exists():
             raise SyncError(f"{repo}: finish or abort the Git operation before syncing")
@@ -368,6 +384,7 @@ def sync_repository(repo: Path) -> None:
 
 
 def sync_submodules() -> None:
+    remove_stale_locks(REPO)
     paths = git(REPO, "config", "--file", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$")
     for entry in paths.splitlines():
         key, path = entry.split(" ", 1)

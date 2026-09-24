@@ -23,7 +23,7 @@ Edit the source under `claude/`, `codex/`, or `pi/`, then run:
 uv run ~/.agents/sync.py
 ```
 
-Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. A pulled change to `sync.py` itself takes effect on the following run. Restart open shells after shell config changes.
+Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a launchd agent on macOS, or a Windows scheduled task while logged in. It commits edits and new files, merges upstream changes, pushes, and installs the config. Git-ignored files stay local. Submodule repositories sync first, then their revisions enter the config repo. Auto-sync runs on each repository's default branch and stops on conflicts or unfinished Git operations; resolve those before the next run. Git lock files older than ten minutes are stale, so sync removes them before touching a repository. A pulled change to `sync.py` itself takes effect on the following run. Restart open shells after shell config changes.
 
 Sync also quarantines fresh package releases: uv, npm, and pnpm refuse versions published in the last 3 days, configured through `uv/uv.toml`, `pnpm/config.yaml`, and `~/.npmrc`. Tools updated on purpose, such as Codex and Claude Code, are exempt by name; their dependencies are not. npm 11.15 or newer is required.
 
