@@ -46,8 +46,16 @@ When spawning a subagent, always set the model explicitly (e.g. `model: "opus"`)
 
 Delegate to no more than a handful of subagents at a time.
 
-<model: subagent>
-Delegate only to models of a lower tier than your own; otherwise do the work yourself.
+<model: fable subagent>
+You may delegate to Opus and to GPT Sol, Terra, and Luna, and consult Astra for a second opinion. Do Fable-tier work yourself.
+</model>
+
+<model: opus subagent>
+You may delegate research and mechanical non-code work to Sonnet, Terra, or Luna. Write code yourself.
+</model>
+
+<model: sonnet subagent>
+Do the work yourself; never delegate.
 </model>
 
 ## Pi Implementation Delegation
