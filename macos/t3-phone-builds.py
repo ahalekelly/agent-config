@@ -6,11 +6,14 @@
 """Build Adrian's T3 Code fork for SideStore.
 
 Every half hour on AC power, integrate the newest stable upstream release into
-main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. Adrian
-installs it by running the "Update T3 and Refresh SideStore" shortcut on the
-iPhone, which installs it through SideStore and then writes the IPA's SHA-256
-to T3Code.installed.sha256.txt in the same folder. SideStore owns signing and
-renewal. Failed merges and builds back off for a day; a network outage waits for
+main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. The
+"Update T3 and Refresh SideStore" shortcut on the iPhone installs it through
+SideStore and then writes the IPA's SHA-256 to T3Code.installed.sha256.txt in
+the same folder. After packaging, the runner starts that shortcut on the
+unlocked iPhone with `xcrun devicectl device process launch --payload-url
+shortcuts://run-shortcut?name=...` and waits for the receipt; a locked or
+unreachable phone waits for a later run, and Adrian can always run the shortcut
+himself. SideStore owns signing and renewal. Failed merges and builds back off for a day; a network outage waits for
 the next run and reports after a day.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
@@ -19,6 +22,7 @@ only while the job is unloaded. State, logs, and DerivedData live in
 the T3 Code app on this Mac, so it must be open. Work on fixes in a separate worktree.
 """
 
+import hashlib
 import json
 import os
 import plistlib
@@ -28,6 +32,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 from collections import deque
 from datetime import datetime, timedelta, timezone
@@ -42,6 +47,12 @@ ARTIFACT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/SideS
 TEAM = "T3TBGN4UX7"
 BUNDLE_ID = "com.akelly.t3code"
 MODEL = "claude-opus-5-5"
+PHONE = "00008140-000809E90402201C"
+SHORTCUT = "Update T3 and Refresh SideStore"
+SHORTCUT_URL = "shortcuts://run-shortcut?name=" + SHORTCUT.replace(" ", "%20")
+# Each launch gets three minutes to write the receipt (polled every ten seconds).
+INSTALL_LAUNCHES = 3
+RECEIPT_POLLS = 18
 DAY = timedelta(days=1)
 
 
@@ -271,6 +282,51 @@ class Runner:
             self.command("ditto", "-c", "-k", "--keepParent", "--norsrc", payload, ipa)
             ipa.replace(ARTIFACT_DIR / "T3Code.ipa")
 
+    def devicectl(self, *args):
+        """Run a devicectl command against the iPhone; None when it fails."""
+        with tempfile.TemporaryDirectory(prefix="t3-devicectl-") as folder:
+            output = Path(folder) / "result.json"
+            if self.attempt("xcrun", "devicectl", *args, "--device", PHONE, "--timeout", "30",
+                            "--json-output", output).returncode:
+                return None
+            return json.loads(output.read_text())["result"]
+
+    def install(self):
+        """Install the IPA by running the install shortcut on the iPhone.
+
+        Returns None once the shortcut's receipt names this IPA, or why the phone
+        cannot run it yet. Once launched, a shortcut that never writes the receipt
+        raises, and the runner does not launch it again for this revision.
+        """
+        digest = hashlib.sha256((ARTIFACT_DIR / "T3Code.ipa").read_bytes()).hexdigest()
+        receipt = ARTIFACT_DIR / "T3Code.installed.sha256.txt"
+
+        def installed():
+            return receipt.exists() and receipt.read_text().strip() == digest
+
+        if installed():
+            return None
+        lock = self.devicectl("device", "info", "lockState")
+        if lock is None:
+            return "the iPhone is unreachable"
+        if lock["passcodeRequired"]:
+            return "the iPhone is locked"
+        self.state["install_attempted"] = self.revision
+        self.save()
+        # The phone sees the new IPA only once iCloud syncs it. Until then the
+        # shortcut finds the previous IPA's hash in the receipt and skips
+        # installing, so launch it again until the receipt names this IPA.
+        for _ in range(INSTALL_LAUNCHES):
+            if self.devicectl("device", "process", "launch", "--payload-url", SHORTCUT_URL,
+                              "com.apple.shortcuts") is None:
+                raise RuntimeError(f"devicectl could not start the {SHORTCUT} shortcut")
+            for _ in range(RECEIPT_POLLS):
+                time.sleep(10)
+                if installed():
+                    return None
+        raise RuntimeError(f"The {SHORTCUT} shortcut ran {INSTALL_LAUNCHES} times without "
+                           f"writing this IPA's hash to {receipt}")
+
     def run(self):
         self.step = "power check"
         if "'AC Power'" not in self.capture("pmset", "-g", "batt"):
@@ -304,17 +360,35 @@ class Runner:
             self.build()
             self.outcome = "built"
         self.phase = None
+        if self.state.get("installed_revision") == self.revision:
+            self.outcome = "installed"
+            return
+        if self.state.get("install_attempted") == self.revision:
+            self.outcome = "IPA ready"  # The failed install was reported when it happened.
+            return
+        self.step = "install"
+        waiting = self.install()
+        if waiting is None:
+            self.state["installed_revision"] = self.revision
+            self.save()
+            self.notify(f"iPhone: installed {self.version} ({self.short})",
+                        f"The {SHORTCUT} shortcut installed {BRANCH} at {self.short}, based on "
+                        f"v{self.version}, on Adrian's iPhone. Tell Adrian it is installed.")
+            self.outcome = "installed"
+            return
         if self.state.get("notified_revision") != self.revision:
             self.notify(f"iPhone: SideStore update {self.version} ({self.short})",
                         f"Widget-enabled IPA ready on the Mac: {ARTIFACT_DIR / 'T3Code.ipa'}.\n"
                         f"Built {BRANCH} at {self.short}, based on v{self.version}.\n"
-                        "Tell Adrian to unlock his iPhone and run the Update T3 and Refresh SideStore "
-                        "shortcut, which installs this IPA through SideStore. Once it finishes, "
-                        f"{ARTIFACT_DIR / 'T3Code.installed.sha256.txt'} holds the IPA's SHA-256. "
-                        "SideStore owns signing and renewal. Do not install it with Xcode or devicectl.")
+                        f"It could not install automatically because {waiting}; the runner tries "
+                        "again every half hour on AC power. Tell Adrian he can unlock his iPhone and "
+                        f"run the {SHORTCUT} shortcut, which installs this IPA through SideStore. "
+                        f"Once it finishes, {ARTIFACT_DIR / 'T3Code.installed.sha256.txt'} holds "
+                        "the IPA's SHA-256. "
+                        "SideStore owns signing and renewal. Do not install it with Xcode.")
             self.state["notified_revision"] = self.revision
             self.save()
-        self.outcome = "IPA ready"
+        self.outcome = f"IPA ready, {waiting}"
 
 
 def main():
