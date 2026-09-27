@@ -139,6 +139,8 @@ def install_links(platform: str) -> None:
             units / "t3-trace-archive.service": REPO / "linux" / "t3-trace-archive.service",
             units / "t3-trace-archive.timer": REPO / "linux" / "t3-trace-archive.timer",
             units / "claude-remote-control.service": REPO / "linux" / "claude-remote-control.service",
+            units / "claude-update.service": REPO / "linux" / "claude-update.service",
+            units / "claude-update.timer": REPO / "linux" / "claude-update.timer",
             units / "trash-empty.service": REPO / "linux" / "trash-empty.service",
             units / "trash-empty.timer": REPO / "linux" / "trash-empty.timer",
         }
