@@ -73,6 +73,8 @@ To schedule a T3 Code session on this machine (T3 has no scheduler): a systemd u
 
 When delivering reports or other documents for me to read, provide clickable Markdown links using `file://` URLs with URL-encoded absolute paths, for example `[Report](file:///Users/akelly/report.md)`.
 
+T3 Code runs inside the desktop app here, and `~/.agents/bin/t3-thread.py` (see akelly-desktop) works against it while the app is open. Schedule it with a LaunchAgent in `~/Library/LaunchAgents` using `StartCalendarInterval`, which fires on the next wake if the Mac was asleep at that time. That key has no year, so a one-off job should check the year, then remove its own plist and `launchctl bootout` itself.
+
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
 Connect to the Linux machine over the local network first: `ssh -o ConnectTimeout=5 -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.local`. If unreachable, use `ssh -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.troodon-bigeye.ts.net`. If Tailscale fails, check `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list` (`*` marks the active profile). The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`); switch with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch c085`.
