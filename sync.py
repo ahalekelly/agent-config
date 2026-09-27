@@ -139,8 +139,6 @@ def install_links(platform: str) -> None:
             units / "t3-trace-archive.service": REPO / "linux" / "t3-trace-archive.service",
             units / "t3-trace-archive.timer": REPO / "linux" / "t3-trace-archive.timer",
             units / "claude-remote-control.service": REPO / "linux" / "claude-remote-control.service",
-            units / "claude-update.service": REPO / "linux" / "claude-update.service",
-            units / "claude-update.timer": REPO / "linux" / "claude-update.timer",
             units / "trash-empty.service": REPO / "linux" / "trash-empty.service",
             units / "trash-empty.timer": REPO / "linux" / "trash-empty.timer",
         }
@@ -460,15 +458,18 @@ def install_pull_schedule(platform: str) -> None:
             capture_output=True,
         )
         subprocess.run([schtasks, "/Create", "/F", "/TN", "T3 keepalive", "/XML", str(REPO / "windows/t3-keepalive.xml")], check=True, capture_output=True)
-        subprocess.run(
-            [schtasks, "/Create", "/F", "/TN", "Claude Code update", "/SC", "HOURLY", "/IT", "/TR", str(HOME / ".local" / "bin" / "claude.exe") + " update"],
-            check=True,
-            capture_output=True,
-        )
         status = subprocess.run([schtasks, "/Query", "/TN", "T3 keepalive", "/FO", "LIST"], check=True, capture_output=True, text=True)
         if "Running" not in status.stdout:
             subprocess.run([schtasks, "/Run", "/TN", "T3 keepalive"], check=True, capture_output=True)
             print("installed scheduled task T3 keepalive")
+
+
+def update_claude(platform: str) -> None:
+    """Install the latest Claude Code; its own updater runs only in the interactive TUI, which T3 Code sessions never open."""
+    claude = HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude")
+    result = subprocess.run([str(claude), "update"], check=True, capture_output=True, text=True)
+    if "up to date" not in result.stdout:
+        print(result.stdout.strip())
 
 
 def main() -> None:
@@ -500,6 +501,7 @@ def main() -> None:
         install_npm_cooldown()
         install_process_wrapper(platform)
         render_codex(platform)
+        update_claude(platform)
     else:
         install_pull_schedule(platform)
 
