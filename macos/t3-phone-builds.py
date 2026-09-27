@@ -22,6 +22,7 @@ only while the job is unloaded. State, logs, and DerivedData live in
 the T3 Code app on this Mac, so it must be open. Work on fixes in a separate worktree.
 """
 
+import ctypes
 import hashlib
 import json
 import os
@@ -397,6 +398,12 @@ class Runner:
 
 
 def main():
+    # launchd starts jobs with dataless-file materialization off, so reading a
+    # file iCloud evicted fails with EDEADLK. Turn it on for this process and
+    # its children (IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES, IOPOL_SCOPE_PROCESS,
+    # IOPOL_MATERIALIZE_DATALESS_FILES_ON from <sys/resource.h>).
+    if ctypes.CDLL(None, use_errno=True).setiopolicy_np(3, 0, 2):
+        raise OSError(ctypes.get_errno(), "setiopolicy_np could not enable iCloud downloads")
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     runner = Runner()
     try:
