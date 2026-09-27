@@ -316,7 +316,12 @@ class Runner:
         # The phone sees the new IPA only once iCloud syncs it. Until then the
         # shortcut finds the previous IPA's hash in the receipt and skips
         # installing, so launch it again until the receipt names this IPA.
-        for _ in range(INSTALL_LAUNCHES):
+        for launch in range(INSTALL_LAUNCHES):
+            if launch:
+                lock = self.devicectl("device", "info", "lockState")
+                if lock is None or lock["passcodeRequired"]:
+                    raise RuntimeError(f"The iPhone locked or went out of reach before the {SHORTCUT} "
+                                       "shortcut installed this IPA")
             if self.devicectl("device", "process", "launch", "--payload-url", SHORTCUT_URL,
                               "com.apple.shortcuts") is None:
                 raise RuntimeError(f"devicectl could not start the {SHORTCUT} shortcut")

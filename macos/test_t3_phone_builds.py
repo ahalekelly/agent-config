@@ -52,6 +52,8 @@ class RunTests(StateTests):
         self.builds = 0
         self.fail_build = False
         self.power = "Now drawing from 'AC Power'"
+        self.installs = 0
+        self.install_result = "the iPhone is locked"
 
     def run_service(self):
         def capture(runner, *args, cwd=phone.REPO):
@@ -68,10 +70,19 @@ class RunTests(StateTests):
             runner.state.pop("build_failure", None)
             runner.save()
 
+        def install(runner):
+            self.installs += 1
+            if isinstance(self.install_result, Exception):
+                runner.state["install_attempted"] = runner.revision
+                runner.save()
+                raise self.install_result
+            return self.install_result
+
         with patch.object(phone.Runner, "capture", capture), \
              patch.object(phone.Runner, "attempt", lambda _, *a, cwd=None: subprocess.CompletedProcess(a, 0)), \
              patch.object(phone.Runner, "integrate", lambda _: None), \
              patch.object(phone.Runner, "build", build), \
+             patch.object(phone.Runner, "install", install), \
              patch.object(phone.Runner, "notify", lambda _, title, body: self.events.append((title, body))):
             return phone.main()
 
@@ -88,6 +99,31 @@ class RunTests(StateTests):
         self.assertEqual(len(self.events), 1)
         self.assertIn("SideStore update", self.events[0][0])
         self.assertIn("Update T3 and Refresh SideStore", self.events[0][1])
+
+    def test_installed_build_notifies_once(self):
+        self.install_result = None
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.installs, 1)
+        self.assertEqual([title for title, _ in self.events], ["iPhone: installed 0.0.38 (aaaaaaaaa)"])
+        self.assertEqual(self.state()["installed_revision"], FORK)
+
+    def test_locked_phone_retries_install_after_one_notice(self):
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.installs, 2)
+        self.assertEqual(len(self.events), 1)
+        self.assertIn("because the iPhone is locked", self.events[0][1])
+        self.install_result = None
+        self.run_service()
+        self.assertEqual(self.events[-1][0], "iPhone: installed 0.0.38 (aaaaaaaaa)")
+
+    def test_failed_install_reports_once_without_relaunching(self):
+        self.install_result = RuntimeError("no receipt")
+        self.assertEqual(self.run_service(), 1)
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.installs, 1)
+        self.assertEqual([title for title, _ in self.events], ["iPhone build failed: aaaaaaaaa install"])
 
     def test_sidestore_owns_renewal_without_rebuilding(self):
         self.save({"packaged": record(8), "notified_revision": FORK})
@@ -123,6 +159,81 @@ class RunTests(StateTests):
         self.run_service()
         self.assertEqual(self.builds, 0)
         self.assertEqual(len(self.events), 1)
+
+
+class InstallTests(StateTests):
+    """Drive install() against a phone that answers from self.lock and self.receipt_after."""
+
+    def setUp(self):
+        super().setUp()
+        self.artifacts = self.root / "artifacts"
+        self.artifacts.mkdir()
+        (self.artifacts / "T3Code.ipa").write_bytes(b"new ipa")
+        self.digest = phone.hashlib.sha256(b"new ipa").hexdigest()
+        self.receipt = self.artifacts / "T3Code.installed.sha256.txt"
+        self.receipt.write_text("old digest\n")
+        self.lock = {"passcodeRequired": False}
+        self.receipt_after = 1  # The launch whose run writes the receipt; 0 never writes it.
+        self.launches = 0
+        for item in (patch.object(phone, "ARTIFACT_DIR", self.artifacts),
+                     patch.object(phone.time, "sleep", lambda _: None)):
+            item.start()
+            self.addCleanup(item.stop)
+
+    def devicectl(self, *args):
+        if args[:3] == ("device", "info", "lockState"):
+            return self.lock
+        self.assertEqual(args[:5], ("device", "process", "launch", "--payload-url", phone.SHORTCUT_URL))
+        self.launches += 1
+        if self.launches == self.receipt_after:
+            self.receipt.write_text(self.digest + "\n")
+        return {}
+
+    def install(self):
+        runner = phone.Runner()
+        runner.revision = FORK
+        with patch.object(phone.Runner, "devicectl", lambda _, *args: self.devicectl(*args)):
+            return runner.install()
+
+    def test_launches_the_shortcut_until_the_receipt_names_the_ipa(self):
+        self.receipt_after = 2
+        self.assertIsNone(self.install())
+        self.assertEqual(self.launches, 2)
+        self.assertEqual(self.state()["install_attempted"], FORK)
+
+    def test_matching_receipt_needs_no_launch(self):
+        self.receipt.write_text(self.digest + "\n")
+        self.assertIsNone(self.install())
+        self.assertEqual(self.launches, 0)
+
+    def test_locked_or_unreachable_phone_waits(self):
+        self.lock = {"passcodeRequired": True}
+        self.assertEqual(self.install(), "the iPhone is locked")
+        self.lock = None
+        self.assertEqual(self.install(), "the iPhone is unreachable")
+        self.assertEqual(self.launches, 0)
+        self.assertFalse((self.root / "state.json").exists())
+
+    def test_phone_locking_between_launches_raises(self):
+        self.receipt_after = 0
+        original = self.devicectl
+
+        def devicectl(*args):
+            result = original(*args)
+            if self.launches:
+                self.lock = {"passcodeRequired": True}
+            return result
+
+        self.devicectl = devicectl
+        with self.assertRaisesRegex(RuntimeError, "locked or went out of reach"):
+            self.install()
+        self.assertEqual(self.launches, 1)
+
+    def test_missing_receipt_raises_after_every_launch(self):
+        self.receipt_after = 0
+        with self.assertRaisesRegex(RuntimeError, "ran 3 times"):
+            self.install()
+        self.assertEqual(self.launches, phone.INSTALL_LAUNCHES)
 
 
 class IntegrationTests(StateTests):
@@ -179,6 +290,7 @@ class IntegrationTests(StateTests):
              patch.object(phone.Runner, "attempt", attempt), \
              patch.object(phone.Runner, "command", command), \
              patch.object(phone.Runner, "build", build), \
+             patch.object(phone.Runner, "install", lambda _: "the iPhone is locked"), \
              patch.object(phone.Runner, "notify", lambda _, title, body:
                           self.events.append((title, body)) if "SideStore update" not in title else None):
             return phone.main()
