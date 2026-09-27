@@ -50,6 +50,7 @@ HTTP_KINDS = {
     "/ws": "ws",
 }
 STAGES = ["descriptor", "token", "ticket", "resolver", "ws", "config", "shell", "sync"]
+LIFETIME_KINDS = ("ws", "config", "sync")
 AUTH_WINDOW_S = 60.0
 POST_CONNECT_WINDOW_S = 120.0
 SETUP_WINDOW_S = 1.0  # ws/config children ending later than this are steady-state work, not connect setup
@@ -161,9 +162,10 @@ def parse_spans(paths: list[str]) -> list[Span]:
 
 
 def fill_setup_compute(paths: list[str], spans: list[Span]) -> None:
-    """The ws and config spans live as long as the socket; their connect-time work is the
-    burst of child spans right after they start, so measure that instead of the lifetime."""
-    parents = {s.span_id: s for s in spans if s.kind in ("ws", "config")}
+    """The ws, config, and sync spans live as long as the socket; their connect-time work is
+    the burst of child spans right after they start, so measure that instead of the lifetime.
+    RPC requests are children of the ws span too, but they are later stages, not upgrade work."""
+    parents = {s.span_id: s for s in spans if s.kind in LIFETIME_KINDS}
     for parent in parents.values():
         parent.compute_ms = 0.0
     marker = '"parentSpanId":"'
@@ -171,7 +173,7 @@ def fill_setup_compute(paths: list[str], spans: list[Span]) -> None:
         with open_trace(path) as f:
             for line in f:
                 i = line.find(marker)
-                if i < 0:
+                if i < 0 or '"name":"ws.rpc.' in line:
                     continue
                 parent = parents.get(line[i + len(marker) : i + len(marker) + 16])
                 if parent is None:
