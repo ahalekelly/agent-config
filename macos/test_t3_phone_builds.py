@@ -87,7 +87,7 @@ class RunTests(StateTests):
         self.assertEqual(self.builds, 1)
         self.assertEqual(len(self.events), 1)
         self.assertIn("SideStore update", self.events[0][0])
-        self.assertIn("keep its widget extension", self.events[0][1])
+        self.assertIn("Update T3 and Refresh SideStore", self.events[0][1])
 
     def test_sidestore_owns_renewal_without_rebuilding(self):
         self.save({"packaged": record(8), "notified_revision": FORK})

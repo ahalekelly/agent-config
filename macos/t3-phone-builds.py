@@ -307,7 +307,9 @@ class Runner:
             self.notify(f"iPhone: SideStore update {self.version} ({self.short})",
                         f"Widget-enabled IPA ready on the Mac: {ARTIFACT_DIR / 'T3Code.ipa'}.\n"
                         f"Built {BRANCH} at {self.short}, based on v{self.version}.\n"
-                        "Tell Adrian to import this IPA into SideStore and keep its widget extension. "
+                        "Tell Adrian to unlock his iPhone and run the Update T3 and Refresh SideStore "
+                        "shortcut, which installs this IPA through SideStore. Once it finishes, "
+                        f"{ARTIFACT_DIR / 'T3Code.installed.sha256.txt'} holds the IPA's SHA-256. "
                         "SideStore owns signing and renewal. Do not install it with Xcode or devicectl.")
             self.state["notified_revision"] = self.revision
             self.save()
