@@ -477,6 +477,8 @@ def update_agents(platform: str) -> None:
         after = subprocess.run([tool, "--version"], check=True, capture_output=True, text=True).stdout.strip()
         if after != before:
             print(f"updated {tool}: {before} -> {after}")
+    # Pi ships inside pi-for-claude, pinned by its lockfile; this installs the pins and updates Pi's extensions.
+    subprocess.run(["pi-for-claude", "update"], check=True, capture_output=True, text=True)
 
 
 def main() -> None:
