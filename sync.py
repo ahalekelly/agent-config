@@ -464,12 +464,19 @@ def install_pull_schedule(platform: str) -> None:
             print("installed scheduled task T3 keepalive")
 
 
-def update_claude(platform: str) -> None:
-    """Install the latest Claude Code; its own updater runs only in the interactive TUI, which T3 Code sessions never open."""
-    claude = HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude")
-    result = subprocess.run([str(claude), "update"], check=True, capture_output=True, text=True)
-    if "up to date" not in result.stdout:
-        print(result.stdout.strip())
+def update_agents(platform: str) -> None:
+    """Install the latest Claude Code and Codex; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
+    claude = str(HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude"))
+    updates = {
+        claude: [claude, "update"],
+        "codex": ["brew", "upgrade", "--cask", "codex"] if platform == "macos" else ["npm", "install", "-g", "--min-release-age=0", "@openai/codex@latest"],
+    }
+    for tool, command in updates.items():
+        before = subprocess.run([tool, "--version"], check=True, capture_output=True, text=True).stdout.strip()
+        subprocess.run(command, check=True, capture_output=True, text=True)
+        after = subprocess.run([tool, "--version"], check=True, capture_output=True, text=True).stdout.strip()
+        if after != before:
+            print(f"updated {tool}: {before} -> {after}")
 
 
 def main() -> None:
@@ -501,7 +508,7 @@ def main() -> None:
         install_npm_cooldown()
         install_process_wrapper(platform)
         render_codex(platform)
-        update_claude(platform)
+        update_agents(platform)
     else:
         install_pull_schedule(platform)
 
