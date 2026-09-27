@@ -6,9 +6,12 @@
 """Build Adrian's T3 Code fork for SideStore.
 
 Every half hour on AC power, integrate the newest stable upstream release into
-main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. SideStore
-owns installation, signing, and renewal. Failed merges and builds back off for
-a day; a network outage waits for the next run and reports after a day.
+main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. Adrian
+installs it by running the "Update T3 and Refresh SideStore" shortcut on the
+iPhone, which installs it through SideStore and then writes the IPA's SHA-256
+to T3Code.installed.sha256.txt in the same folder. SideStore owns signing and
+renewal. Failed merges and builds back off for a day; a network outage waits for
+the next run and reports after a day.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
 only while the job is unloaded. State, logs, and DerivedData live in
