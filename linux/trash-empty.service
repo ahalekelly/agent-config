@@ -4,3 +4,5 @@ Description=Delete trashed items older than 7 days
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/trash-empty -f 7
+# Root's trash, which fills when agents run `sudo trash`
+ExecStart=/usr/bin/sudo -n -H /usr/bin/trash-empty -f 7
