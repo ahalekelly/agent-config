@@ -12,8 +12,8 @@ a day; a network outage waits for the next run and reports after a day.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
 only while the job is unloaded. State, logs, and DerivedData live in
-~/Library/Application Support/t3-phone-builds. T3 notifications use the service
-in ~/.t3-service. Work on fixes in a separate worktree.
+~/Library/Application Support/t3-phone-builds. Notifications open a thread in
+akelly-desktop's T3 service over SSH. Work on fixes in a separate worktree.
 """
 
 import json
@@ -32,12 +32,15 @@ from pathlib import Path
 
 REPO = Path.home() / "Git/t3code"
 STATE_DIR = Path.home() / "Library/Application Support/t3-phone-builds"
-THREAD_HELPER = Path.home() / ".agents/bin/t3-thread.py"
+DESKTOP = "akelly@akelly-desktop.troodon-bigeye.ts.net"
+# Non-interactive SSH shells on the desktop lack ~/.local/bin on PATH.
+THREAD_COMMAND = "~/.local/bin/uv run --quiet ~/.agents/bin/t3-thread.py new ~/Git/t3code"
+PROVIDER_INSTANCE = "claudeAgent"
 BRANCH = "main"
 ARTIFACT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/SideStore Setup"
 TEAM = "T3TBGN4UX7"
 BUNDLE_ID = "com.akelly.t3code"
-MODEL = "claude-opus-5"
+MODEL = "claude-opus-5-5"
 DAY = timedelta(days=1)
 
 
@@ -68,7 +71,6 @@ class Runner:
         self.env = {
             **os.environ,
             "APP_VARIANT": "production",
-            "T3CODE_HOME": str(Path.home() / ".t3-service"),
             "T3CODE_IOS_SIGNING": "sidestore",
             "T3CODE_IOS_BUNDLE_ID": BUNDLE_ID,
             "T3CODE_IOS_SIDESTORE_TEAM_ID": TEAM,
@@ -110,11 +112,11 @@ class Runner:
         temporary.replace(path)
 
     def notify(self, title, body):
-        with tempfile.TemporaryDirectory(prefix="t3-phone-event-") as folder:
-            prompt = Path(folder) / "prompt.md"
-            prompt.write_text(body)
-            subprocess.run(["uv", "run", "--quiet", str(THREAD_HELPER), "new",
-                            str(REPO), title, MODEL, str(prompt)], env=self.env, check=True)
+        """Open a T3 thread on the desktop; the prompt travels over stdin."""
+        self.step = "notify"
+        subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "HostKeyAlias=akelly-desktop", DESKTOP,
+                        f"{THREAD_COMMAND} {shlex.quote(title)} {PROVIDER_INSTANCE} {MODEL} /dev/stdin"],
+                       input=body, text=True, check=True)
 
     def xcodebuild(self):
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
@@ -303,7 +305,7 @@ class Runner:
         self.phase = None
         if self.state.get("notified_revision") != self.revision:
             self.notify(f"iPhone: SideStore update {self.version} ({self.short})",
-                        f"Widget-enabled IPA ready: {ARTIFACT_DIR / 'T3Code.ipa'}.\n"
+                        f"Widget-enabled IPA ready on the Mac: {ARTIFACT_DIR / 'T3Code.ipa'}.\n"
                         f"Built {BRANCH} at {self.short}, based on v{self.version}.\n"
                         "Tell Adrian to import this IPA into SideStore and keep its widget extension. "
                         "SideStore owns signing and renewal. Do not install it with Xcode or devicectl.")
@@ -330,10 +332,10 @@ def main():
                 tail = "".join(deque(output, maxlen=80))
         runner.notify(f"iPhone build failed: {runner.short} {runner.step}",
                       f"Step: {runner.step}\n\n{failure}\nLast 80 log lines:\n{tail}\n"
-                      f"Logs: {runner.log}, {STATE_DIR / 'log.txt'}.\n"
-                      f"Diagnose in {REPO} and {Path(__file__).resolve()}. Fix causes in our script "
-                      f"or in the fork's {BRANCH}; only report upstream causes. The build checkout is "
-                      "service-owned; work on fixes in a separate worktree.")
+                      f"Logs on the Mac: {runner.log}, {STATE_DIR / 'log.txt'}.\n"
+                      f"Diagnose over SSH in the Mac's {REPO} and in {Path(__file__).resolve()}. Fix "
+                      f"causes in our script or in the fork's {BRANCH}; only report upstream causes. "
+                      "The build checkout is service-owned; work on fixes in a separate worktree.")
         return 1
     finally:
         with (STATE_DIR / "log.txt").open("a") as output:
