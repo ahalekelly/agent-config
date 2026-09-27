@@ -6,10 +6,19 @@
 """Profile client connect waterfalls from T3 server trace logs.
 
 Reads the trace archive kept by t3-trace-archive.py plus the live
-server.trace.ndjson* files, reconstructs each client connection sequence
-(auth hops -> WS upgrade -> getConfig -> shell snapshot -> thread fetches),
-and reports per-connect timelines plus aggregates. Gaps between server-side
-arrivals = network RTT + client-side work; span durations = server compute.
+server.trace.ndjson* files and reconstructs each client connection:
+auth hops (descriptor, token, websocket ticket, resolver descriptor) ->
+WS upgrade -> server-config subscription -> HTTP shell snapshot -> shell
+subscription (the client is synced once it subscribes). Span durations =
+server compute; gaps between server-side arrivals = network RTT +
+client-side work. A connection appears only after its socket closed,
+because the WS span and its RPC child spans are written at close.
+
+`prev` relates each connect to the same client's previous socket:
+`replace` means the client dropped its old socket and reconnected at once
+(mobile does this on resume after >=10s in the background), `overlap`
+means the old socket was still open on the server, `idle` is the offline
+gap.
 
 Usage:
     uv run t3-profile-connects.py [--since HOURS] [--logs GLOB ...] [-v]
@@ -31,86 +40,84 @@ DEFAULT_GLOBS = [
     f"{ARCHIVE}/current.ndjson",
     os.path.expanduser("~/.t3/userdata/logs/server.trace.ndjson*"),
 ]
-LINE_MARKERS = ('"http.server', '"ws.rpc.server.getConfig"')
-
-RELEVANT_PATHS = {
+RPC_KINDS = {"ws.rpc.subscribeServerConfig": "config", "ws.rpc.orchestration.subscribeShell": "sync"}
+LINE_MARKERS = ('"http.server', *(f'"{name}"' for name in RPC_KINDS))
+HTTP_KINDS = {
     "/.well-known/t3/environment": "descriptor",
     "/oauth/token": "token",
     "/api/auth/websocket-ticket": "ticket",
     "/api/orchestration/shell": "shell",
     "/ws": "ws",
 }
+STAGES = ["descriptor", "token", "ticket", "resolver", "ws", "config", "shell", "sync"]
 AUTH_WINDOW_S = 60.0
 POST_CONNECT_WINDOW_S = 120.0
+SETUP_WINDOW_S = 1.0  # ws/config children ending later than this are steady-state work, not connect setup
 
 
 @dataclass
 class Span:
-    kind: str  # descriptor | token | ticket | ws | getConfig | shell | thread
+    kind: str
     start: float  # unix seconds
-    dur_ms: float
+    end: float
+    compute_ms: float  # server work; for ws/config spans filled from child spans, see fill_setup_compute
     trace_id: str
     span_id: str
-    ua: str
-    query: str
+    parent_id: str
+    peer: str  # client IP, "" when unknown
     host: str
-    deflate: bool
+    query: dict[str, str]
+    exit: str
     claimed: bool = False
 
 
 @dataclass
 class Connect:
-    config: Span
-    ws: Span | None = None  # absent while the socket is still open
-    steps: dict[str, Span] = field(default_factory=dict)  # kind -> span
+    ws: Span
+    steps: list[Span]  # time-ordered, includes ws
     threads: list[Span] = field(default_factory=list)
+    prev_close_gap: float | None = None  # seconds from the same client's previous socket close
 
     @property
     def start(self) -> float:
-        return min(s.start for s in self.all_steps())
-
-    def all_steps(self) -> list[Span]:
-        return [s for s in (self.ws, *self.steps.values(), self.config) if s is not None]
-
-    @property
-    def synced_at(self) -> float | None:
-        shell = self.steps.get("shell")
-        if shell is None:
-            return None
-        return shell.start + shell.dur_ms / 1000
+        return self.steps[0].start
 
     @property
     def total_ms(self) -> float | None:
-        synced = self.synced_at
-        return None if synced is None else (synced - self.start) * 1000
+        sync = next((s for s in self.steps if s.kind == "sync"), None)
+        return None if sync is None else (sync.start - self.start) * 1000
 
     @property
     def server_ms(self) -> float:
-        # The /ws span measures socket lifetime, not work; its auth check is ~1ms.
-        return sum(s.dur_ms for s in self.steps.values()) + self.config.dur_ms + 1.0
+        return sum(s.compute_ms for s in self.steps)
 
     def client(self) -> str:
-        ua = next((s.ua for s in self.all_steps() if s.ua), "")
-        if "Darwin" in ua or "CFNetwork" in ua:
-            return "ios"
-        if "okhttp" in ua:
-            return "android"
-        if "Electron" in ua:
-            return "desktop"
-        if ua.startswith("Mozilla"):
-            return "browser"
-        return "unknown"
+        q = self.ws.query
+        return f"{q['clientSurface']}/{q.get('clientOs', '?')}" if "clientSurface" in q else "unknown"
 
     def via(self) -> str:
-        host = next((s.host for s in self.all_steps() if s.host), "")
-        return "relay" if "t3coderelay" in host else "direct"
+        return "relay" if "t3coderelay" in self.ws.host else "direct"
+
+    def prev_label(self) -> str:
+        gap = self.prev_close_gap
+        if gap is None:
+            return "first"
+        if gap < 0:
+            return f"overlap {-gap:.0f}s"
+        if gap <= 3:
+            return f"replace +{gap:.1f}s"
+        return f"idle {gap:.0f}s"
+
+
+def open_trace(path: str):
+    opener = gzip.open if path.endswith(".gz") else open
+    return opener(path, "rt", errors="replace")
 
 
 def parse_spans(paths: list[str]) -> list[Span]:
     spans: dict[str, Span] = {}
     for path in paths:
-        opener = gzip.open if path.endswith(".gz") else open
-        with opener(path, "rt", errors="replace") as f:
+        with open_trace(path) as f:
             for line in f:
                 if not any(marker in line for marker in LINE_MARKERS):
                     continue
@@ -122,42 +129,67 @@ def parse_spans(paths: list[str]) -> list[Span]:
                     continue
                 name = row.get("name", "")
                 attrs = row.get("attributes", {})
-                if name == "ws.rpc.server.getConfig":
-                    kind = "getConfig"
-                elif name.startswith("http.server"):
-                    url_path = attrs.get("url.path", "")
+                url_path = attrs.get("url.path", "")
+                if name in RPC_KINDS:
+                    kind = RPC_KINDS[name]
+                elif name.startswith("http.server") and attrs.get("http.request.method") != "OPTIONS":
                     if url_path.startswith("/api/orchestration/threads/"):
                         kind = "thread"
-                    elif url_path in RELEVANT_PATHS:
-                        kind = RELEVANT_PATHS[url_path]
+                    elif url_path in HTTP_KINDS:
+                        kind = HTTP_KINDS[url_path]
                     else:
                         continue
                 else:
                     continue
-                span_id = row["spanId"]
-                spans[span_id] = Span(
+                start = int(row["startTimeUnixNano"]) / 1e9
+                end = int(row["endTimeUnixNano"]) / 1e9
+                query = attrs.get("url.query", "")
+                spans[row["spanId"]] = Span(
                     kind=kind,
-                    start=int(row["startTimeUnixNano"]) / 1e9,
-                    dur_ms=row.get("durationMs", 0.0),
+                    start=start,
+                    end=end,
+                    compute_ms=(end - start) * 1000,
                     trace_id=row.get("traceId", ""),
-                    span_id=span_id,
-                    ua=attrs.get("user_agent.original", ""),
-                    query=attrs.get("url.query", ""),
+                    span_id=row["spanId"],
+                    parent_id=row.get("parentSpanId", ""),
+                    peer=attrs.get("http.request.header.cf-connecting-ip") or attrs.get("client.address", ""),
                     host=attrs.get("http.request.header.host", ""),
-                    deflate="permessage-deflate"
-                    in attrs.get("http.request.header.sec-websocket-extensions", ""),
+                    query=dict(kv.split("=", 1) for kv in query.split("&") if "=" in kv),
+                    exit=row.get("exit", {}).get("_tag", ""),
                 )
     return sorted(spans.values(), key=lambda s: s.start)
 
 
-def ua_compatible(a: Span, b: Span) -> bool:
-    return not a.ua or not b.ua or a.ua == b.ua
+def fill_setup_compute(paths: list[str], spans: list[Span]) -> None:
+    """The ws and config spans live as long as the socket; their connect-time work is the
+    burst of child spans right after they start, so measure that instead of the lifetime."""
+    parents = {s.span_id: s for s in spans if s.kind in ("ws", "config")}
+    for parent in parents.values():
+        parent.compute_ms = 0.0
+    marker = '"parentSpanId":"'
+    for path in paths:
+        with open_trace(path) as f:
+            for line in f:
+                i = line.find(marker)
+                if i < 0:
+                    continue
+                parent = parents.get(line[i + len(marker) : i + len(marker) + 16])
+                if parent is None:
+                    continue
+                row = json.loads(line)
+                end = int(row["endTimeUnixNano"]) / 1e9
+                if end - parent.start <= SETUP_WINDOW_S:
+                    parent.compute_ms = max(parent.compute_ms, (end - parent.start) * 1000)
+
+
+def peer_compatible(a: Span, b: Span) -> bool:
+    return not a.peer or not b.peer or a.peer == b.peer
 
 
 def claim_before(spans: list[Span], kind: str, before: float, anchor: Span) -> Span | None:
     best = None
     for s in spans:
-        if s.kind != kind or s.claimed or not ua_compatible(s, anchor):
+        if s.kind != kind or s.claimed or not peer_compatible(s, anchor):
             continue
         if before - AUTH_WINDOW_S <= s.start < before:
             best = s  # spans are time-sorted, so the last hit is the latest
@@ -168,7 +200,7 @@ def claim_before(spans: list[Span], kind: str, before: float, anchor: Span) -> S
 
 def claim_after(spans: list[Span], kind: str, after: float, anchor: Span, window: float) -> Span | None:
     for s in spans:
-        if s.kind != kind or s.claimed or not ua_compatible(s, anchor):
+        if s.kind != kind or s.claimed or not peer_compatible(s, anchor):
             continue
         if after <= s.start <= after + window:
             s.claimed = True
@@ -177,61 +209,83 @@ def claim_after(spans: list[Span], kind: str, after: float, anchor: Span, window
 
 
 def build_connects(spans: list[Span]) -> list[Connect]:
+    children: dict[str, list[Span]] = {}
+    for s in spans:
+        if s.kind in ("config", "sync"):
+            children.setdefault(s.parent_id, []).append(s)
     connects = []
-    for cfg in (s for s in spans if s.kind == "getConfig"):
-        cfg.claimed = True
-        c = Connect(config=cfg)
-        ws = next(
-            (s for s in spans if s.kind == "ws" and not s.claimed and s.trace_id == cfg.trace_id),
-            None,
-        ) or claim_before(spans, "ws", cfg.start, cfg)
-        if ws:
-            ws.claimed = True
-            c.ws = ws
-        ticket = claim_before(spans, "ticket", (ws or cfg).start, ws or cfg)
+    for ws in (s for s in spans if s.kind == "ws"):
+        ws.claimed = True
+        steps = [ws]
+        for kind in ("config", "sync"):
+            first = next((s for s in children.get(ws.span_id, []) if s.kind == kind), None)
+            if first:
+                first.claimed = True
+                steps.append(first)
+        ticket = claim_before(spans, "ticket", ws.start, ws)
         if ticket:
-            c.steps["ticket"] = ticket
-            token = claim_before(spans, "token", ticket.start, ticket)
-            if token:
-                c.steps["token"] = token
-                desc = claim_before(spans, "descriptor", token.start, token)
-                if desc:
-                    c.steps["descriptor"] = desc
-        anchor = ticket or ws or cfg
-        shell = claim_after(spans, "shell", cfg.start + cfg.dur_ms / 1000, anchor, POST_CONNECT_WINDOW_S)
+            steps.append(ticket)
+            # The client propagates one traceparent across the ticket and the descriptor
+            # fetches around it, so the same trace id groups the rest of the auth hops.
+            for s in spans:
+                if s.kind in ("descriptor", "token") and not s.claimed and s.trace_id == ticket.trace_id:
+                    if abs(s.start - ticket.start) <= AUTH_WINDOW_S and s.start < ws.start:
+                        s.claimed = True
+                        if s.kind == "descriptor" and s.start > ticket.start:
+                            s.kind = "resolver"
+                        steps.append(s)
+        c = Connect(ws=ws, steps=sorted(steps, key=lambda s: s.start))
+        config = next((s for s in steps if s.kind == "config"), None)
+        shell = claim_after(spans, "shell", (config or ws).start, ws, POST_CONNECT_WINDOW_S)
         if shell:
-            c.steps["shell"] = shell
-            while t := claim_after(spans, "thread", shell.start, anchor, POST_CONNECT_WINDOW_S):
+            c.steps.append(shell)
+            c.steps.sort(key=lambda s: s.start)
+            while t := claim_after(spans, "thread", shell.start, ws, POST_CONNECT_WINDOW_S):
                 c.threads.append(t)
         connects.append(c)
+    connects.sort(key=lambda c: c.start)
+    last_close: dict[str, float] = {}
+    for c in connects:
+        client = c.client()
+        if client in last_close:
+            c.prev_close_gap = c.start - last_close[client]
+        last_close[client] = max(last_close.get(client, 0.0), c.ws.end)
     return connects
 
 
-STEP_ORDER = ["descriptor", "token", "ticket", "ws", "getConfig", "shell"]
+def stage_gaps(c: Connect) -> list[tuple[Span, float | None]]:
+    """Each step with the gap (seconds) since the previous step's server work ended."""
+    out = []
+    prev_end = None
+    for s in c.steps:
+        out.append((s, None if prev_end is None else s.start - prev_end))
+        prev_end = s.start + s.compute_ms / 1000
+    return out
+
+
+def fmt_time(t: float) -> str:
+    return time.strftime("%m-%d %H:%M:%S", time.localtime(t))
 
 
 def print_connect(c: Connect, verbose: bool) -> None:
-    when = f"{c.start:.0f}"
     total = c.total_ms
-    total_s = f"{total:7.0f}ms" if total is not None else "   no-sync"
-    socket = f"{c.ws.dur_ms / 1000:7.1f}s" if c.ws else "   open "
-    deflate = "?" if c.ws is None else ("y" if c.ws.deflate else "n")
-    present = [k for k in STEP_ORDER if k in c.steps or (k == "ws" and c.ws) or k == "getConfig"]
+    total_s = f"{total:6.0f}ms" if total is not None else " no-sync"
+    life = c.ws.end - c.ws.start
+    close = "" if c.ws.exit == "Success" else f"({c.ws.exit.lower()[:3]})"
     print(
-        f"{when}  {c.client():8s} {c.via():6s} total={total_s} server={c.server_ms:5.0f}ms "
-        f"socket={socket} deflate={deflate} steps={'/'.join(present)} threads={len(c.threads)}"
+        f"{fmt_time(c.start)}  {c.client():14s} {c.via():6s} total={total_s} server={c.server_ms:4.0f}ms "
+        f"socket={life:6.0f}s{close:5s} prev={c.prev_label():14s} "
+        f"steps={'/'.join(s.kind for s in c.steps)} threads={len(c.threads)}"
     )
     if not verbose:
         return
-    prev_end = None
-    for kind in STEP_ORDER:
-        s = c.ws if kind == "ws" else c.config if kind == "getConfig" else c.steps.get(kind)
-        if s is None:
-            continue
-        gap = "" if prev_end is None else f"gap={((s.start - prev_end) * 1000):6.0f}ms"
-        dur = "lifetime" if kind == "ws" else f"{s.dur_ms:6.1f}ms"
-        print(f"    +{(s.start - c.start) * 1000:7.0f}ms  {kind:10s} server={dur:>10s}  {gap}")
-        prev_end = s.start + (0 if kind == "ws" else s.dur_ms / 1000)
+    for s, gap in stage_gaps(c):
+        gap_s = "" if gap is None else f"gap={gap * 1000:6.0f}ms"
+        print(f"    +{(s.start - c.start) * 1000:7.0f}ms  {s.kind:10s} server={s.compute_ms:6.1f}ms  {gap_s}")
+
+
+def p90(values: list[float]) -> float:
+    return sorted(values)[math.ceil(len(values) * 0.9) - 1]
 
 
 def print_aggregates(connects: list[Connect]) -> None:
@@ -241,24 +295,34 @@ def print_aggregates(connects: list[Connect]) -> None:
     print("\n=== Aggregates by client ===")
     for client, group in sorted(by_client.items()):
         totals = [c.total_ms for c in group if c.total_ms is not None]
-        churn = sum(1 for c in group if c.ws and c.ws.dur_ms < 60_000)
-        still_open = sum(1 for c in group if c.ws is None)
-        line = f"{client:8s} connects={len(group):3d} short-lived(<60s)={churn:3d} open={still_open:2d}"
+        lives = [c.ws.end - c.ws.start for c in group]
+        prev = {label: sum(1 for c in group if c.prev_label().startswith(label)) for label in ("replace", "idle", "overlap")}
+        line = f"{client:14s} connects={len(group):3d} synced={len(totals):3d} socket life median={statistics.median(lives):4.0f}s prev={prev}"
         if totals:
-            line += (
-                f" synced={len(totals):3d} total median={statistics.median(totals):6.0f}ms"
-                f" p90={sorted(totals)[math.ceil(len(totals) * 0.9) - 1]:6.0f}ms"
-                f" max={max(totals):6.0f}ms"
-            )
             server = [c.server_ms for c in group if c.total_ms is not None]
-            line += f" | server median={statistics.median(server):4.0f}ms"
+            line += (
+                f"\n{'':14s} total median={statistics.median(totals):5.0f}ms p90={p90(totals):5.0f}ms max={max(totals):5.0f}ms"
+                f" | server median={statistics.median(server):3.0f}ms p90={p90(server):3.0f}ms"
+            )
         print(line)
-    orphan_shells = "(shell fetches not tied to a connect indicate resyncs on a live socket)"
-    print(f"\nNote: gaps = RTT + client-side work; server = span durations. {orphan_shells}")
+        gaps: dict[str, list[float]] = {}
+        computes: dict[str, list[float]] = {}
+        for c in group:
+            for s, gap in stage_gaps(c):
+                computes.setdefault(s.kind, []).append(s.compute_ms)
+                if gap is not None:
+                    gaps.setdefault(s.kind, []).append(gap * 1000)
+        for kind in STAGES:
+            if kind not in computes:
+                continue
+            g = gaps.get(kind, [])
+            gap_s = f"gap before median={statistics.median(g):5.0f}ms p90={p90(g):5.0f}ms" if g else f"{'':41s}"
+            print(f"    {kind:10s} n={len(computes[kind]):3d} {gap_s} server median={statistics.median(computes[kind]):6.1f}ms")
+    print("\nNote: gap = RTT + client-side work before that step arrived; server = span compute.")
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--logs", nargs="+", default=DEFAULT_GLOBS, help="globs of trace files (.ndjson or .ndjson.gz)")
     ap.add_argument("--since", type=float, help="only read files modified within the last N hours")
     ap.add_argument("-v", "--verbose", action="store_true", help="per-step waterfall for each connect")
@@ -271,11 +335,10 @@ def main() -> None:
     if not paths:
         raise SystemExit(f"no trace files match {args.logs}")
     spans = parse_spans(paths)
-    connects = sorted(build_connects(spans), key=lambda c: c.start)
-    span_min = min(s.start for s in spans)
-    span_max = max(s.start for s in spans)
-    kinds = {k: sum(1 for s in spans if s.kind == k) for k in ("descriptor", "token", "ticket", "ws", "getConfig", "shell", "thread")}
-    print(f"{len(paths)} files, window {(span_max - span_min) / 3600:.1f}h, spans by kind: {kinds}")
+    fill_setup_compute(paths, spans)
+    connects = build_connects(spans)
+    kinds = {k: sum(1 for s in spans if s.kind == k) for k in (*STAGES, "thread")}
+    print(f"{len(paths)} files, {fmt_time(spans[0].start)} .. {fmt_time(spans[-1].start)}, spans by kind: {kinds}")
     print(f"\n=== Connects ({len(connects)}) ===")
     for c in connects:
         print_connect(c, args.verbose)
