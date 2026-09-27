@@ -3,10 +3,12 @@
 # ///
 """Send a prompt to T3 Code, either in a new thread or into an existing one.
 
-Usage: t3-thread.py new <project-dir> <title> <model> <prompt-file>
+Usage: t3-thread.py new <project-dir> <title> <provider-instance> <model> <prompt-file>
        t3-thread.py resume <thread-id> <prompt-file>
 
 Thread ids are listed by GET /api/orchestration/snapshot.
+Provider instances are the keys of `providerInstances` in userdata/settings.json
+(e.g. `claudeAgent`, `claudeAgent_claude_work`).
 Run against a ready T3 server; T3CODE_HOME selects its data directory (default ~/.t3).
 
 Auth: mint a short-lived pairing token with `t3 pair`, exchange it for an
@@ -25,31 +27,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 T3 = Path(os.environ.get("T3CODE_HOME", Path.home() / ".t3"))
-MAC_APP = Path("/Applications/T3 Code (Alpha).app")
 
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def t3_cli() -> tuple[list[str], dict[str, str]]:
-    """The `t3` CLI of the running server: the service install, or else the macOS desktop app's bundled server."""
-    service_state = T3 / "runtime/service-state.json"
-    if service_state.is_file():
-        version = json.loads(service_state.read_text())["activeVersion"]
-        return [str(T3 / "runtime/versions" / version / "t3")], dict(os.environ)
-    if not MAC_APP.is_dir():
-        raise SystemExit(f"No T3 CLI found: neither {service_state} nor {MAC_APP} exists")
-    electron = MAC_APP / "Contents/MacOS" / MAC_APP.stem
-    server = MAC_APP / "Contents/Resources/app.asar/apps/server/dist/bin.mjs"
-    return [str(electron), str(server)], {**os.environ, "ELECTRON_RUN_AS_NODE": "1"}
-
-
 def mint_access_token(origin: str, label: str) -> str:
-    cli, env = t3_cli()
+    version = json.loads((T3 / "runtime/service-state.json").read_text())["activeVersion"]
+    executable = T3 / "runtime/versions" / version / "t3"
     out = subprocess.run(
-        [*cli, "pair", "--base-dir", str(T3), "--ttl", "5m", "--label", label],
-        capture_output=True, text=True, check=True, cwd=Path.home(), env=env,
+        [str(executable), "pair", "--base-dir", str(T3), "--ttl", "5m", "--label", label],
+        capture_output=True, text=True, check=True, cwd=Path.home(),
     ).stdout
     pairing_token = re.search(r"^Token: (\S+)$", out, re.M).group(1)
     form = urllib.parse.urlencode({
@@ -66,12 +55,12 @@ def mint_access_token(origin: str, label: str) -> str:
 
 def main() -> None:
     args = sys.argv[1:]
-    if args[:1] == ["new"] and len(args) == 5:
-        _, project_dir, title, model, prompt_file = args
+    if args[:1] == ["new"] and len(args) == 6:
+        _, project_dir, title, instance_id, model, prompt_file = args
         thread_id = None
     elif args[:1] == ["resume"] and len(args) == 3:
         _, thread_id, prompt_file = args
-        project_dir = model = None
+        project_dir = instance_id = model = None
         title = f"resume {thread_id[:8]}"
     else:
         raise SystemExit(__doc__)
@@ -103,7 +92,7 @@ def main() -> None:
             dispatch({"type": "project.create", "projectId": project_id, "title": Path(project_dir).name, "workspaceRoot": project_dir})
         thread_id = str(uuid.uuid4())
         dispatch({"type": "thread.create", "threadId": thread_id, "projectId": project_id,
-                  "title": title, "modelSelection": {"instanceId": "claudeAgent", "model": model},
+                  "title": title, "modelSelection": {"instanceId": instance_id, "model": model},
                   "runtimeMode": "full-access", "branch": "main", "worktreePath": None})
     dispatch({"type": "thread.turn.start", "threadId": thread_id,
               "runtimeMode": "full-access", "interactionMode": "default",
