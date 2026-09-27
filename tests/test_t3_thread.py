@@ -16,7 +16,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "bin/t3-thread.py"
 def test_missing_runtime_explains_server_readiness(tmp_path, mode):
     prompt = tmp_path / "prompt.txt"
     prompt.write_text("Hello")
-    args = ["new", str(tmp_path), "Test", "model"] if mode == "new" else ["resume", "thread-id"]
+    args = ["new", str(tmp_path), "Test", "claudeAgent", "model"] if mode == "new" else ["resume", "thread-id"]
     result = subprocess.run(
         [sys.executable, str(SCRIPT), *args, str(prompt)],
         env=os.environ | {"T3CODE_HOME": str(tmp_path)},
