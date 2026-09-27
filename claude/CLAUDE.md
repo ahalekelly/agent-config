@@ -47,15 +47,15 @@ Production code should be written by Opus or Sol, or for very complicated code F
 Never use Haiku.
 
 <model: fable subagent>
-You may delegate to lower tier models (Opus, Sonnet, GPT Sol, and Luna), and consult Astra for a second opinion.
+As a subagent, you may delegate to lower tier models (Opus, Sonnet, GPT Sol, and Luna), and consult Astra for a second opinion.
 
 </model>
 <model: opus subagent>
-You may delegate simple research and mechanical non-code work to Sonnet. Write the code yourself, and do any other non-trivial work yourself.
+As a subagent, you may delegate simple research and mechanical non-code work to Sonnet. Write the code yourself, and do any other non-trivial work yourself.
 
 </model>
 <model: sonnet subagent>
-Do the work yourself; never delegate.
+As a subagent, do the work yourself; never delegate.
 
 </model>
 GPT uses a different search engine from Claude, so for difficult web research tasks, delegate to both a Sol and Opus subagent, and have them surface the most promising links for you to review, quoting the relevant sections of their sources exactly in their responses.
