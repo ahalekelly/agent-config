@@ -460,6 +460,11 @@ def install_pull_schedule(platform: str) -> None:
             capture_output=True,
         )
         subprocess.run([schtasks, "/Create", "/F", "/TN", "T3 keepalive", "/XML", str(REPO / "windows/t3-keepalive.xml")], check=True, capture_output=True)
+        subprocess.run(
+            [schtasks, "/Create", "/F", "/TN", "Claude Code update", "/SC", "HOURLY", "/IT", "/TR", str(HOME / ".local" / "bin" / "claude.exe") + " update"],
+            check=True,
+            capture_output=True,
+        )
         status = subprocess.run([schtasks, "/Query", "/TN", "T3 keepalive", "/FO", "LIST"], check=True, capture_output=True, text=True)
         if "Running" not in status.stdout:
             subprocess.run([schtasks, "/Run", "/TN", "T3 keepalive"], check=True, capture_output=True)

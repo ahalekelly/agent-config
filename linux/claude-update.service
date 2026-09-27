@@ -3,4 +3,4 @@ Description=Install the latest Claude Code release
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/claude install latest
+ExecStart=%h/.local/bin/claude update

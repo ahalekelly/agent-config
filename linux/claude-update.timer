@@ -1,8 +1,8 @@
 [Unit]
-Description=Update Claude Code daily
+Description=Update Claude Code hourly
 
 [Timer]
-OnCalendar=daily
+OnCalendar=hourly
 Persistent=true
 
 [Install]
