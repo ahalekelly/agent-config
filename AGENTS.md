@@ -73,7 +73,7 @@ T3 jobs, including scheduled ones, run on this machine unless they can't. To sch
 
 When delivering reports or other documents for me to read, provide clickable Markdown links using `file://` URLs with URL-encoded absolute paths, for example `[Report](file:///Users/akelly/report.md)`.
 
-T3 jobs, scheduled or not, run on akelly-desktop, where T3 runs as a service. This Mac only runs T3 inside the desktop app, so a thread here can't be resumed on a schedule; start a new thread on akelly-desktop instead.
+T3 jobs, scheduled or not, run on akelly-desktop, because this Mac is often asleep. Jobs that only run while the Mac is awake, like the phone build, post to T3 here instead: `t3-thread.py` uses the desktop app's bundled server, so the app must be open. `~/.agents/bin/t3-transplant-threads.py` moves a project's threads between T3 databases (the target server stopped).
 
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 

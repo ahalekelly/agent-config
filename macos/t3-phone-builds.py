@@ -13,7 +13,7 @@ a day; a network outage waits for the next run and reports after a day.
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
 only while the job is unloaded. State, logs, and DerivedData live in
 ~/Library/Application Support/t3-phone-builds. Notifications open a thread in
-akelly-desktop's T3 service over SSH. Work on fixes in a separate worktree.
+the T3 Code app on this Mac, so it must be open. Work on fixes in a separate worktree.
 """
 
 import json
@@ -32,9 +32,7 @@ from pathlib import Path
 
 REPO = Path.home() / "Git/t3code"
 STATE_DIR = Path.home() / "Library/Application Support/t3-phone-builds"
-DESKTOP = "akelly@akelly-desktop.troodon-bigeye.ts.net"
-# Non-interactive SSH shells on the desktop lack ~/.local/bin on PATH.
-THREAD_COMMAND = "~/.local/bin/uv run --quiet ~/.agents/bin/t3-thread.py new ~/Git/t3code"
+THREAD_SCRIPT = Path.home() / ".agents/bin/t3-thread.py"
 PROVIDER_INSTANCE = "claudeAgent"
 BRANCH = "main"
 ARTIFACT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/SideStore Setup"
@@ -112,10 +110,10 @@ class Runner:
         temporary.replace(path)
 
     def notify(self, title, body):
-        """Open a T3 thread on the desktop; the prompt travels over stdin."""
+        """Open a T3 thread in the Mac's T3; the prompt travels over stdin."""
         self.step = "notify"
-        subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "HostKeyAlias=akelly-desktop", DESKTOP,
-                        f"{THREAD_COMMAND} {shlex.quote(title)} {PROVIDER_INSTANCE} {MODEL} /dev/stdin"],
+        subprocess.run([Path.home() / ".local/bin/uv", "run", "--quiet", THREAD_SCRIPT, "new", REPO, title,
+                        PROVIDER_INSTANCE, MODEL, "/dev/stdin"],
                        input=body, text=True, check=True)
 
     def xcodebuild(self):

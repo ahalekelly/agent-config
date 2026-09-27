@@ -27,18 +27,31 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 T3 = Path(os.environ.get("T3CODE_HOME", Path.home() / ".t3"))
+MAC_APP = Path("/Applications/T3 Code (Alpha).app")
 
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def t3_cli() -> tuple[list[str], dict[str, str]]:
+    """The `t3` CLI of the running server: the service install, or else the macOS desktop app's bundled server."""
+    service_state = T3 / "runtime/service-state.json"
+    if service_state.is_file():
+        version = json.loads(service_state.read_text())["activeVersion"]
+        return [str(T3 / "runtime/versions" / version / "t3")], dict(os.environ)
+    if not MAC_APP.is_dir():
+        raise SystemExit(f"No T3 CLI found: neither {service_state} nor {MAC_APP} exists")
+    electron = MAC_APP / "Contents/MacOS" / MAC_APP.stem
+    server = MAC_APP / "Contents/Resources/app.asar/apps/server/dist/bin.mjs"
+    return [str(electron), str(server)], {**os.environ, "ELECTRON_RUN_AS_NODE": "1"}
+
+
 def mint_access_token(origin: str, label: str) -> str:
-    version = json.loads((T3 / "runtime/service-state.json").read_text())["activeVersion"]
-    executable = T3 / "runtime/versions" / version / "t3"
+    cli, env = t3_cli()
     out = subprocess.run(
-        [str(executable), "pair", "--base-dir", str(T3), "--ttl", "5m", "--label", label],
-        capture_output=True, text=True, check=True, cwd=Path.home(),
+        [*cli, "pair", "--base-dir", str(T3), "--ttl", "5m", "--label", label],
+        capture_output=True, text=True, check=True, cwd=Path.home(), env=env,
     ).stdout
     pairing_token = re.search(r"^Token: (\S+)$", out, re.M).group(1)
     form = urllib.parse.urlencode({
