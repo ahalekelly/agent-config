@@ -283,12 +283,17 @@ class Runner:
             self.command("ditto", "-c", "-k", "--keepParent", "--norsrc", payload, ipa)
             ipa.replace(ARTIFACT_DIR / "T3Code.ipa")
 
-    def devicectl(self, *args):
-        """Run a devicectl command against the iPhone; None when it fails."""
+    def devicectl(self, command, *args):
+        """Run a devicectl command such as "device info lockState" against the
+        iPhone; None when it fails.
+
+        Options go before the command's positional arguments: devicectl passes
+        everything after a launch's bundle ID to the app.
+        """
         with tempfile.TemporaryDirectory(prefix="t3-devicectl-") as folder:
             output = Path(folder) / "result.json"
-            if self.attempt("xcrun", "devicectl", *args, "--device", PHONE, "--timeout", "30",
-                            "--json-output", output).returncode:
+            if self.attempt("xcrun", "devicectl", "--timeout", "30", "--json-output", output,
+                            *command.split(), "--device", PHONE, *args).returncode:
                 return None
             return json.loads(output.read_text())["result"]
 
@@ -307,7 +312,7 @@ class Runner:
 
         if installed():
             return None
-        lock = self.devicectl("device", "info", "lockState")
+        lock = self.devicectl("device info lockState")
         if lock is None:
             return "the iPhone is unreachable"
         if lock["passcodeRequired"]:
@@ -319,11 +324,11 @@ class Runner:
         # installing, so launch it again until the receipt names this IPA.
         for launch in range(INSTALL_LAUNCHES):
             if launch:
-                lock = self.devicectl("device", "info", "lockState")
+                lock = self.devicectl("device info lockState")
                 if lock is None or lock["passcodeRequired"]:
                     raise RuntimeError(f"The iPhone locked or went out of reach before the {SHORTCUT} "
                                        "shortcut installed this IPA")
-            if self.devicectl("device", "process", "launch", "--payload-url", SHORTCUT_URL,
+            if self.devicectl("device process launch", "--payload-url", SHORTCUT_URL,
                               "com.apple.shortcuts") is None:
                 raise RuntimeError(f"devicectl could not start the {SHORTCUT} shortcut")
             for _ in range(RECEIPT_POLLS):
