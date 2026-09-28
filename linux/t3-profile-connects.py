@@ -25,6 +25,15 @@ gap.
 otherwise the reverse-DNS domain or address prefix. Aggregates are grouped
 by client and network, since each network has its own latency.
 
+The mobile app posts its own connect spans (service `t3code-mobile`, written
+as `otlp-span` records) after each connect. They are attached to a connect
+through the `relay.connection.attempt` span that shares the ticket's trace
+id. The phone's clock is aligned to the server's from HTTP request pairs:
+each server span must sit inside the client span with the same trace id and
+path, which bounds the offset. With phone spans attached, each step's gap
+splits into `phone` (from the previous response arriving on the phone to
+this request leaving it) and `net` (the rest: both directions of RTT).
+
 Usage:
     uv run t3-profile-connects.py [--since HOURS] [--logs GLOB ...] [-v]
 """
@@ -58,6 +67,19 @@ HTTP_KINDS = {
     "/ws": "ws",
 }
 STAGES = ["descriptor", "token", "ticket", "resolver", "ws", "config", "shell", "sync"]
+CLIENT_SERVICE = "t3code-mobile"
+CLIENT_MARKER = '"otlp-span"'
+PHONE_SPANS = {  # phone-side spans shown in the waterfall
+    "relay.connection.attempt": "attempt",
+    "clientRuntime.connection.broker.prepare": "prepare",
+    "environment.websocket.connect": "ws-open",
+    "environment.initialSync": "config-wait",
+    "clientRuntime.state.fetchEnvironmentShellSnapshot": "shell-fetch",
+    "EnvironmentShellState.applyItems": "apply",
+    "EnvironmentShellState.makeSubscribeInput": "subscribe-input",
+    "client.jsThread.stall": "stall",
+}
+PHONE_WINDOW_S = 2.0  # phone spans starting this long after the last step still belong to the connect
 LIFETIME_KINDS = ("ws", "config", "sync")
 AUTH_WINDOW_S = 60.0
 POST_CONNECT_WINDOW_S = 120.0
@@ -75,9 +97,25 @@ class Span:
     parent_id: str
     peer: str  # client IP, "" when unknown
     host: str
+    path: str
     query: dict[str, str]
     exit: str
     claimed: bool = False
+    sent: float | None = None  # phone-side request send / response receive, server clock
+    received: float | None = None
+
+
+@dataclass
+class PhoneSpan:
+    name: str
+    start: float  # phone clock until attach_phone_spans shifts it to the server clock
+    end: float
+    trace_id: str
+    path: str  # url.path of http.client spans, "" otherwise
+
+    @property
+    def ms(self) -> float:
+        return (self.end - self.start) * 1000
 
 
 @dataclass
@@ -87,6 +125,8 @@ class Connect:
     threads: list[Span] = field(default_factory=list)
     prev_close_gap: float | None = None  # seconds from the same client's previous socket close
     network: str = ""  # see network_label
+    phone: list[PhoneSpan] = field(default_factory=list)  # attached phone spans, server clock
+    skew_s: float | None = None  # phone clock minus server clock
 
     @property
     def start(self) -> float:
@@ -100,6 +140,14 @@ class Connect:
     @property
     def server_ms(self) -> float:
         return sum(s.compute_ms for s in self.steps)
+
+    @property
+    def phone_ms(self) -> float:
+        return sum(phone for _, _, phone, _ in stage_gaps(self) if phone is not None and phone > 0) * 1000
+
+    @property
+    def stall_ms(self) -> float:
+        return sum(s.ms for s in self.phone if s.name == "client.jsThread.stall")
 
     def client(self) -> str:
         q = self.ws.query
@@ -124,11 +172,23 @@ def open_trace(path: str):
     return opener(path, "rt", errors="replace")
 
 
-def parse_spans(paths: list[str]) -> list[Span]:
+def parse_spans(paths: list[str]) -> tuple[list[Span], list[PhoneSpan]]:
     spans: dict[str, Span] = {}
+    phone: list[PhoneSpan] = []
     for path in paths:
         with open_trace(path) as f:
             for line in f:
+                if CLIENT_MARKER in line:
+                    row = json.loads(line)
+                    if row.get("resourceAttributes", {}).get("service.name") == CLIENT_SERVICE:
+                        phone.append(PhoneSpan(
+                            name=row["name"],
+                            start=int(row["startTimeUnixNano"]) / 1e9,
+                            end=int(row["endTimeUnixNano"]) / 1e9,
+                            trace_id=row.get("traceId", ""),
+                            path=row.get("attributes", {}).get("url.path", ""),
+                        ))
+                    continue
                 if not any(marker in line for marker in LINE_MARKERS):
                     continue
                 try:
@@ -164,10 +224,11 @@ def parse_spans(paths: list[str]) -> list[Span]:
                     parent_id=row.get("parentSpanId", ""),
                     peer=attrs.get("http.request.header.cf-connecting-ip") or attrs.get("client.address", ""),
                     host=attrs.get("http.request.header.host", ""),
+                    path=url_path,
                     query=dict(kv.split("=", 1) for kv in query.split("&") if "=" in kv),
                     exit=row.get("exit", {}).get("_tag", ""),
                 )
-    return sorted(spans.values(), key=lambda s: s.start)
+    return sorted(spans.values(), key=lambda s: s.start), sorted(phone, key=lambda s: s.start)
 
 
 def fill_setup_compute(paths: list[str], spans: list[Span]) -> None:
@@ -293,13 +354,68 @@ def network_label(peer: str, home: list[ipaddress.IPv4Network | ipaddress.IPv6Ne
         return str(ipaddress.ip_network(f"{peer}/{48 if ip.version == 6 else 24}", strict=False))
 
 
-def stage_gaps(c: Connect) -> list[tuple[Span, float | None]]:
-    """Each step with the gap (seconds) since the previous step's server work ended."""
+def attach_phone_spans(connects: list[Connect], phone: list[PhoneSpan]) -> None:
+    """Attach each connect's phone spans, shifted onto the server clock, and note per step
+    when the phone sent the request and received the response."""
+    attempts = {s.trace_id: s for s in phone if s.name == "relay.connection.attempt"}
+    http: dict[tuple[str, str], PhoneSpan] = {}
+    for s in phone:
+        if s.name.startswith("http.client "):
+            http.setdefault((s.trace_id, s.path), s)
+    for c in connects:
+        ticket = next((s for s in c.steps if s.kind == "ticket"), None)
+        attempt = attempts.get(ticket.trace_id) if ticket else None
+        if attempt is None:
+            continue
+        # The server span lies inside the phone's request span, so with skew = phone - server:
+        # phone.start - skew <= server.start and server.end <= phone.end - skew.
+        pairs = [(s, http[(s.trace_id, s.path)]) for s in c.steps if (s.trace_id, s.path) in http]
+        if not pairs:
+            continue
+        lo = max(p.start - s.start for s, p in pairs)
+        hi = min(p.end - s.end for s, p in pairs)
+        skew = (lo + hi) / 2
+        c.skew_s = skew
+        for s, p in pairs:
+            s.sent, s.received = p.start - skew, p.end - skew
+        last = max(s.start + s.compute_ms / 1000 for s in c.steps)
+        window = (attempt.start, max(attempt.end, last + skew) + PHONE_WINDOW_S)
+        c.phone = [
+            PhoneSpan(s.name, s.start - skew, s.end - skew, s.trace_id, s.path)
+            for s in phone
+            if window[0] <= s.start <= window[1] and s.name in PHONE_SPANS
+        ]
+        by_name: dict[str, list[PhoneSpan]] = {}
+        for s in c.phone:
+            by_name.setdefault(s.name, []).append(s)
+        ws_open = by_name.get("environment.websocket.connect", [None])[0]
+        config_wait = by_name.get("environment.initialSync", [None])[0]
+        for s in c.steps:
+            if s.kind == "ws" and ws_open:
+                s.sent, s.received = ws_open.start, ws_open.end
+            elif s.kind == "config" and ws_open:
+                s.sent = ws_open.end  # the config subscription is sent as soon as the socket opens
+                s.received = config_wait.end if config_wait else None
+            elif s.kind == "sync":
+                subscribed = [p for p in by_name.get("EnvironmentShellState.makeSubscribeInput", []) if p.end <= s.start]
+                s.sent = subscribed[-1].end if subscribed else None
+
+
+def stage_gaps(c: Connect) -> list[tuple[Span, float | None, float | None, float | None]]:
+    """Each step with the gap (seconds) since the previous step's server work ended, split into
+    phone time (previous response received on the phone -> this request sent) and network time
+    (the rest) when phone spans are attached. Phone time is negative when the request left before
+    the previous response arrived, i.e. the two steps overlapped."""
     out = []
     prev_end = None
+    prev_received = c.phone[0].start if c.phone else None  # the attempt span starts the connect
     for s in c.steps:
-        out.append((s, None if prev_end is None else s.start - prev_end))
+        gap = None if prev_end is None else s.start - prev_end
+        phone = None if s.sent is None or prev_received is None else s.sent - prev_received
+        net = None if gap is None or phone is None else gap - phone
+        out.append((s, gap, phone, net))
         prev_end = s.start + s.compute_ms / 1000
+        prev_received = s.received
     return out
 
 
@@ -312,16 +428,23 @@ def print_connect(c: Connect, verbose: bool) -> None:
     total_s = f"{total:6.0f}ms" if total is not None else " no-sync"
     life = c.ws.end - c.ws.start
     close = "" if c.ws.exit == "Success" else f"({c.ws.exit.lower()[:3]})"
+    phone_s = f" phone={c.phone_ms:4.0f}ms stall={c.stall_ms:4.0f}ms skew={c.skew_s:+.2f}s" if c.phone else ""
     print(
-        f"{fmt_time(c.start)}  {c.client():14s} {c.via():6s} net={c.network:16s} total={total_s} server={c.server_ms:4.0f}ms "
+        f"{fmt_time(c.start)}  {c.client():14s} {c.via():6s} net={c.network:16s} total={total_s} server={c.server_ms:4.0f}ms{phone_s} "
         f"socket={life:6.0f}s{close:5s} prev={c.prev_label():14s} "
         f"steps={'/'.join(s.kind for s in c.steps)} threads={len(c.threads)}"
     )
     if not verbose:
         return
-    for s, gap in stage_gaps(c):
+    rows: list[tuple[float, str]] = []
+    for s, gap, phone, net in stage_gaps(c):
         gap_s = "" if gap is None else f"gap={gap * 1000:6.0f}ms"
-        print(f"    +{(s.start - c.start) * 1000:7.0f}ms  {s.kind:10s} server={s.compute_ms:6.1f}ms  {gap_s}")
+        split = "" if phone is None else f"  phone={phone * 1000:5.0f}ms" + ("" if net is None else f" net={net * 1000:5.0f}ms")
+        rows.append((s.start, f"{s.kind:10s} server={s.compute_ms:6.1f}ms  {gap_s}{split}"))
+    for p in c.phone:
+        rows.append((p.start, f"{'phone':10s} {PHONE_SPANS[p.name]} {p.ms:.0f}ms"))
+    for start, text in sorted(rows, key=lambda r: r[0]):
+        print(f"    +{(start - c.start) * 1000:7.0f}ms  {text}")
 
 
 def p90(values: list[float]) -> float:
@@ -346,19 +469,25 @@ def print_aggregates(connects: list[Connect]) -> None:
             )
         print(line)
         gaps: dict[str, list[float]] = {}
+        phones: dict[str, list[float]] = {}
         computes: dict[str, list[float]] = {}
         for c in group:
-            for s, gap in stage_gaps(c):
+            for s, gap, phone, _ in stage_gaps(c):
                 computes.setdefault(s.kind, []).append(s.compute_ms)
                 if gap is not None:
                     gaps.setdefault(s.kind, []).append(gap * 1000)
+                if phone is not None:
+                    phones.setdefault(s.kind, []).append(phone * 1000)
         for kind in STAGES:
             if kind not in computes:
                 continue
             g = gaps.get(kind, [])
             gap_s = f"gap before median={statistics.median(g):5.0f}ms p90={p90(g):5.0f}ms" if g else f"{'':41s}"
-            print(f"    {kind:10s} n={len(computes[kind]):3d} {gap_s} server median={statistics.median(computes[kind]):6.1f}ms")
-    print("\nNote: gap = RTT + client-side work before that step arrived; server = span compute.")
+            ph = phones.get(kind, [])
+            phone_s = f" phone median={statistics.median(ph):5.0f}ms (n={len(ph)})" if ph else ""
+            print(f"    {kind:10s} n={len(computes[kind]):3d} {gap_s} server median={statistics.median(computes[kind]):6.1f}ms{phone_s}")
+    print("\nNote: gap = RTT + client-side work before that step arrived; server = span compute;"
+          " phone = client work inside that gap when the phone's spans are attached.")
 
 
 def main() -> None:
@@ -374,9 +503,10 @@ def main() -> None:
         paths = [p for p in paths if os.path.getmtime(p) >= cutoff]
     if not paths:
         raise SystemExit(f"no trace files match {args.logs}")
-    spans = parse_spans(paths)
+    spans, phone = parse_spans(paths)
     fill_setup_compute(paths, spans)
     connects = build_connects(spans)
+    attach_phone_spans(connects, phone)
     home = home_networks()
     labels: dict[str, str] = {}
     for c in connects:
@@ -384,7 +514,7 @@ def main() -> None:
             labels[c.ws.peer] = network_label(c.ws.peer, home)
         c.network = labels[c.ws.peer]
     kinds = {k: sum(1 for s in spans if s.kind == k) for k in (*STAGES, "thread")}
-    print(f"{len(paths)} files, {fmt_time(spans[0].start)} .. {fmt_time(spans[-1].start)}, spans by kind: {kinds}")
+    print(f"{len(paths)} files, {fmt_time(spans[0].start)} .. {fmt_time(spans[-1].start)}, spans by kind: {kinds}, phone spans: {len(phone)}")
     print(f"\n=== Connects ({len(connects)}) ===")
     for c in connects:
         print_connect(c, args.verbose)
