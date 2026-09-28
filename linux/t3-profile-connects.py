@@ -246,8 +246,9 @@ def build_connects(spans: list[Span]) -> list[Connect]:
                             s.kind = "resolver"
                         steps.append(s)
         c = Connect(ws=ws, steps=sorted(steps, key=lambda s: s.start))
-        config = next((s for s in steps if s.kind == "config"), None)
-        shell = claim_after(spans, "shell", (config or ws).start, ws, POST_CONNECT_WINDOW_S)
+        # Mobile starts the shell snapshot GET once the connection is prepared, so it
+        # can arrive before the WS upgrade; older clients send it after the config.
+        shell = claim_after(spans, "shell", (ticket or ws).start, ws, POST_CONNECT_WINDOW_S)
         if shell:
             c.steps.append(shell)
             c.steps.sort(key=lambda s: s.start)
