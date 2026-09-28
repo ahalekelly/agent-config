@@ -8,12 +8,13 @@
 Every half hour on AC power, integrate the newest stable upstream release into
 main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. The
 "Update T3 and Refresh SideStore" shortcut on the iPhone installs it through
-SideStore and then writes the IPA's SHA-256 to T3Code.installed.sha256.txt in
-the same folder. Once iCloud has uploaded the IPA, the runner starts that shortcut on the
-unlocked iPhone with `xcrun devicectl device process launch --payload-url
-shortcuts://run-shortcut?name=...` and waits for the receipt; a locked or
-unreachable phone waits for a later run, and Adrian can always run the shortcut
-himself. SideStore owns signing and renewal. Failed merges and builds back off for a day; a network outage waits for
+SideStore. Each build's CFBundleVersion is the fork revision's commit count, so
+`xcrun devicectl device info apps` shows which build the iPhone runs. Once
+iCloud has uploaded the IPA, the runner starts that shortcut on the unlocked
+iPhone with `xcrun devicectl device process launch --payload-url
+shortcuts://run-shortcut?name=...` and waits for the build to appear; a locked
+or unreachable phone waits for a later run, and Adrian can always run the
+shortcut himself. SideStore owns signing and renewal. Failed merges and builds back off for a day; a network outage waits for
 the next run and reports after a day.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
@@ -23,7 +24,6 @@ the T3 Code app on this Mac, so it must be open. Work on fixes in a separate wor
 """
 
 import ctypes
-import hashlib
 import json
 import os
 import plistlib
@@ -51,9 +51,9 @@ MODEL = "claude-opus-5-5"
 PHONE = "00008140-000809E90402201C"
 SHORTCUT = "Update T3 and Refresh SideStore"
 SHORTCUT_URL = "shortcuts://run-shortcut?name=" + SHORTCUT.replace(" ", "%20")
-# Each launch gets three minutes to write the receipt (polled every ten seconds).
+# Each launch gets three minutes to install the build (polled every ten seconds).
 INSTALL_LAUNCHES = 3
-RECEIPT_POLLS = 18
+INSTALL_POLLS = 18
 # iCloud gets ten minutes to upload the IPA (polled every ten seconds).
 UPLOAD_POLLS = 60
 UPLOADED_SWIFT = """import Foundation
@@ -83,6 +83,7 @@ class Runner:
         self.state = {}
         self.revision = "unknown"
         self.version = "unknown"
+        self.build_number = "unknown"
         self.step = "startup"
         self.phase = None
         self.outcome = "failed"
@@ -150,7 +151,7 @@ class Runner:
         self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                      "-configuration", "Release", "-destination", "generic/platform=iOS",
                      "-derivedDataPath", STATE_DIR / "DerivedData",
-                     "CODE_SIGNING_ALLOWED=NO", f"CURRENT_PROJECT_VERSION={self.version}", "build")
+                     "CODE_SIGNING_ALLOWED=NO", f"CURRENT_PROJECT_VERSION={self.build_number}", "build")
 
     def fetch(self):
         """Update the remotes, tolerating a network that is not up yet.
@@ -270,9 +271,9 @@ class Runner:
             widget, = (copied / "PlugIns").glob("*.appex")
             for bundle in (copied, widget):
                 info = plistlib.loads((bundle / "Info.plist").read_bytes())
-                if info["CFBundleVersion"] != self.version:
-                    raise RuntimeError(
-                        f"{bundle.name} has CFBundleVersion {info['CFBundleVersion']}; expected {self.version}")
+                if info["CFBundleVersion"] != self.build_number:
+                    raise RuntimeError(f"{bundle.name} has CFBundleVersion {info['CFBundleVersion']}; "
+                                       f"expected {self.build_number}")
                 expected_group = f"group.{BUNDLE_ID}.{TEAM}"
                 if info.get("ExpoWidgetsAppGroupIdentifier") != expected_group:
                     raise RuntimeError(f"{bundle.name} does not use SideStore App Group {expected_group}")
@@ -306,15 +307,14 @@ class Runner:
     def install(self):
         """Install the IPA by running the install shortcut on the iPhone.
 
-        Returns None once the shortcut's receipt names this IPA, or why the phone
-        cannot run it yet. Once launched, a shortcut that never writes the receipt
+        Returns None once the iPhone runs this build, or why the phone cannot run
+        the shortcut yet. Once launched, a shortcut that never installs this build
         raises, and the runner does not launch it again for this revision.
         """
-        digest = hashlib.sha256((ARTIFACT_DIR / "T3Code.ipa").read_bytes()).hexdigest()
-        receipt = ARTIFACT_DIR / "T3Code.installed.sha256.txt"
-
         def installed():
-            return receipt.exists() and receipt.read_text().strip() == digest
+            # SideStore installs the app under a bundle ID suffixed with the team.
+            apps = self.devicectl("device info apps", "--bundle-id", f"{BUNDLE_ID}.{TEAM}")
+            return apps is not None and [app["bundleVersion"] for app in apps["apps"]] == [self.build_number]
 
         if installed():
             return None
@@ -333,8 +333,8 @@ class Runner:
         self.state["install_attempted"] = self.revision
         self.save()
         # The phone sees the new IPA only once iCloud syncs it. Until then the
-        # shortcut finds the previous IPA's hash in the receipt and skips
-        # installing, so launch it again until the receipt names this IPA.
+        # shortcut finds the previous IPA and skips installing, so launch it
+        # again until the phone runs this build.
         for launch in range(INSTALL_LAUNCHES):
             if launch:
                 lock = self.devicectl("device info lockState")
@@ -344,12 +344,12 @@ class Runner:
             if self.devicectl("device process launch", "--payload-url", SHORTCUT_URL,
                               "com.apple.shortcuts") is None:
                 raise RuntimeError(f"devicectl could not start the {SHORTCUT} shortcut")
-            for _ in range(RECEIPT_POLLS):
+            for _ in range(INSTALL_POLLS):
                 time.sleep(10)
                 if installed():
                     return None
         raise RuntimeError(f"The {SHORTCUT} shortcut ran {INSTALL_LAUNCHES} times without "
-                           f"writing this IPA's hash to {receipt}")
+                           f"installing build {self.build_number}")
 
     def run(self):
         self.step = "power check"
@@ -374,6 +374,7 @@ class Runner:
         # integrates, so this names the release the build is based on.
         self.version = self.capture("git", "describe", "--tags", "--abbrev=0", "--exclude", "*-*",
                                     "--match", "v[0-9]*.[0-9]*.[0-9]*", self.revision).strip()[1:]
+        self.build_number = self.capture("git", "rev-list", "--count", self.revision).strip()
         packaged = self.state.get("packaged")
         if packaged is None or packaged["revision"] != self.revision:
             if cooling_down(self.state.get("build_failure"), self.revision):
@@ -407,8 +408,8 @@ class Runner:
                         f"It could not install automatically because {waiting}; the runner tries "
                         "again every half hour on AC power. Tell Adrian he can unlock his iPhone and "
                         f"run the {SHORTCUT} shortcut, which installs this IPA through SideStore. "
-                        f"Once it finishes, {ARTIFACT_DIR / 'T3Code.installed.sha256.txt'} holds "
-                        "the IPA's SHA-256. "
+                        f"Once it finishes, `xcrun devicectl device info apps` on the Mac shows "
+                        f"bundleVersion {self.build_number} for {BUNDLE_ID}.{TEAM}. "
                         "SideStore owns signing and renewal. Do not install it with Xcode.")
             self.state["notified_revision"] = self.revision
             self.save()

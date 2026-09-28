@@ -59,7 +59,7 @@ class RunTests(StateTests):
         def capture(runner, *args, cwd=phone.REPO):
             if args[0] == "pmset":
                 return self.power
-            return FORK + "\n" if args[1] == "rev-parse" else "v0.0.38\n"
+            return {"rev-parse": FORK + "\n", "rev-list": "4545\n"}.get(args[1], "v0.0.38\n")
 
         def build(runner):
             self.builds += 1
@@ -119,7 +119,7 @@ class RunTests(StateTests):
         self.assertEqual(self.events[-1][0], "iPhone: installed 0.0.38 (aaaaaaaaa)")
 
     def test_failed_install_reports_once_without_relaunching(self):
-        self.install_result = RuntimeError("no receipt")
+        self.install_result = RuntimeError("not installed")
         self.assertEqual(self.run_service(), 1)
         self.assertEqual(self.run_service(), 0)
         self.assertEqual(self.installs, 1)
@@ -162,18 +162,16 @@ class RunTests(StateTests):
 
 
 class InstallTests(StateTests):
-    """Drive install() against a phone that answers from self.lock and self.receipt_after."""
+    """Drive install() against a phone that answers from self.lock and self.install_after."""
 
     def setUp(self):
         super().setUp()
         self.artifacts = self.root / "artifacts"
         self.artifacts.mkdir()
         (self.artifacts / "T3Code.ipa").write_bytes(b"new ipa")
-        self.digest = phone.hashlib.sha256(b"new ipa").hexdigest()
-        self.receipt = self.artifacts / "T3Code.installed.sha256.txt"
-        self.receipt.write_text("old digest\n")
         self.lock = {"passcodeRequired": False}
-        self.receipt_after = 1  # The launch whose run writes the receipt; 0 never writes it.
+        self.installed_build = "4544"
+        self.install_after = 1  # The launch whose run installs the build; 0 never installs it.
         self.launches = 0
         self.uploaded = "true\n"
         for item in (patch.object(phone, "ARTIFACT_DIR", self.artifacts),
@@ -185,26 +183,30 @@ class InstallTests(StateTests):
     def devicectl(self, *args):
         if args[:3] == ("device", "info", "lockState"):
             return self.lock
+        if args[:3] == ("device", "info", "apps"):
+            self.assertEqual(args[3:], ("--bundle-id", f"{phone.BUNDLE_ID}.{phone.TEAM}"))
+            return None if self.lock is None else {"apps": [{"bundleVersion": self.installed_build}]}
         self.assertEqual(args[:5], ("device", "process", "launch", "--payload-url", phone.SHORTCUT_URL))
         self.launches += 1
-        if self.launches == self.receipt_after:
-            self.receipt.write_text(self.digest + "\n")
+        if self.launches == self.install_after:
+            self.installed_build = "4545"
         return {}
 
     def install(self):
         runner = phone.Runner()
         runner.revision = FORK
+        runner.build_number = "4545"
         with patch.object(phone.Runner, "devicectl", lambda _, command, *args: self.devicectl(*command.split(), *args)):
             return runner.install()
 
-    def test_launches_the_shortcut_until_the_receipt_names_the_ipa(self):
-        self.receipt_after = 2
+    def test_launches_the_shortcut_until_the_phone_runs_the_build(self):
+        self.install_after = 2
         self.assertIsNone(self.install())
         self.assertEqual(self.launches, 2)
         self.assertEqual(self.state()["install_attempted"], FORK)
 
-    def test_matching_receipt_needs_no_launch(self):
-        self.receipt.write_text(self.digest + "\n")
+    def test_installed_build_needs_no_launch(self):
+        self.installed_build = "4545"
         self.assertIsNone(self.install())
         self.assertEqual(self.launches, 0)
 
@@ -223,7 +225,7 @@ class InstallTests(StateTests):
         self.assertFalse((self.root / "state.json").exists())
 
     def test_phone_locking_between_launches_raises(self):
-        self.receipt_after = 0
+        self.install_after = 0
         original = self.devicectl
 
         def devicectl(*args):
@@ -237,8 +239,8 @@ class InstallTests(StateTests):
             self.install()
         self.assertEqual(self.launches, 1)
 
-    def test_missing_receipt_raises_after_every_launch(self):
-        self.receipt_after = 0
+    def test_missing_install_raises_after_every_launch(self):
+        self.install_after = 0
         with self.assertRaisesRegex(RuntimeError, "ran 3 times"):
             self.install()
         self.assertEqual(self.launches, phone.INSTALL_LAUNCHES)
@@ -435,10 +437,10 @@ def native_project(root):
 
 
 class XcodebuildTests(StateTests):
-    def test_generated_app_and_widget_use_release_build_version(self):
+    def test_generated_app_and_widget_use_the_build_number(self):
         native_project(self.root)
         runner = phone.Runner()
-        runner.version = "0.0.42"
+        runner.build_number = "4545"
         with patch.object(phone, "REPO", self.root):
             try:
                 runner.xcodebuild()
@@ -448,7 +450,7 @@ class XcodebuildTests(StateTests):
         for name in ("T3Code.app", "ExpoWidgetsTarget.appex"):
             with self.subTest(bundle=name):
                 info = plistlib.loads((products / name / "Info.plist").read_bytes())
-                self.assertEqual(info["CFBundleVersion"], runner.version)
+                self.assertEqual(info["CFBundleVersion"], runner.build_number)
 
     def test_xcodebuild_resets_metro_cache_without_changing_runner_ci(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -481,12 +483,12 @@ class PackageTests(StateTests):
         ipa = destination / "T3Code.ipa"
         ipa.write_bytes(b"existing IPA")
         runner = phone.Runner()
-        runner.version = "0.0.42"
+        runner.build_number = "4545"
         for stale in (app, widget):
             with self.subTest(stale=stale.name):
                 for bundle in (app, widget):
                     (bundle / "Info.plist").write_bytes(plistlib.dumps({
-                        "CFBundleVersion": "1" if bundle == stale else runner.version,
+                        "CFBundleVersion": "1" if bundle == stale else runner.build_number,
                         "ExpoWidgetsAppGroupIdentifier": f"group.{phone.BUNDLE_ID}.{phone.TEAM}",
                     }))
                 with patch.object(phone, "REPO", self.root), patch.object(phone, "ARTIFACT_DIR", destination):
@@ -520,7 +522,7 @@ class PackageTests(StateTests):
         destination = self.root / "iCloud"
         with patch.object(phone, "REPO", self.root), patch.object(phone, "ARTIFACT_DIR", destination):
             runner = phone.Runner()
-            runner.version = "1"
+            runner.build_number = "1"
             runner.package()
         with zipfile.ZipFile(destination / "T3Code.ipa") as archive:
             archive.extractall(self.root / "unpacked")
