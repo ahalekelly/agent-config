@@ -175,7 +175,9 @@ class InstallTests(StateTests):
         self.lock = {"passcodeRequired": False}
         self.receipt_after = 1  # The launch whose run writes the receipt; 0 never writes it.
         self.launches = 0
+        self.uploaded = "true\n"
         for item in (patch.object(phone, "ARTIFACT_DIR", self.artifacts),
+                     patch.object(phone.Runner, "capture", lambda _, *args: self.uploaded),
                      patch.object(phone.time, "sleep", lambda _: None)):
             item.start()
             self.addCleanup(item.stop)
@@ -192,7 +194,7 @@ class InstallTests(StateTests):
     def install(self):
         runner = phone.Runner()
         runner.revision = FORK
-        with patch.object(phone.Runner, "devicectl", lambda _, *args: self.devicectl(*args)):
+        with patch.object(phone.Runner, "devicectl", lambda _, command, *args: self.devicectl(*command.split(), *args)):
             return runner.install()
 
     def test_launches_the_shortcut_until_the_receipt_names_the_ipa(self):
@@ -205,6 +207,12 @@ class InstallTests(StateTests):
         self.receipt.write_text(self.digest + "\n")
         self.assertIsNone(self.install())
         self.assertEqual(self.launches, 0)
+
+    def test_pending_upload_waits_without_launching(self):
+        self.uploaded = "false\n"
+        self.assertEqual(self.install(), "iCloud has not finished uploading the IPA")
+        self.assertEqual(self.launches, 0)
+        self.assertFalse((self.root / "state.json").exists())
 
     def test_locked_or_unreachable_phone_waits(self):
         self.lock = {"passcodeRequired": True}

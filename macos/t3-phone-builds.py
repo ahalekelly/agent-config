@@ -9,7 +9,7 @@ Every half hour on AC power, integrate the newest stable upstream release into
 main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. The
 "Update T3 and Refresh SideStore" shortcut on the iPhone installs it through
 SideStore and then writes the IPA's SHA-256 to T3Code.installed.sha256.txt in
-the same folder. After packaging, the runner starts that shortcut on the
+the same folder. Once iCloud has uploaded the IPA, the runner starts that shortcut on the
 unlocked iPhone with `xcrun devicectl device process launch --payload-url
 shortcuts://run-shortcut?name=...` and waits for the receipt; a locked or
 unreachable phone waits for a later run, and Adrian can always run the shortcut
@@ -54,6 +54,12 @@ SHORTCUT_URL = "shortcuts://run-shortcut?name=" + SHORTCUT.replace(" ", "%20")
 # Each launch gets three minutes to write the receipt (polled every ten seconds).
 INSTALL_LAUNCHES = 3
 RECEIPT_POLLS = 18
+# iCloud gets ten minutes to upload the IPA (polled every ten seconds).
+UPLOAD_POLLS = 60
+UPLOADED_SWIFT = """import Foundation
+let values = try URL(fileURLWithPath: CommandLine.arguments[1])
+    .resourceValues(forKeys: [.ubiquitousItemIsUploadedKey])
+print(values.ubiquitousItemIsUploaded!)"""
 DAY = timedelta(days=1)
 
 
@@ -312,6 +318,13 @@ class Runner:
 
         if installed():
             return None
+        # A shortcut launched before the upload finishes can only find the previous IPA.
+        for _ in range(UPLOAD_POLLS):
+            if self.capture("swift", "-e", UPLOADED_SWIFT, ARTIFACT_DIR / "T3Code.ipa").strip() == "true":
+                break
+            time.sleep(10)
+        else:
+            return "iCloud has not finished uploading the IPA"
         lock = self.devicectl("device info lockState")
         if lock is None:
             return "the iPhone is unreachable"
