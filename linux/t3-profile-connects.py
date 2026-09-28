@@ -20,6 +20,11 @@ because the WS span and its RPC child spans are written at close.
 means the old socket was still open on the server, `idle` is the offline
 gap.
 
+`net` is the phone's network, from the client IP the relay forwards:
+`home` when it shares this machine's public IPv4 address or IPv6 /64,
+otherwise the reverse-DNS domain or address prefix. Aggregates are grouped
+by client and network, since each network has its own latency.
+
 Usage:
     uv run t3-profile-connects.py [--since HOURS] [--logs GLOB ...] [-v]
 """
@@ -27,10 +32,13 @@ Usage:
 import argparse
 import glob
 import gzip
+import ipaddress
 import json
 import math
 import os
+import socket
 import statistics
+import subprocess
 import time
 from dataclasses import dataclass, field
 
@@ -78,6 +86,7 @@ class Connect:
     steps: list[Span]  # time-ordered, includes ws
     threads: list[Span] = field(default_factory=list)
     prev_close_gap: float | None = None  # seconds from the same client's previous socket close
+    network: str = ""  # see network_label
 
     @property
     def start(self) -> float:
@@ -255,6 +264,34 @@ def build_connects(spans: list[Span]) -> list[Connect]:
     return connects
 
 
+def home_networks() -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
+    """This machine's public IPv4 address and IPv6 /64, which the phone shares on home Wi-Fi."""
+    nets = []
+    for flag, prefix in (("-4", 32), ("-6", 64)):
+        trace = subprocess.run(
+            ["curl", "-s", flag, "--max-time", "5", "https://cloudflare.com/cdn-cgi/trace"],
+            capture_output=True, text=True,
+        ).stdout
+        ip = next((line[3:] for line in trace.splitlines() if line.startswith("ip=")), None)
+        if ip:
+            nets.append(ipaddress.ip_network(f"{ip}/{prefix}", strict=False))
+    if not nets:
+        raise SystemExit("could not look up this machine's public IP, which identifies home Wi-Fi")
+    return nets
+
+
+def network_label(peer: str, home: list[ipaddress.IPv4Network | ipaddress.IPv6Network]) -> str:
+    if not peer:
+        return "unknown"
+    ip = ipaddress.ip_address(peer)
+    if any(ip in net for net in home):
+        return "home"
+    try:
+        return ".".join(socket.gethostbyaddr(peer)[0].split(".")[-2:])
+    except OSError:
+        return str(ipaddress.ip_network(f"{peer}/{48 if ip.version == 6 else 24}", strict=False))
+
+
 def stage_gaps(c: Connect) -> list[tuple[Span, float | None]]:
     """Each step with the gap (seconds) since the previous step's server work ended."""
     out = []
@@ -275,7 +312,7 @@ def print_connect(c: Connect, verbose: bool) -> None:
     life = c.ws.end - c.ws.start
     close = "" if c.ws.exit == "Success" else f"({c.ws.exit.lower()[:3]})"
     print(
-        f"{fmt_time(c.start)}  {c.client():14s} {c.via():6s} total={total_s} server={c.server_ms:4.0f}ms "
+        f"{fmt_time(c.start)}  {c.client():14s} {c.via():6s} net={c.network:16s} total={total_s} server={c.server_ms:4.0f}ms "
         f"socket={life:6.0f}s{close:5s} prev={c.prev_label():14s} "
         f"steps={'/'.join(s.kind for s in c.steps)} threads={len(c.threads)}"
     )
@@ -293,17 +330,17 @@ def p90(values: list[float]) -> float:
 def print_aggregates(connects: list[Connect]) -> None:
     by_client: dict[str, list[Connect]] = {}
     for c in connects:
-        by_client.setdefault(c.client(), []).append(c)
-    print("\n=== Aggregates by client ===")
+        by_client.setdefault(f"{c.client()} {c.network}", []).append(c)
+    print("\n=== Aggregates by client and network ===")
     for client, group in sorted(by_client.items()):
         totals = [c.total_ms for c in group if c.total_ms is not None]
         lives = [c.ws.end - c.ws.start for c in group]
         prev = {label: sum(1 for c in group if c.prev_label().startswith(label)) for label in ("replace", "idle", "overlap")}
-        line = f"{client:14s} connects={len(group):3d} synced={len(totals):3d} socket life median={statistics.median(lives):4.0f}s prev={prev}"
+        line = f"{client:32s} connects={len(group):3d} synced={len(totals):3d} socket life median={statistics.median(lives):4.0f}s prev={prev}"
         if totals:
             server = [c.server_ms for c in group if c.total_ms is not None]
             line += (
-                f"\n{'':14s} total median={statistics.median(totals):5.0f}ms p90={p90(totals):5.0f}ms max={max(totals):5.0f}ms"
+                f"\n{'':32s} total median={statistics.median(totals):5.0f}ms p90={p90(totals):5.0f}ms max={max(totals):5.0f}ms"
                 f" | server median={statistics.median(server):3.0f}ms p90={p90(server):3.0f}ms"
             )
         print(line)
@@ -339,6 +376,12 @@ def main() -> None:
     spans = parse_spans(paths)
     fill_setup_compute(paths, spans)
     connects = build_connects(spans)
+    home = home_networks()
+    labels: dict[str, str] = {}
+    for c in connects:
+        if c.ws.peer not in labels:
+            labels[c.ws.peer] = network_label(c.ws.peer, home)
+        c.network = labels[c.ws.peer]
     kinds = {k: sum(1 for s in spans if s.kind == k) for k in (*STAGES, "thread")}
     print(f"{len(paths)} files, {fmt_time(spans[0].start)} .. {fmt_time(spans[-1].start)}, spans by kind: {kinds}")
     print(f"\n=== Connects ({len(connects)}) ===")
