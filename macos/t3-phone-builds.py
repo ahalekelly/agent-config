@@ -51,6 +51,10 @@ BUNDLE_ID = "com.akelly.t3code"
 API_KEY_ID = "ZT4M83BNFY"
 API_ISSUER = "1572e43c-4c24-4268-b52e-3f9460b87529"
 API_KEY = Path.home() / f".appstoreconnect/AuthKey_{API_KEY_ID}.p8"
+# Holds the Apple Distribution identity. Its own password lets codesign use the
+# key without a prompt, and it starts locked after every reboot.
+KEYCHAIN = Path.home() / ".appstoreconnect/t3-signing.keychain-db"
+KEYCHAIN_PASSWORD = Path.home() / ".appstoreconnect/t3-signing.password"
 MODEL = "claude-opus-5-5"
 PHONE = "00008140-000809E90402201C"
 ARCHIVE = STATE_DIR / "T3Code.xcarchive"
@@ -149,7 +153,9 @@ class Runner:
         (workspace.parent / ".xcode.env.local").write_text("export NODE_BINARY=$(command -v node)\n")
         signing = ("-allowProvisioningUpdates", "-authenticationKeyPath", API_KEY,
                    "-authenticationKeyID", API_KEY_ID, "-authenticationKeyIssuerID", API_ISSUER)
-        shutil.rmtree(ARCHIVE, ignore_errors=True)
+        # Unlogged, because command() writes its arguments to the build log.
+        subprocess.run(["security", "unlock-keychain", "-p", KEYCHAIN_PASSWORD.read_text(), KEYCHAIN],
+                       check=True)
         # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
         self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                      "-configuration", "Release", "-destination", "generic/platform=iOS",
@@ -157,7 +163,6 @@ class Runner:
                      "CODE_SIGN_STYLE=Automatic", f"DEVELOPMENT_TEAM={TEAM}",
                      f"CURRENT_PROJECT_VERSION={self.build_number}", "archive")
         self.step = "export IPA"
-        shutil.rmtree(EXPORT_DIR, ignore_errors=True)
         with tempfile.NamedTemporaryFile(suffix=".plist") as options:
             options.write(plistlib.dumps({
                 "method": "release-testing",
@@ -172,8 +177,8 @@ class Runner:
             options.flush()
             self.command("xcodebuild", "-exportArchive", "-archivePath", ARCHIVE,
                          "-exportPath", EXPORT_DIR, "-exportOptionsPlist", options.name, *signing)
-        ipa, = EXPORT_DIR.glob("*.ipa")
-        ipa.rename(EXPORT_DIR / "T3Code.ipa")
+        if not (EXPORT_DIR / "T3Code.ipa").exists():
+            raise RuntimeError(f"exportArchive did not write T3Code.ipa to {EXPORT_DIR}")
 
     def fetch(self):
         """Update the remotes, tolerating a network that is not up yet.
