@@ -57,7 +57,7 @@ KEYCHAIN = Path.home() / ".appstoreconnect/t3-signing.keychain-db"
 KEYCHAIN_PASSWORD = Path.home() / ".appstoreconnect/t3-signing.password"
 MODEL = "claude-opus-5-5"
 PHONE = "00008140-000809E90402201C"
-ARCHIVE = STATE_DIR / "T3Code.xcarchive"
+# The published IPA, manifest, icon, and install page.
 EXPORT_DIR = STATE_DIR / "export"
 # SSH targets for akelly-desktop, local network first.
 DESKTOP_HOSTS = (("akelly-desktop.local", "-o", "ConnectTimeout=5"),
@@ -145,7 +145,7 @@ class Runner:
     def xcodebuild(self):
         workspace, = (REPO / "apps/mobile/ios").glob("*.xcworkspace")
         # Generated extension plists take their version from Xcode's build setting.
-        for target in (workspace.stem, "ExpoWidgetsTarget"):
+        for target in (workspace.stem, "ExpoWidgetsTarget", "expo-sharing-extension"):
             info = workspace.parent / target / "Info.plist"
             self.command("/usr/libexec/PlistBuddy", "-c",
                          "Set :CFBundleVersion $(CURRENT_PROJECT_VERSION)", info)
@@ -153,18 +153,24 @@ class Runner:
         (workspace.parent / ".xcode.env.local").write_text("export NODE_BINARY=$(command -v node)\n")
         signing = ("-allowProvisioningUpdates", "-authenticationKeyPath", API_KEY,
                    "-authenticationKeyID", API_KEY_ID, "-authenticationKeyIssuerID", API_ISSUER)
-        # Unlogged, because command() writes its arguments to the build log.
-        subprocess.run(["security", "unlock-keychain", "-p", KEYCHAIN_PASSWORD.read_text(), KEYCHAIN],
-                       check=True)
-        # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
-        self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
-                     "-configuration", "Release", "-destination", "generic/platform=iOS",
-                     "-derivedDataPath", STATE_DIR / "DerivedData", "-archivePath", ARCHIVE, *signing,
-                     "CODE_SIGN_STYLE=Automatic", f"DEVELOPMENT_TEAM={TEAM}",
-                     f"CURRENT_PROJECT_VERSION={self.build_number}", "archive")
-        self.step = "export IPA"
-        with tempfile.NamedTemporaryFile(suffix=".plist") as options:
-            options.write(plistlib.dumps({
+        # Unlogged, and without check=True, because both would put the password
+        # in the build log or a traceback.
+        unlocked = subprocess.run(["security", "unlock-keychain", "-p",
+                                   KEYCHAIN_PASSWORD.read_text().strip(), KEYCHAIN],
+                                  capture_output=True)
+        if unlocked.returncode:
+            raise RuntimeError(f"Could not unlock {KEYCHAIN}: {unlocked.stderr.decode().strip()}")
+        with tempfile.TemporaryDirectory(dir=STATE_DIR, prefix="archive-") as folder:
+            archive, exported, options = (Path(folder) / name
+                                          for name in ("T3Code.xcarchive", "export", "options.plist"))
+            # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
+            self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
+                         "-configuration", "Release", "-destination", "generic/platform=iOS",
+                         "-derivedDataPath", STATE_DIR / "DerivedData", "-archivePath", archive,
+                         *signing, "CODE_SIGN_STYLE=Automatic", f"DEVELOPMENT_TEAM={TEAM}",
+                         f"CURRENT_PROJECT_VERSION={self.build_number}", "archive")
+            self.step = "export IPA"
+            options.write_bytes(plistlib.dumps({
                 "method": "release-testing",
                 "teamID": TEAM,
                 "signingStyle": "automatic",
@@ -174,11 +180,11 @@ class Runner:
                              "displayImageURL": f"{DOWNLOAD_URL}/icon.png",
                              "fullSizeImageURL": f"{DOWNLOAD_URL}/icon.png"},
             }))
-            options.flush()
-            self.command("xcodebuild", "-exportArchive", "-archivePath", ARCHIVE,
-                         "-exportPath", EXPORT_DIR, "-exportOptionsPlist", options.name, *signing)
-        if not (EXPORT_DIR / "T3Code.ipa").exists():
-            raise RuntimeError(f"exportArchive did not write T3Code.ipa to {EXPORT_DIR}")
+            self.command("xcodebuild", "-exportArchive", "-archivePath", archive,
+                         "-exportPath", exported, "-exportOptionsPlist", options, *signing)
+            EXPORT_DIR.mkdir(exist_ok=True)
+            for name in ("T3Code.ipa", "manifest.plist"):
+                (exported / name).replace(EXPORT_DIR / name)
 
     def fetch(self):
         """Update the remotes, tolerating a network that is not up yet.
@@ -281,8 +287,6 @@ class Runner:
         self.command("env", f"SDKROOT={sdk}", "pod", "install", cwd=REPO / "apps/mobile/ios")
         self.step = "xcodebuild"
         self.xcodebuild()
-        self.step = "publish"
-        self.publish()
         self.state["packaged"] = self.record()
         self.state.pop("build_failure", None)
         self.save()
@@ -325,9 +329,8 @@ class Runner:
     def install(self):
         """Install the IPA directly when the iPhone is reachable from this Mac.
 
-        Returns None once the iPhone runs this build, or why it cannot install
-        yet. A reachable phone that rejects the install raises, and the runner
-        does not try this revision again.
+        Returns None once the iPhone runs this build, or why it could not install;
+        later runs try again.
         """
         def installed():
             apps = self.devicectl("device info apps", "--bundle-id", BUNDLE_ID)
@@ -337,10 +340,8 @@ class Runner:
             return None
         if self.devicectl("device info lockState") is None:
             return "the iPhone is unreachable"
-        self.state["install_attempted"] = self.revision
-        self.save()
         if self.devicectl("device install app", EXPORT_DIR / "T3Code.ipa") is None or not installed():
-            raise RuntimeError(f"devicectl could not install build {self.build_number} on the iPhone")
+            return f"devicectl could not install it (see {self.log})"
         return None
 
     def run(self):
@@ -377,11 +378,14 @@ class Runner:
             self.build()
             self.outcome = "built"
         self.phase = None
+        if self.state.get("published_revision") != self.revision:
+            # A failed copy raises and is reported; the next run copies the same build again.
+            self.step = "publish"
+            self.publish()
+            self.state["published_revision"] = self.revision
+            self.save()
         if self.state.get("installed_revision") == self.revision:
             self.outcome = "installed"
-            return
-        if self.state.get("install_attempted") == self.revision:
-            self.outcome = "IPA ready"  # The failed install was reported when it happened.
             return
         self.step = "install"
         waiting = self.install()

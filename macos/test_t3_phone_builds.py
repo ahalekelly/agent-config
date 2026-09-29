@@ -7,8 +7,8 @@ import json
 import plistlib
 import subprocess
 import tempfile
+import traceback
 import unittest
-import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -52,8 +52,10 @@ class RunTests(StateTests):
         self.builds = 0
         self.fail_build = False
         self.power = "Now drawing from 'AC Power'"
+        self.publishes = 0
+        self.fail_publish = False
         self.installs = 0
-        self.install_result = "the iPhone is locked"
+        self.install_result = "the iPhone is unreachable"
 
     def run_service(self):
         def capture(runner, *args, cwd=phone.REPO):
@@ -70,18 +72,20 @@ class RunTests(StateTests):
             runner.state.pop("build_failure", None)
             runner.save()
 
+        def publish(runner):
+            self.publishes += 1
+            if self.fail_publish:
+                raise RuntimeError("Could not copy the build to akelly-desktop over either network")
+
         def install(runner):
             self.installs += 1
-            if isinstance(self.install_result, Exception):
-                runner.state["install_attempted"] = runner.revision
-                runner.save()
-                raise self.install_result
             return self.install_result
 
         with patch.object(phone.Runner, "capture", capture), \
              patch.object(phone.Runner, "attempt", lambda _, *a, cwd=None: subprocess.CompletedProcess(a, 0)), \
              patch.object(phone.Runner, "integrate", lambda _: None), \
              patch.object(phone.Runner, "build", build), \
+             patch.object(phone.Runner, "publish", publish), \
              patch.object(phone.Runner, "install", install), \
              patch.object(phone.Runner, "notify", lambda _, title, body: self.events.append((title, body))):
             return phone.main()
@@ -92,13 +96,18 @@ class RunTests(StateTests):
         self.assertEqual(self.builds, 0)
         self.assertEqual(self.events, [])
 
-    def test_first_build_publishes_and_notifies_once(self):
+    def test_unreachable_phone_links_download_page_once_and_retries_install(self):
         self.assertEqual(self.run_service(), 0)
         self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.builds, 1)
-        self.assertEqual(len(self.events), 1)
-        self.assertIn("SideStore update", self.events[0][0])
-        self.assertIn("Update T3 and Refresh SideStore", self.events[0][1])
+        self.assertEqual((self.builds, self.publishes, self.installs), (1, 1, 2))
+        self.assertEqual([title for title, _ in self.events], ["iPhone: update 0.0.38 (aaaaaaaaa) ready"])
+        self.assertIn("because the iPhone is unreachable", self.events[0][1])
+        self.assertIn(phone.DOWNLOAD_URL, self.events[0][1])
+        self.assertEqual(self.state()["notified_revision"], FORK)
+        self.install_result = None
+        self.run_service()
+        self.assertEqual(self.events[-1][0], "iPhone: installed 0.0.38 (aaaaaaaaa)")
+        self.assertEqual(self.state()["installed_revision"], FORK)
 
     def test_installed_build_notifies_once(self):
         self.install_result = None
@@ -106,36 +115,30 @@ class RunTests(StateTests):
         self.assertEqual(self.run_service(), 0)
         self.assertEqual(self.installs, 1)
         self.assertEqual([title for title, _ in self.events], ["iPhone: installed 0.0.38 (aaaaaaaaa)"])
-        self.assertEqual(self.state()["installed_revision"], FORK)
 
-    def test_locked_phone_retries_install_after_one_notice(self):
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.installs, 2)
-        self.assertEqual(len(self.events), 1)
-        self.assertIn("because the iPhone is locked", self.events[0][1])
-        self.install_result = None
-        self.run_service()
-        self.assertEqual(self.events[-1][0], "iPhone: installed 0.0.38 (aaaaaaaaa)")
-
-    def test_failed_install_reports_once_without_relaunching(self):
-        self.install_result = RuntimeError("not installed")
+    def test_failed_publish_reports_and_retries_without_rebuilding(self):
+        self.fail_publish = True
         self.assertEqual(self.run_service(), 1)
+        self.assertEqual([title for title, _ in self.events], ["iPhone build failed: aaaaaaaaa publish"])
+        self.assertNotIn("published_revision", self.state())
+        self.assertNotIn("build_failure", self.state())
+        self.assertEqual(self.installs, 0)
+        self.fail_publish = False
         self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.installs, 1)
-        self.assertEqual([title for title, _ in self.events], ["iPhone build failed: aaaaaaaaa install"])
+        self.assertEqual((self.builds, self.publishes, self.installs), (1, 2, 1))
+        self.assertEqual(self.state()["published_revision"], FORK)
 
-    def test_sidestore_owns_renewal_without_rebuilding(self):
-        self.save({"packaged": record(8), "notified_revision": FORK})
+    def test_notified_package_neither_rebuilds_nor_renotifies(self):
+        self.save({"packaged": record(8), "published_revision": FORK, "notified_revision": FORK})
         self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.builds, 0)
+        self.assertEqual((self.builds, self.publishes, self.installs), (0, 0, 1))
         self.assertEqual(self.events, [])
 
     def test_failed_build_backoff_and_retry(self):
         self.fail_build = True
         self.assertEqual(self.run_service(), 1)
         self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.builds, 1)
+        self.assertEqual((self.builds, self.publishes), (1, 0))
         self.assertEqual(len(self.events), 1)
         self.fail_build = False
         with patch.object(phone, "now", return_value=NOW + phone.DAY):
@@ -148,47 +151,80 @@ class RunTests(StateTests):
         self.run_service()
         self.assertEqual(self.builds, 1)
 
-    def test_new_revision_builds_and_notifies(self):
-        self.save({"packaged": record(revision=MERGED), "notified_revision": MERGED})
+    def test_new_revision_builds_publishes_and_notifies(self):
+        self.save({"packaged": record(revision=MERGED), "published_revision": MERGED,
+                   "notified_revision": MERGED})
         self.run_service()
-        self.assertEqual(self.builds, 1)
+        self.assertEqual((self.builds, self.publishes), (1, 1))
         self.assertEqual(self.state()["notified_revision"], FORK)
 
-    def test_unreported_package_notifies_without_rebuilding(self):
-        self.save({"packaged": record()})
-        self.run_service()
-        self.assertEqual(self.builds, 0)
-        self.assertEqual(len(self.events), 1)
 
-
-class InstallTests(StateTests):
-    """Drive install() against a phone that answers from self.lock and self.install_after."""
+class PublishTests(StateTests):
+    """Drive publish() against rsync that fails for the hosts in self.failing_hosts."""
 
     def setUp(self):
         super().setUp()
-        self.artifacts = self.root / "artifacts"
-        self.artifacts.mkdir()
-        (self.artifacts / "T3Code.ipa").write_bytes(b"new ipa")
-        self.lock = {"passcodeRequired": False}
-        self.installed_build = "4544"
-        self.install_after = 1  # The launch whose run installs the build; 0 never installs it.
-        self.launches = 0
-        self.uploaded = "true\n"
-        for item in (patch.object(phone, "ARTIFACT_DIR", self.artifacts),
-                     patch.object(phone.Runner, "capture", lambda _, *args: self.uploaded),
-                     patch.object(phone.time, "sleep", lambda _: None)):
+        self.export = self.root / "export"
+        self.export.mkdir()
+        icon = self.root / "assets/prod/black-ios-1024.png"
+        icon.parent.mkdir(parents=True)
+        icon.write_bytes(b"icon")
+        self.failing_hosts = set()
+        self.hosts = []
+        for item in (patch.object(phone, "REPO", self.root), patch.object(phone, "EXPORT_DIR", self.export)):
             item.start()
             self.addCleanup(item.stop)
 
+    def publish(self):
+        def attempt(runner, *args, cwd=phone.REPO):
+            self.assertEqual(args[0], "rsync")
+            host = args[-1].split("@")[1].split(":")[0]
+            self.hosts.append(host)
+            return subprocess.CompletedProcess(args, 1 if host in self.failing_hosts else 0)
+
+        runner = phone.Runner()
+        runner.revision, runner.version, runner.build_number = FORK, "0.0.38", "4545"
+        with patch.object(phone.Runner, "attempt", attempt):
+            runner.publish()
+
+    def test_writes_install_page_and_copies_over_the_local_network(self):
+        self.publish()
+        self.assertEqual(self.hosts, ["akelly-desktop.local"])
+        self.assertEqual((self.export / "icon.png").read_bytes(), b"icon")
+        page = (self.export / "index.html").read_text()
+        self.assertIn(f"url={phone.DOWNLOAD_URL}/manifest.plist", page)
+        self.assertIn("build 4545", page)
+
+    def test_falls_back_to_tailscale(self):
+        self.failing_hosts = {"akelly-desktop.local"}
+        self.publish()
+        self.assertEqual(self.hosts, ["akelly-desktop.local", "akelly-desktop.troodon-bigeye.ts.net"])
+
+    def test_raises_when_both_hosts_fail(self):
+        self.failing_hosts = {host for host, *_ in phone.DESKTOP_HOSTS}
+        with self.assertRaisesRegex(RuntimeError, "either network"):
+            self.publish()
+
+
+class InstallTests(StateTests):
+    """Drive install() against a phone that answers from self.reachable and self.installs_build."""
+
+    def setUp(self):
+        super().setUp()
+        self.reachable = True
+        self.installs_build = True
+        self.installed_build = "4544"
+        self.install_commands = 0
+
     def devicectl(self, *args):
         if args[:3] == ("device", "info", "lockState"):
-            return self.lock
+            return {"passcodeRequired": False} if self.reachable else None
         if args[:3] == ("device", "info", "apps"):
-            self.assertEqual(args[3:], ("--bundle-id", f"{phone.BUNDLE_ID}.{phone.TEAM}"))
-            return None if self.lock is None else {"apps": [{"bundleVersion": self.installed_build}]}
-        self.assertEqual(args[:5], ("device", "process", "launch", "--payload-url", phone.SHORTCUT_URL))
-        self.launches += 1
-        if self.launches == self.install_after:
+            self.assertEqual(args[3:], ("--bundle-id", phone.BUNDLE_ID))
+            return {"apps": [{"bundleVersion": self.installed_build}]} if self.reachable else None
+        self.assertEqual(args[:3], ("device", "install", "app"))
+        self.install_commands += 1
+        if self.installs_build:
             self.installed_build = "4545"
         return {}
 
@@ -199,51 +235,24 @@ class InstallTests(StateTests):
         with patch.object(phone.Runner, "devicectl", lambda _, command, *args: self.devicectl(*command.split(), *args)):
             return runner.install()
 
-    def test_launches_the_shortcut_until_the_phone_runs_the_build(self):
-        self.install_after = 2
+    def test_installs_the_build(self):
         self.assertIsNone(self.install())
-        self.assertEqual(self.launches, 2)
-        self.assertEqual(self.state()["install_attempted"], FORK)
+        self.assertEqual(self.install_commands, 1)
 
-    def test_installed_build_needs_no_launch(self):
+    def test_installed_build_needs_no_install(self):
         self.installed_build = "4545"
         self.assertIsNone(self.install())
-        self.assertEqual(self.launches, 0)
+        self.assertEqual(self.install_commands, 0)
 
-    def test_pending_upload_waits_without_launching(self):
-        self.uploaded = "false\n"
-        self.assertEqual(self.install(), "iCloud has not finished uploading the IPA")
-        self.assertEqual(self.launches, 0)
-        self.assertFalse((self.root / "state.json").exists())
-
-    def test_locked_or_unreachable_phone_waits(self):
-        self.lock = {"passcodeRequired": True}
-        self.assertEqual(self.install(), "the iPhone is locked")
-        self.lock = None
+    def test_unreachable_phone_returns_reason(self):
+        self.reachable = False
         self.assertEqual(self.install(), "the iPhone is unreachable")
-        self.assertEqual(self.launches, 0)
-        self.assertFalse((self.root / "state.json").exists())
+        self.assertEqual(self.install_commands, 0)
 
-    def test_phone_locking_between_launches_raises(self):
-        self.install_after = 0
-        original = self.devicectl
-
-        def devicectl(*args):
-            result = original(*args)
-            if self.launches:
-                self.lock = {"passcodeRequired": True}
-            return result
-
-        self.devicectl = devicectl
-        with self.assertRaisesRegex(RuntimeError, "locked or went out of reach"):
-            self.install()
-        self.assertEqual(self.launches, 1)
-
-    def test_missing_install_raises_after_every_launch(self):
-        self.install_after = 0
-        with self.assertRaisesRegex(RuntimeError, "ran 3 times"):
-            self.install()
-        self.assertEqual(self.launches, phone.INSTALL_LAUNCHES)
+    def test_install_that_leaves_the_old_build_returns_reason(self):
+        self.installs_build = False
+        self.assertIn("devicectl could not install it", self.install())
+        self.assertEqual(self.install_commands, 1)
 
 
 class IntegrationTests(StateTests):
@@ -300,9 +309,10 @@ class IntegrationTests(StateTests):
              patch.object(phone.Runner, "attempt", attempt), \
              patch.object(phone.Runner, "command", command), \
              patch.object(phone.Runner, "build", build), \
-             patch.object(phone.Runner, "install", lambda _: "the iPhone is locked"), \
+             patch.object(phone.Runner, "publish", lambda _: None), \
+             patch.object(phone.Runner, "install", lambda _: "the iPhone is unreachable"), \
              patch.object(phone.Runner, "notify", lambda _, title, body:
-                          self.events.append((title, body)) if "SideStore update" not in title else None):
+                          self.events.append((title, body)) if not title.startswith("iPhone: update") else None):
             return phone.main()
 
     def ran(self, *prefix):
@@ -375,165 +385,79 @@ class CocoaPodsTests(StateTests):
         with patch.object(phone, "REPO", self.root), \
              patch.object(phone.Runner, "capture", git_is_clean), \
              patch.object(phone.Runner, "command", only_pod_install), \
-             patch.object(phone.Runner, "xcodebuild", lambda _: None), \
-             patch.object(phone.Runner, "package", lambda _: None):
+             patch.object(phone.Runner, "xcodebuild", lambda _: None):
             runner.build()
         sdk = runner.log.read_text().splitlines()[-1].removeprefix("SDKROOT=")
         developer = subprocess.run(["xcode-select", "-p"], capture_output=True, text=True).stdout.strip()
         self.assertTrue(sdk.startswith(developer), sdk)
 
 
-def native_project(root):
-    ios = root / "apps/mobile/ios"
-    workspace = ios / "T3Code.xcworkspace"
-    workspace.mkdir(parents=True)
-    (workspace / "contents.xcworkspacedata").write_text(
-        '<Workspace version="1.0"><FileRef location="group:T3Code.xcodeproj"/></Workspace>')
-    project = ios / "T3Code.xcodeproj"
-    project.mkdir()
-    objects = {
-        "PROJECT": {"isa": "PBXProject", "mainGroup": "GROUP", "targets": ["APP", "WIDGET"],
-                    "buildConfigurationList": "CONFIGS", "compatibilityVersion": "Xcode 14.0"},
-        "GROUP": {"isa": "PBXGroup", "children": [], "sourceTree": "<group>"},
-        "CONFIGS": {"isa": "XCConfigurationList", "buildConfigurations": ["RELEASE"],
-                    "defaultConfigurationName": "Release"},
-        "RELEASE": {"isa": "XCBuildConfiguration", "name": "Release", "buildSettings": {
-            "SDKROOT": "iphoneos", "IPHONEOS_DEPLOYMENT_TARGET": "16.0"}},
-    }
-    for key, name, kind in (("APP", "T3Code", "application"),
-                            ("WIDGET", "ExpoWidgetsTarget", "app-extension")):
-        folder = ios / name
-        folder.mkdir()
-        (folder / "Info.plist").write_bytes(plistlib.dumps({
-            "CFBundleVersion": "0.0.42", "CFBundleShortVersionString": "0.0.42"}))
-        objects.update({
-            key: {"isa": "PBXNativeTarget", "name": name, "productName": name,
-                  "productType": "com.apple.product-type." + kind,
-                  "productReference": key + "PRODUCT", "buildPhases": [],
-                  "buildConfigurationList": key + "CONFIGS"},
-            key + "PRODUCT": {"isa": "PBXFileReference", "path": name + (".app" if key == "APP" else ".appex"),
-                              "sourceTree": "BUILT_PRODUCTS_DIR"},
-            key + "CONFIGS": {"isa": "XCConfigurationList", "buildConfigurations": [key + "RELEASE"],
-                              "defaultConfigurationName": "Release"},
-            key + "RELEASE": {"isa": "XCBuildConfiguration", "name": "Release", "buildSettings": {
-                "PRODUCT_NAME": name, "PRODUCT_BUNDLE_IDENTIFIER": "test." + name,
-                "GENERATE_INFOPLIST_FILE": "NO" if key == "APP" else "YES",
-                "INFOPLIST_FILE": name + "/Info.plist",
-                "CURRENT_PROJECT_VERSION": "1", "VERSIONING_SYSTEM": "apple-generic"}},
-        })
-    (project / "project.pbxproj").write_bytes(plistlib.dumps({
-        "archiveVersion": "1", "objectVersion": "56", "objects": objects, "rootObject": "PROJECT"}))
-    schemes = project / "xcshareddata/xcschemes"
-    schemes.mkdir(parents=True)
-    entries = "".join(
-        f'<BuildActionEntry buildForRunning="YES" buildForArchiving="YES">'
-        f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{key}" '
-        f'BlueprintName="{name}" ReferencedContainer="container:T3Code.xcodeproj"/>'
-        '</BuildActionEntry>'
-        for key, name in (("APP", "T3Code"), ("WIDGET", "ExpoWidgetsTarget")))
-    (schemes / "T3Code.xcscheme").write_text(
-        f'<Scheme version="1.7"><BuildAction><BuildActionEntries>{entries}'
-        '</BuildActionEntries></BuildAction></Scheme>')
+# Stands in for xcodebuild: logs CI and its arguments, and an export writes the IPA and manifest.
+FAKE_XCODEBUILD = """#!/bin/sh
+printf 'CI=%s %s\\n' "$CI" "$*"
+while [ $# -gt 0 ]; do
+  if [ "$1" = -exportPath ]; then mkdir -p "$2" && touch "$2/T3Code.ipa" "$2/manifest.plist"; fi
+  shift
+done
+"""
+# Stands in for security: echoes its arguments, and fails when SECURITY_FAILS is set.
+FAKE_SECURITY = """#!/bin/sh
+echo "$@"
+if [ -n "$SECURITY_FAILS" ]; then echo "The user name or passphrase you entered is not correct." >&2; exit 51; fi
+"""
 
 
 class XcodebuildTests(StateTests):
-    def test_generated_app_and_widget_use_the_build_number(self):
-        native_project(self.root)
-        runner = phone.Runner()
-        runner.build_number = "4545"
-        with patch.object(phone, "REPO", self.root):
-            try:
-                runner.xcodebuild()
-            except subprocess.CalledProcessError:
-                self.fail(runner.log.read_text())
-        products = self.root / "DerivedData/Build/Products/Release-iphoneos"
-        for name in ("T3Code.app", "ExpoWidgetsTarget.appex"):
-            with self.subTest(bundle=name):
-                info = plistlib.loads((products / name / "Info.plist").read_bytes())
-                self.assertEqual(info["CFBundleVersion"], runner.build_number)
+    PASSWORD = "hunter2-keychain-secret"
 
-    def test_xcodebuild_resets_metro_cache_without_changing_runner_ci(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            workspace = root / "apps/mobile/ios/T3Code.xcworkspace"
-            workspace.mkdir(parents=True)
-            for name in ("T3Code", "ExpoWidgetsTarget"):
-                target = workspace.parent / name
-                target.mkdir()
-                (target / "Info.plist").write_bytes(plistlib.dumps({"CFBundleVersion": "1"}))
-            executable = root / "xcodebuild"
-            executable.write_text('#!/bin/sh\nprintf "CI=%s\\n" "$CI"\n')
-            executable.chmod(0o755)
-            runner = phone.Runner()
-            runner.log = root / "build.log"
-            runner.env["PATH"] = f"{root}:{runner.env['PATH']}"
-            with patch.object(phone, "REPO", root):
-                runner.xcodebuild()
-            self.assertEqual(runner.log.read_text().splitlines()[-1], "CI=0")
-            self.assertEqual(runner.env["CI"], "1")
+    def setUp(self):
+        super().setUp()
+        self.ios = self.root / "apps/mobile/ios"
+        (self.ios / "T3Code.xcworkspace").mkdir(parents=True)
+        for name in ("T3Code", "ExpoWidgetsTarget", "expo-sharing-extension"):
+            (self.ios / name).mkdir()
+            (self.ios / name / "Info.plist").write_bytes(plistlib.dumps({"CFBundleVersion": "0.0.42"}))
+        tools = self.root / "bin"
+        tools.mkdir()
+        for name, script in (("xcodebuild", FAKE_XCODEBUILD), ("security", FAKE_SECURITY)):
+            (tools / name).write_text(script)
+            (tools / name).chmod(0o755)
+        password = self.root / "password"
+        password.write_text(self.PASSWORD + "\n")
+        for item in (patch.object(phone, "REPO", self.root),
+                     patch.object(phone, "EXPORT_DIR", self.root / "export"),
+                     patch.object(phone, "KEYCHAIN_PASSWORD", password),
+                     patch.dict(phone.os.environ, {"PATH": f"{tools}:{phone.os.environ['PATH']}"})):
+            item.start()
+            self.addCleanup(item.stop)
+        self.runner = phone.Runner()
+        self.runner.build_number = "4545"
 
+    def test_archive_stamps_every_target_and_exports_the_ipa(self):
+        self.runner.xcodebuild()
+        for name in ("T3Code", "ExpoWidgetsTarget", "expo-sharing-extension"):
+            with self.subTest(target=name):
+                info = plistlib.loads((self.ios / name / "Info.plist").read_bytes())
+                self.assertEqual(info["CFBundleVersion"], "$(CURRENT_PROJECT_VERSION)")
+        archive, export = [line for line in self.runner.log.read_text().splitlines() if line.startswith("CI=")]
+        # Metro resets its cache only outside CI; the runner's own environment keeps CI.
+        self.assertTrue(archive.startswith("CI=0 "), archive)
+        self.assertIn("CURRENT_PROJECT_VERSION=4545", archive)
+        self.assertIn("-exportArchive", export)
+        self.assertEqual(self.runner.env["CI"], "1")
+        self.assertEqual(sorted(path.name for path in (self.root / "export").iterdir()),
+                         ["T3Code.ipa", "manifest.plist"])
+        self.assertEqual(list(self.root.glob("archive-*")), [])
+        self.assertNotIn(self.PASSWORD, self.runner.log.read_text())
 
-class PackageTests(StateTests):
-    def test_mismatched_bundle_version_preserves_existing_ipa(self):
-        app = self.root / "DerivedData/Build/Products/Release-iphoneos/T3Code.app"
-        widget = app / "PlugIns/ExpoWidgetsTarget.appex"
-        widget.mkdir(parents=True)
-        destination = self.root / "iCloud"
-        destination.mkdir()
-        ipa = destination / "T3Code.ipa"
-        ipa.write_bytes(b"existing IPA")
-        runner = phone.Runner()
-        runner.build_number = "4545"
-        for stale in (app, widget):
-            with self.subTest(stale=stale.name):
-                for bundle in (app, widget):
-                    (bundle / "Info.plist").write_bytes(plistlib.dumps({
-                        "CFBundleVersion": "1" if bundle == stale else runner.build_number,
-                        "ExpoWidgetsAppGroupIdentifier": f"group.{phone.BUNDLE_ID}.{phone.TEAM}",
-                    }))
-                with patch.object(phone, "REPO", self.root), patch.object(phone, "ARTIFACT_DIR", destination):
-                    with self.assertRaisesRegex(RuntimeError, "CFBundleVersion"):
-                        runner.package()
-                self.assertEqual(ipa.read_bytes(), b"existing IPA")
-
-    def test_ipa_preserves_widget_and_provisioning_entitlements(self):
-        app = self.root / "DerivedData/Build/Products/Release-iphoneos/T3Code.app"
-        widget = app / "PlugIns/ExpoWidgetsTarget.appex"
-        for bundle, identifier, package_type in (
-            (app, phone.BUNDLE_ID, "APPL"),
-            (widget, phone.BUNDLE_ID + ".widgets", "XPC!"),
-        ):
-            bundle.mkdir(parents=True)
-            info = {
-                "CFBundleIdentifier": identifier,
-                "CFBundleExecutable": bundle.stem,
-                "CFBundlePackageType": package_type,
-                "CFBundleVersion": "1",
-                "ExpoWidgetsAppGroupIdentifier": f"group.{phone.BUNDLE_ID}.{phone.TEAM}",
-            }
-            (bundle / "Info.plist").write_bytes(plistlib.dumps(info))
-            subprocess.run(["xcrun", "clang", "-x", "c", "-", "-o", str(bundle / bundle.stem)],
-                           input="int main(void) { return 0; }", text=True, check=True)
-            entitlements = self.root / f"apps/mobile/ios/{bundle.stem}/{bundle.stem}.entitlements"
-            entitlements.parent.mkdir(parents=True)
-            entitlements.write_bytes(plistlib.dumps({
-                "com.apple.security.application-groups": [f"group.{phone.BUNDLE_ID}"],
-            }))
-        destination = self.root / "iCloud"
-        with patch.object(phone, "REPO", self.root), patch.object(phone, "ARTIFACT_DIR", destination):
-            runner = phone.Runner()
-            runner.build_number = "1"
-            runner.package()
-        with zipfile.ZipFile(destination / "T3Code.ipa") as archive:
-            archive.extractall(self.root / "unpacked")
-        for relative in ("T3Code.app", "T3Code.app/PlugIns/ExpoWidgetsTarget.appex"):
-            bundle = self.root / "unpacked/Payload" / relative
-            signed = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(bundle)],
-                                    capture_output=True, check=True)
-            self.assertEqual(plistlib.loads(signed.stdout)["com.apple.security.application-groups"],
-                             [f"group.{phone.BUNDLE_ID}"])
-            info = plistlib.loads((bundle / "Info.plist").read_bytes())
-            self.assertEqual(info["ExpoWidgetsAppGroupIdentifier"], f"group.{phone.BUNDLE_ID}.{phone.TEAM}")
+    def test_unlock_failure_hides_the_password(self):
+        with patch.dict(phone.os.environ, {"SECURITY_FAILS": "1"}):
+            with self.assertRaisesRegex(RuntimeError, "passphrase you entered is not correct") as raised:
+                self.runner.xcodebuild()
+        report = "".join(traceback.format_exception(raised.exception))
+        self.assertNotIn(self.PASSWORD, report)
+        self.assertFalse((self.root / "export").exists())
+        self.assertNotIn(self.PASSWORD, self.runner.log.read_text())
 
 
 if __name__ == "__main__":
