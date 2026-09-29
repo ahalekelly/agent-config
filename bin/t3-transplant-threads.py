@@ -93,7 +93,7 @@ def main() -> None:
         threads,
     ).fetchall()
 
-    backup = Path(f"{target_path}.bak-{datetime.now():%Y%m%dT%H%M%S}")
+    backup = Path(f"{target_path}.bak-{datetime.now():%Y%m%dT%H%M%S%f}")
     target.execute("VACUUM INTO ?", (str(backup),))
     with target:
         target.executemany(
