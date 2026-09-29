@@ -3,27 +3,29 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Build Adrian's T3 Code fork for SideStore.
+"""Build Adrian's T3 Code fork as an ad hoc app for his iPhone.
 
 Every half hour on AC power, integrate the newest stable upstream release into
-main and package a widget-enabled IPA in iCloud Drive/SideStore Setup. The
-"Update T3 and Refresh SideStore" shortcut on the iPhone installs it through
-SideStore. Each build's CFBundleVersion is the fork revision's commit count, so
-`xcrun devicectl device info apps` shows which build the iPhone runs. Once
-iCloud has uploaded the IPA, the runner starts that shortcut on the unlocked
-iPhone with `xcrun devicectl device process launch --payload-url
-shortcuts://run-shortcut?name=...` and waits for the build to appear; a locked
-or unreachable phone waits for a later run, and Adrian can always run the
-shortcut himself. SideStore owns signing and renewal. Failed merges and builds back off for a day; a network outage waits for
-the next run and reports after a day.
+main and export an ad hoc IPA signed by Adrian's paid Apple team. xcodebuild
+manages certificates and profiles through an App Store Connect API key; ad hoc
+profiles cover only devices registered to the team. Each build's
+CFBundleVersion is the fork revision's commit count, so `xcrun devicectl device
+info apps` shows which build the iPhone runs.
+
+Every build is published to akelly-desktop, whose `tailscale serve` serves
+~/t3-builds at DOWNLOAD_URL; the page there installs it over the air from
+anywhere on the tailnet. When the iPhone is reachable from this Mac, the runner
+also installs it directly with `devicectl device install app`; otherwise a
+notification links the download page. Failed merges and builds back off for a
+day; a network outage waits for the next run and reports after a day.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
-only while the job is unloaded. State, logs, and DerivedData live in
-~/Library/Application Support/t3-phone-builds. Notifications open a thread in
-the T3 Code app on this Mac, so it must be open. Work on fixes in a separate worktree.
+only while the job is unloaded. State, logs, DerivedData, and the archive live
+in ~/Library/Application Support/t3-phone-builds. Notifications open a thread
+in the T3 Code app on this Mac, so it must be open. Work on fixes in a separate
+worktree.
 """
 
-import ctypes
 import json
 import os
 import plistlib
@@ -33,7 +35,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import traceback
 from collections import deque
 from datetime import datetime, timedelta, timezone
@@ -44,22 +45,21 @@ STATE_DIR = Path.home() / "Library/Application Support/t3-phone-builds"
 THREAD_SCRIPT = Path.home() / ".agents/bin/t3-thread.py"
 PROVIDER_INSTANCE = "claudeAgent"
 BRANCH = "main"
-ARTIFACT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/SideStore Setup"
-TEAM = "T3TBGN4UX7"
+TEAM = "TODO_TEAM_ID"
 BUNDLE_ID = "com.akelly.t3code"
+# App Store Connect API key (Admin role); the .p8 lives outside Git.
+API_KEY_ID = "TODO_KEY_ID"
+API_ISSUER = "TODO_ISSUER_ID"
+API_KEY = Path.home() / f".appstoreconnect/AuthKey_{API_KEY_ID}.p8"
 MODEL = "claude-opus-5-5"
 PHONE = "00008140-000809E90402201C"
-SHORTCUT = "Update T3 and Refresh SideStore"
-SHORTCUT_URL = "shortcuts://run-shortcut?name=" + SHORTCUT.replace(" ", "%20")
-# Each launch gets three minutes to install the build (polled every ten seconds).
-INSTALL_LAUNCHES = 3
-INSTALL_POLLS = 18
-# iCloud gets ten minutes to upload the IPA (polled every ten seconds).
-UPLOAD_POLLS = 60
-UPLOADED_SWIFT = """import Foundation
-let values = try URL(fileURLWithPath: CommandLine.arguments[1])
-    .resourceValues(forKeys: [.ubiquitousItemIsUploadedKey])
-print(values.ubiquitousItemIsUploaded!)"""
+ARCHIVE = STATE_DIR / "T3Code.xcarchive"
+EXPORT_DIR = STATE_DIR / "export"
+# SSH targets for akelly-desktop, local network first.
+DESKTOP_HOSTS = (("akelly-desktop.local", "-o", "ConnectTimeout=5"),
+                 ("akelly-desktop.troodon-bigeye.ts.net",))
+DESKTOP_DIR = "t3-builds"
+DOWNLOAD_URL = "https://akelly-desktop.troodon-bigeye.ts.net:8444"
 DAY = timedelta(days=1)
 
 
@@ -91,9 +91,9 @@ class Runner:
         self.env = {
             **os.environ,
             "APP_VARIANT": "production",
-            "T3CODE_IOS_SIGNING": "sidestore",
+            "T3CODE_IOS_SIGNING": "personal",
             "T3CODE_IOS_BUNDLE_ID": BUNDLE_ID,
-            "T3CODE_IOS_SIDESTORE_TEAM_ID": TEAM,
+            "T3CODE_IOS_TEAM_ID": TEAM,
             "EXPO_NO_GIT_STATUS": "1",
             "CI": "1",
         }
@@ -147,11 +147,33 @@ class Runner:
                          "Set :CFBundleVersion $(CURRENT_PROJECT_VERSION)", info)
         # Resolve Node at build time rather than retaining a versioned Homebrew path.
         (workspace.parent / ".xcode.env.local").write_text("export NODE_BINARY=$(command -v node)\n")
+        signing = ("-allowProvisioningUpdates", "-authenticationKeyPath", API_KEY,
+                   "-authenticationKeyID", API_KEY_ID, "-authenticationKeyIssuerID", API_ISSUER)
+        shutil.rmtree(ARCHIVE, ignore_errors=True)
         # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
         self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                      "-configuration", "Release", "-destination", "generic/platform=iOS",
-                     "-derivedDataPath", STATE_DIR / "DerivedData",
-                     "CODE_SIGNING_ALLOWED=NO", f"CURRENT_PROJECT_VERSION={self.build_number}", "build")
+                     "-derivedDataPath", STATE_DIR / "DerivedData", "-archivePath", ARCHIVE, *signing,
+                     "CODE_SIGN_STYLE=Automatic", f"DEVELOPMENT_TEAM={TEAM}",
+                     f"CURRENT_PROJECT_VERSION={self.build_number}", "archive")
+        self.step = "export IPA"
+        shutil.rmtree(EXPORT_DIR, ignore_errors=True)
+        with tempfile.NamedTemporaryFile(suffix=".plist") as options:
+            options.write(plistlib.dumps({
+                "method": "release-testing",
+                "teamID": TEAM,
+                "signingStyle": "automatic",
+                # Xcode writes manifest.plist, which the download page's
+                # itms-services link hands to iOS.
+                "manifest": {"appURL": f"{DOWNLOAD_URL}/T3Code.ipa",
+                             "displayImageURL": f"{DOWNLOAD_URL}/icon.png",
+                             "fullSizeImageURL": f"{DOWNLOAD_URL}/icon.png"},
+            }))
+            options.flush()
+            self.command("xcodebuild", "-exportArchive", "-archivePath", ARCHIVE,
+                         "-exportPath", EXPORT_DIR, "-exportOptionsPlist", options.name, *signing)
+        ipa, = EXPORT_DIR.glob("*.ipa")
+        ipa.rename(EXPORT_DIR / "T3Code.ipa")
 
     def fetch(self):
         """Update the remotes, tolerating a network that is not up yet.
@@ -254,41 +276,32 @@ class Runner:
         self.command("env", f"SDKROOT={sdk}", "pod", "install", cwd=REPO / "apps/mobile/ios")
         self.step = "xcodebuild"
         self.xcodebuild()
-        self.step = "package IPA"
-        self.package()
+        self.step = "publish"
+        self.publish()
         self.state["packaged"] = self.record()
         self.state.pop("build_failure", None)
         self.save()
 
-    def package(self):
-        app, = (STATE_DIR / "DerivedData/Build/Products/Release-iphoneos").glob("*.app")
-        native = REPO / "apps/mobile/ios"
-        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="t3-sidestore-") as folder:
-            payload = Path(folder) / "Payload"
-            copied = payload / app.name
-            shutil.copytree(app, copied, symlinks=True)
-            widget, = (copied / "PlugIns").glob("*.appex")
-            for bundle in (copied, widget):
-                info = plistlib.loads((bundle / "Info.plist").read_bytes())
-                if info["CFBundleVersion"] != self.build_number:
-                    raise RuntimeError(f"{bundle.name} has CFBundleVersion {info['CFBundleVersion']}; "
-                                       f"expected {self.build_number}")
-                expected_group = f"group.{BUNDLE_ID}.{TEAM}"
-                if info.get("ExpoWidgetsAppGroupIdentifier") != expected_group:
-                    raise RuntimeError(f"{bundle.name} does not use SideStore App Group {expected_group}")
-            # SideStore reads the source signature's entitlements when provisioning.
-            # Ad-hoc signatures preserve them without an Apple signing certificate.
-            self.command("codesign", "--force", "--deep", "--sign", "-", copied)
-            for bundle, entitlements in (
-                (widget, native / "ExpoWidgetsTarget/ExpoWidgetsTarget.entitlements"),
-                (copied, native / f"{app.stem}/{app.stem}.entitlements"),
-            ):
-                self.command("codesign", "--force", "--sign", "-", "--entitlements", entitlements, bundle)
-            self.command("codesign", "--verify", "--deep", "--strict", copied)
-            ipa = ARTIFACT_DIR / "T3Code.ipa.tmp"
-            self.command("ditto", "-c", "-k", "--keepParent", "--norsrc", payload, ipa)
-            ipa.replace(ARTIFACT_DIR / "T3Code.ipa")
+    def publish(self):
+        """Copy the IPA, its manifest, and an install page to akelly-desktop."""
+        shutil.copy(REPO / "assets/prod/black-ios-1024.png", EXPORT_DIR / "icon.png")
+        install = "itms-services://?action=download-manifest&url=" + f"{DOWNLOAD_URL}/manifest.plist"
+        (EXPORT_DIR / "index.html").write_text(
+            '<!doctype html><meta name="viewport" content="width=device-width">'
+            f"<title>T3 Code {self.build_number}</title>"
+            '<body style="font: 20px -apple-system; text-align: center; padding-top: 30vh">'
+            f"<p>T3 Code {self.version}, build {self.build_number} ({self.short})</p>"
+            f'<p><a href="{install}">Install</a></p>\n')
+        for host, *options in DESKTOP_HOSTS:
+            # --delay-updates swaps every file in at the end, so the page never
+            # links a half-copied IPA.
+            copied = self.attempt("rsync", "-e", shlex.join(["ssh", "-o", "BatchMode=yes",
+                                                             "-o", "HostKeyAlias=akelly-desktop", *options]),
+                                  "--delete", "--recursive", "--delay-updates", f"{EXPORT_DIR}/",
+                                  f"akelly@{host}:{DESKTOP_DIR}/")
+            if not copied.returncode:
+                return
+        raise RuntimeError("Could not copy the build to akelly-desktop over either network")
 
     def devicectl(self, command, *args):
         """Run a devicectl command such as "device info lockState" against the
@@ -305,51 +318,25 @@ class Runner:
             return json.loads(output.read_text())["result"]
 
     def install(self):
-        """Install the IPA by running the install shortcut on the iPhone.
+        """Install the IPA directly when the iPhone is reachable from this Mac.
 
-        Returns None once the iPhone runs this build, or why the phone cannot run
-        the shortcut yet. Once launched, a shortcut that never installs this build
-        raises, and the runner does not launch it again for this revision.
+        Returns None once the iPhone runs this build, or why it cannot install
+        yet. A reachable phone that rejects the install raises, and the runner
+        does not try this revision again.
         """
         def installed():
-            # SideStore installs the app under a bundle ID suffixed with the team.
-            apps = self.devicectl("device info apps", "--bundle-id", f"{BUNDLE_ID}.{TEAM}")
+            apps = self.devicectl("device info apps", "--bundle-id", BUNDLE_ID)
             return apps is not None and [app["bundleVersion"] for app in apps["apps"]] == [self.build_number]
 
         if installed():
             return None
-        # A shortcut launched before the upload finishes can only find the previous IPA.
-        for _ in range(UPLOAD_POLLS):
-            if self.capture("swift", "-e", UPLOADED_SWIFT, ARTIFACT_DIR / "T3Code.ipa").strip() == "true":
-                break
-            time.sleep(10)
-        else:
-            return "iCloud has not finished uploading the IPA"
-        lock = self.devicectl("device info lockState")
-        if lock is None:
+        if self.devicectl("device info lockState") is None:
             return "the iPhone is unreachable"
-        if lock["passcodeRequired"]:
-            return "the iPhone is locked"
         self.state["install_attempted"] = self.revision
         self.save()
-        # The phone sees the new IPA only once iCloud syncs it. Until then the
-        # shortcut finds the previous IPA and skips installing, so launch it
-        # again until the phone runs this build.
-        for launch in range(INSTALL_LAUNCHES):
-            if launch:
-                lock = self.devicectl("device info lockState")
-                if lock is None or lock["passcodeRequired"]:
-                    raise RuntimeError(f"The iPhone locked or went out of reach before the {SHORTCUT} "
-                                       "shortcut installed this IPA")
-            if self.devicectl("device process launch", "--payload-url", SHORTCUT_URL,
-                              "com.apple.shortcuts") is None:
-                raise RuntimeError(f"devicectl could not start the {SHORTCUT} shortcut")
-            for _ in range(INSTALL_POLLS):
-                time.sleep(10)
-                if installed():
-                    return None
-        raise RuntimeError(f"The {SHORTCUT} shortcut ran {INSTALL_LAUNCHES} times without "
-                           f"installing build {self.build_number}")
+        if self.devicectl("device install app", EXPORT_DIR / "T3Code.ipa") is None or not installed():
+            raise RuntimeError(f"devicectl could not install build {self.build_number} on the iPhone")
+        return None
 
     def run(self):
         self.step = "power check"
@@ -397,32 +384,23 @@ class Runner:
             self.state["installed_revision"] = self.revision
             self.save()
             self.notify(f"iPhone: installed {self.version} ({self.short})",
-                        f"The {SHORTCUT} shortcut installed {BRANCH} at {self.short}, based on "
-                        f"v{self.version}, on Adrian's iPhone. Tell Adrian it is installed.")
+                        f"devicectl installed {BRANCH} at {self.short}, based on v{self.version}, "
+                        "on Adrian's iPhone. Tell Adrian it is installed.")
             self.outcome = "installed"
             return
         if self.state.get("notified_revision") != self.revision:
-            self.notify(f"iPhone: SideStore update {self.version} ({self.short})",
-                        f"Widget-enabled IPA ready on the Mac: {ARTIFACT_DIR / 'T3Code.ipa'}.\n"
-                        f"Built {BRANCH} at {self.short}, based on v{self.version}.\n"
-                        f"It could not install automatically because {waiting}; the runner tries "
-                        "again every half hour on AC power. Tell Adrian he can unlock his iPhone and "
-                        f"run the {SHORTCUT} shortcut, which installs this IPA through SideStore. "
-                        f"Once it finishes, `xcrun devicectl device info apps` on the Mac shows "
-                        f"bundleVersion {self.build_number} for {BUNDLE_ID}.{TEAM}. "
-                        "SideStore owns signing and renewal. Do not install it with Xcode.")
+            self.notify(f"iPhone: update {self.version} ({self.short}) ready",
+                        f"Built {BRANCH} at {self.short}, based on v{self.version}, as build "
+                        f"{self.build_number}. It could not install automatically because {waiting}; "
+                        "the runner tries again every half hour on AC power. Give Adrian this link "
+                        f"to open in Safari on his iPhone, with Tailscale on: {DOWNLOAD_URL}/ "
+                        "Tapping Install there installs the build over the air.")
             self.state["notified_revision"] = self.revision
             self.save()
         self.outcome = f"IPA ready, {waiting}"
 
 
 def main():
-    # launchd starts jobs with dataless-file materialization off, so reading a
-    # file iCloud evicted fails with EDEADLK. Turn it on for this process and
-    # its children (IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES, IOPOL_SCOPE_PROCESS,
-    # IOPOL_MATERIALIZE_DATALESS_FILES_ON from <sys/resource.h>).
-    if ctypes.CDLL(None, use_errno=True).setiopolicy_np(3, 0, 2):
-        raise OSError(ctypes.get_errno(), "setiopolicy_np could not enable iCloud downloads")
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     runner = Runner()
     try:
