@@ -8,35 +8,35 @@
 Reads the trace archive kept by t3-trace-archive.py plus the live
 server.trace.ndjson* files.
 
-Phone connects: the mobile app posts its own spans (service `t3code-mobile`)
-to whichever environment is ready, so this server's traces hold phone connects
-to every environment, including failed ones this server never saw. Each
-`ConnectionDriver.connect` is one row: environment, path (`tailscale` for
-.ts.net and 100.64.0.0/10 hosts, `relay` for t3coderelay, else `direct`),
-outcome, total, and `live` (connect start -> the phone's first shell
-subscription for that environment; `?` when a subscription can't be tied to one
-environment). Time splits three ways:
-  server  - this server's span for the request; the server's span is a child of
-            the phone's request span, so the link is exact. Only requests to this
-            server have one; socket steps (ws-open, config) have none, so their
-            server time counts as network.
-  phone   - time with no request or socket wait in flight, plus
-            `client.jsThread.stall` spans inside a wait. Stalls under 50 ms go
-            undetected, so network is an upper bound.
-  network - the rest of each wait.
-`rtt` is the median `RpcClient.server.probe` round trip for that environment,
-path, and network; the first request shows its network time in RTTs, which
-exposes handshake cost. `net` is the phone's network: `tailscale`, or for relay
-and direct connects the client IP this server saw, labeled `home` when it
-shares this machine's public IPv4 address or IPv6 /64, otherwise the
-reverse-DNS domain or address prefix. The phone's span buffer holds 1000 spans,
-so some connects lack steps.
+Phone connects: the mobile app posts its spans (service `t3code-mobile`) to
+whichever environment is ready, so this server's traces hold phone connects to
+every environment, including attempts that never reached this server. Each
+`ConnectionDriver.connect` is one row: environment (the phone's name for it),
+path (`tailscale` for .ts.net and 100.64.0.0/10 hosts, `relay` for
+t3coderelay, else `direct`), outcome, total, and `live` (connect start -> the
+phone's first shell subscription for that environment; `?` when a
+subscription of unknown environment came first). Each wait (HTTP request,
+ws-open, config) splits three ways:
+  server  - this server's span for the request, linked exactly: it is a child
+            of the phone's request span. Only requests to this server have one;
+            socket waits never do, so their server time counts as network.
+  phone   - time with no wait in flight, plus `client.jsThread.stall` time
+            inside a wait. Stalls under 50 ms go undetected, so network is an
+            upper bound.
+  network - the rest.
+`rtt` is the median `RpcClient.server.probe` round trip, minus stalls, for
+that environment, path, and network; the first request shows its network time
+in RTTs, which exposes handshake cost. `net` is `tailscale`, or for relay and
+direct connects the client IP this server saw: `home` when it shares this
+machine's public IPv4 address or IPv6 /64, otherwise the reverse-DNS domain or
+address prefix (`unknown` for other environments). The phone buffers 1000
+spans, so some connects lack steps.
 
-Server-only connects: clients without phone spans (desktop, web) are rebuilt
-from server spans: auth hops -> WS upgrade -> config subscription -> shell
-snapshot -> shell subscription. Gaps between server arrivals are network plus
-client time. They appear only after the socket closes, when the WS span is
-written.
+Server-only connects: clients without phone spans (desktop, web, evicted phone
+spans) are rebuilt from server spans: auth hops -> WS upgrade -> config
+subscription -> shell snapshot -> shell subscription. Gaps between server
+arrivals are network plus client time. A connect appears only after its socket
+closed, when the WS span is written.
 
 Usage:
     uv run t3-profile-connects.py [--since HOURS] [--logs GLOB ...] [-v]
@@ -71,7 +71,7 @@ HTTP_KINDS = {
     "/api/orchestration/shell": "shell",
     "/ws": "ws",
 }
-STAGES = ["descriptor", "token", "ticket", "resolver", "ws", "config", "shell", "sync"]
+PHONE_STEPS = ["descriptor", "token", "ticket", "resolver", "ws-open", "config"]
 PHONE_SERVICE = "t3code-mobile"
 PHONE_MARKER = '"otlp-span"'
 SHELL_SPANS = ("EnvironmentShellState.makeSubscribeInput", "EnvironmentShellState.applyItems", "MobileEnvironmentCache.saveShell")
@@ -157,7 +157,8 @@ class PhoneConnect:
     stalls: list[PhoneSpan] = field(default_factory=list)
     live: float | None = None
     live_note: str = ""  # shown instead of live when it is unknown
-    prefetch: Step | None = None
+    prefetch: Step | None = None  # the shell snapshot GET, which runs alongside the connect
+    prefetch_ms: float | None = None  # the whole snapshot fetch, GET plus decoding
     shell: list[PhoneSpan] = field(default_factory=list)  # post-connect shell work, see SHELL_SPANS
 
     @property
@@ -200,7 +201,7 @@ class ServerConnect:
         return f"{q['clientSurface']}/{q.get('clientOs', '?')}" if "clientSurface" in q else "unknown"
 
     def via(self) -> str:
-        return "relay" if "t3coderelay" in self.ws.host else "direct"
+        return host_path(self.ws.host)
 
 
 def open_trace(path: str):
@@ -320,6 +321,11 @@ def overlap_ms(spans: list[PhoneSpan], start: float, end: float) -> float:
     return sum(max(0.0, min(s.end, end) - max(s.start, start)) for s in spans) * 1000
 
 
+def stall_ms(step: "Step", stalls: list[PhoneSpan]) -> float:
+    """Stall time inside a wait, capped so it never eats into the server's time."""
+    return min(overlap_ms(stalls, step.start, step.end), step.ms - (step.server_ms or 0.0))
+
+
 # --- phone connects ---------------------------------------------------------
 
 
@@ -333,34 +339,44 @@ def outcome(error: str) -> str:
     return f"error: {error[:60]}"
 
 
-def connect_steps(connect: PhoneSpan, children: dict[str, list[PhoneSpan]], server: dict[str, Span]) -> list[Step]:
-    """The waits of one connect: HTTP requests, socket open, and the config wait."""
-    descendants, stack = [], [connect]
+def descendants(root: PhoneSpan, children: dict[str, list[PhoneSpan]]) -> list[PhoneSpan]:
+    out, stack = [], [root]
     while stack:
         s = stack.pop()
-        descendants.append(s)
+        out.append(s)
         stack.extend(children.get(s.span_id, []))
-    descendants.sort(key=lambda s: s.start)
+    return sorted(out, key=lambda s: s.start)
+
+
+def connect_steps(connect: PhoneSpan, tree: list[PhoneSpan], server: dict[str, Span], stalls: list[PhoneSpan]) -> list[Step]:
+    """The waits of one connect: HTTP requests, socket open, and the config wait."""
     steps: list[Step] = []
-    socket_open = next((s for s in descendants if s.name == "environment.websocket.connect"), None)
-    config = next((s for s in descendants if s.name == "environment.initialSync"), None)
-    for s in descendants:
+    for s in tree:
         if s.name.startswith("http.client "):
-            label = HTTP_KINDS.get(s.attrs.get("url.path", ""), s.attrs.get("url.path", "?"))
+            label = HTTP_KINDS.get(s.attrs["url.path"], s.attrs["url.path"].rsplit("/", 1)[-1])  # relay API: connect, dpop-token
             if label == "descriptor" and any(t.label == "ticket" for t in steps):
                 label = "resolver"
             linked = server.get(s.span_id)
             steps.append(Step(label, s.start, s.end, linked and linked.compute_ms, s.error))
+    socket_open = next((s for s in tree if s.name == "environment.websocket.connect"), None)
+    config = next((s for s in tree if s.name == "environment.initialSync"), None)
     if socket_open:
         # The socket opens lazily; the config wait starts once it is open.
         opened = config.start if config else connect.end
         steps.append(Step("ws-open", socket_open.start, opened, None, "" if config else connect.error))
     if config:
         steps.append(Step("config", config.start, config.end, None, config.error))
-    return sorted(steps, key=lambda s: s.start)
+    steps.sort(key=lambda s: s.start)
+    covered = connect.start
+    for s in steps:
+        s.phone_before_ms = max(0.0, s.start - covered) * 1000
+        s.stall_ms = stall_ms(s, stalls)
+        covered = max(covered, s.end)
+    return steps
 
 
 def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home: list[Net]) -> list[PhoneConnect]:
+    by_id = {s.span_id: s for s in phone}
     children: dict[str, list[PhoneSpan]] = {}
     for s in phone:
         children.setdefault(s.parent_id, []).append(s)
@@ -370,72 +386,306 @@ def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home:
     host_env: dict[str, str] = {}
     for span in (s for s in phone if s.name == "ConnectionDriver.connect"):
         env = span.attrs["connection.environment.id"]
-        steps = connect_steps(span, children, server)
-        http = [s for s in phone if s.name.startswith("http.client ") and span.start <= s.start <= span.end]
-        hosts = {s.host for s in http if s.trace_id == span.trace_id} or {s.host for s in http}
-        linked = [server[s.span_id] for s in http if s.span_id in server]
-        kind = span.attrs["connection.target.kind"]
-        path = "relay" if kind == "RelayConnectionTarget" else next((host_path(h) for h in hosts), "?")
-        network = "tailscale" if path == "tailscale" else network_label(linked[0].peer if linked else "", home)
-        covered = span.start
-        for s in steps:
-            s.phone_before_ms = max(0.0, s.start - covered) * 1000
-            s.stall_ms = overlap_ms(stalls, s.start, s.end)
-            covered = max(covered, s.end)
+        tree = descendants(span, children)
+        http = [s for s in tree if s.name.startswith("http.client ")]
+        steps = connect_steps(span, tree, server, stalls)
+        host = http[0].host if http else ""
+        for s in http:
+            host_env[s.host] = env
+        linked = next((server[s.span_id] for s in http if s.span_id in server), None)
+        if span.attrs["connection.target.kind"] == "RelayConnectionTarget":
+            path = "relay"
+        else:
+            path = host_path(host) if host else "?"
         connects.append(PhoneConnect(
-            span=span, env=env, path=path, network=network, outcome=outcome(span.error), steps=steps,
-            tail_phone_ms=max(0.0, span.end - covered) * 1000, stalls=[],
+            span=span, env=env, host=host, path=path,
+            network="tailscale" if path == "tailscale" else network_label(linked.peer if linked else "", home),
+            outcome=outcome(span.error), steps=steps,
+            tail_phone_ms=max(0.0, span.end - max((s.end for s in steps), default=span.start)) * 1000,
         ))
-        for s in phone:
-            if s.name.startswith("http.client ") and s.trace_id == span.trace_id and span.start <= s.start <= span.end:
-                host_env[s.host] = env
-    # Each environment's shell state runs in one long trace, named by its shell requests' host.
-    trace_env: dict[str, set[str]] = {}
+    # Each environment's shell state runs in one long trace; its requests' host names the environment.
+    trace_envs: dict[str, set[str]] = {}
     for s in phone:
-        if s.host in host_env:
-            trace_env.setdefault(s.trace_id, set()).add(host_env[s.host])
+        if s.host:
+            trace_envs.setdefault(s.trace_id, set()).add(host_env.get(s.host, "?"))
     shell = [s for s in phone if s.name in SHELL_SPANS]
+    shell_gets = [s for s in phone if s.name == "http.client GET" and s.attrs["url.path"] == "/api/orchestration/shell"]
     connects.sort(key=lambda c: c.span.start)
     for i, c in enumerate(connects):
-        later = next((d.span.start for d in connects[i + 1 :] if d.env == c.env), math.inf)
-        subscribes = [s for s in shell if s.name == SHELL_SPANS[0] and c.span.start <= s.start < later]
-        mine = [s for s in subscribes if trace_env.get(s.trace_id) == {c.env}]
-        unknown = [s for s in subscribes if len(trace_env.get(s.trace_id, ())) != 1]
-        if c.outcome != "ok":
-            pass
-        elif mine and not (unknown and unknown[0].start < mine[0].start):
-            c.live = mine[0].start
-        else:
-            c.live_note = "?" if unknown else "none"
-        end = c.live if c.live is not None else c.span.end
+        mine = lambda s: trace_envs.get(s.trace_id) == {c.env}
+        if c.outcome == "ok":
+            later = next((d.span.start for d in connects[i + 1 :] if d.env == c.env), math.inf)
+            subscribe = next((s for s in shell if s.name == SHELL_SPANS[0] and c.span.start <= s.start < later
+                              and (mine(s) or len(trace_envs.get(s.trace_id, ())) != 1)), None)
+            if subscribe and mine(subscribe):
+                c.live = subscribe.start
+            else:
+                c.live_note = "none" if subscribe is None else "?"  # ? = a subscription of unknown environment came first
+        end = c.span.end if c.live is None else c.live
         c.stalls = [s for s in stalls if s.end > c.span.start and s.start < end]
-        c.shell = [s for s in shell if trace_env.get(s.trace_id) == {c.env} and c.span.start <= s.start <= end + SHELL_TAIL_S]
-        prefetch = next((
-            s for s in phone
-            if s.name == "http.client GET" and s.attrs.get("url.path") == "/api/orchestration/shell"
-            and host_env.get(s.host) == c.env and c.span.start <= s.start <= end
-        ), None)
-        if prefetch:
-            linked = server.get(prefetch.span_id)
-            c.prefetch = Step("shell", prefetch.start, prefetch.end, linked and linked.compute_ms, prefetch.error,
-                              stall_ms=overlap_ms(stalls, prefetch.start, prefetch.end))
+        c.shell = [s for s in shell if mine(s) and c.span.start <= s.start <= end + SHELL_TAIL_S]
+        get = next((s for s in shell_gets if host_env.get(s.host) == c.env and c.span.start <= s.start <= end), None)
+        if get:
+            linked = server.get(get.span_id)
+            c.prefetch = Step("shell", get.start, get.end, linked and linked.compute_ms, get.error)
+            c.prefetch.stall_ms = stall_ms(c.prefetch, stalls)
+            c.prefetch_ms = by_id[get.parent_id].ms if get.parent_id in by_id else None
     return connects
 
 
-def env_labels(connects: list[PhoneConnect]) -> dict[str, str]:
-    """Name each environment by a non-relay host it was reached at, else a short id."""
-    hosts: dict[str, str] = {}
-    for c in connects:
-        for s in c.steps:
-            pass
+def environment_of(span: PhoneSpan, by_id: dict[str, PhoneSpan]) -> PhoneSpan | None:
+    """The nearest ancestor naming an environment (EnvironmentSupervisor.make or ConnectionDriver.connect)."""
+    while span is not None:
+        if "environment.id" in span.attrs or "connection.environment.id" in span.attrs:
+            return span
+        span = by_id.get(span.parent_id)
+    return None
+
+
+def probe_rtts(phone: list[PhoneSpan], connects: list[PhoneConnect]) -> dict[tuple[str, str, str], list[float]]:
+    """Probe round trips per connect group; a probe runs on the socket of its environment's latest connect."""
+    by_id = {s.span_id: s for s in phone}
+    stalls = [s for s in phone if s.name == "client.jsThread.stall"]
+    rtts: dict[tuple[str, str, str], list[float]] = {}
+    for p in (s for s in phone if s.name == "RpcClient.server.probe" and not s.error):
+        owner = environment_of(p, by_id)
+        if owner is None:
+            continue
+        env = owner.attrs.get("environment.id") or owner.attrs["connection.environment.id"]
+        latest = [c for c in connects if c.env == env and c.outcome == "ok" and c.span.start <= p.start]
+        if latest:
+            rtts.setdefault(latest[-1].group(), []).append(p.ms - overlap_ms(stalls, p.start, p.end))
+    return rtts
+
+
+def env_labels(phone: list[PhoneSpan], connects: list[PhoneConnect]) -> dict[str, str]:
+    """The phone's name for each environment, else a host it was reached at, else a short id."""
     labels = {c.env: c.env[:8] for c in connects}
     for c in connects:
-        if c.path != "relay" and c.host:
+        if c.host and c.path != "relay":
             name = c.host.rsplit(":", 1)[0]
-            labels[c.env] = name if host_path(name) == "direct" and name.replace(".", "").isdigit() else name.split(".")[0]
-            try:
-                ipaddress.ip_address(name)
-                labels[c.env] = name
-            except ValueError:
-                labels[c.env] = name.split(".")[0]
+            labels[c.env] = name if name.replace(".", "").isdigit() else name.split(".")[0]
+    for s in phone:
+        if s.name == "EnvironmentSupervisor.make":
+            labels[s.attrs["environment.id"]] = s.attrs["environment.label"]
     return labels
+
+
+def fmt_time(t: float) -> str:
+    return time.strftime("%m-%d %H:%M:%S", time.localtime(t))
+
+
+def p90(values: list[float]) -> float:
+    return sorted(values)[math.ceil(len(values) * 0.9) - 1]
+
+
+def med(values: list[float]) -> str:
+    return f"{statistics.median(values):5.0f}" if values else "    -"
+
+
+def print_phone_connect(c: PhoneConnect, labels: dict[str, str], rtt: float | None, verbose: bool) -> None:
+    live = f"{(c.live - c.span.start) * 1000:5.0f}ms" if c.live is not None else f"{c.live_note or '-':>7s}"
+    split = f"server={c.server_ms:4.0f} network={c.network_ms:5.0f} phone={c.phone_ms:4.0f}" if c.steps else "steps evicted"
+    stall = overlap_ms(c.stalls, c.span.start, c.span.end if c.live is None else c.live)
+    print(
+        f"{fmt_time(c.span.start)}  {labels[c.env]:16s} {c.path:9s} net={c.network:14s} {c.outcome[:40]:12s} "
+        f"total={c.span.ms:6.0f}ms live={live} {split} stall={stall:4.0f}"
+    )
+    if not verbose:
+        return
+    rows: list[tuple[float, str]] = []
+    for i, s in enumerate(c.steps):
+        if s.phone_before_ms >= 1:
+            rows.append((s.start - s.phone_before_ms / 1000, f"{'phone':10s} {s.phone_before_ms:6.0f}ms"))
+        rtts = f"  ≈ {s.network_ms / rtt:.1f} RTT" if i == 0 and rtt and not s.error else ""
+        error = f"  {s.error[:70]}" if s.error else ""
+        rows.append((s.start, f"{s.label:10s} {s.ms:6.0f}ms {s.split()}{rtts}{error}"))
+    if c.tail_phone_ms >= 1:
+        rows.append((c.span.end - c.tail_phone_ms / 1000, f"{'phone':10s} {c.tail_phone_ms:6.0f}ms"))
+    rows.append((c.span.end, f"{'connected' if c.outcome == 'ok' else c.outcome[:40]}"))
+    if c.prefetch:
+        whole = "" if c.prefetch_ms is None else f", snapshot fetch {c.prefetch_ms:.0f}ms"
+        rows.append((c.prefetch.start, f"{'shell GET':10s} {c.prefetch.ms:6.0f}ms {c.prefetch.split()}  (concurrent{whole})"))
+    for s in c.shell:
+        rows.append((s.start, f"{s.name.split('.')[-1]:10s} {s.ms:6.0f}ms  (shell)"))
+    for s in c.stalls:
+        rows.append((s.start, f"{'stall':10s} {s.ms:6.0f}ms"))
+    for start, text in sorted(rows, key=lambda r: r[0]):
+        print(f"    +{(start - c.span.start) * 1000:6.0f}ms  {text}")
+
+
+def print_phone_aggregates(connects: list[PhoneConnect], labels: dict[str, str], rtts: dict) -> None:
+    groups: dict[tuple[str, str, str], list[PhoneConnect]] = {}
+    for c in connects:
+        groups.setdefault(c.group(), []).append(c)
+    print("\n=== Phone aggregates by environment, path, and network ===")
+    for key, group in sorted(groups.items(), key=lambda kv: (labels[kv[0][0]], kv[0][1:])):
+        env, path, network = key
+        outcomes: dict[str, int] = {}
+        for c in group:
+            outcomes[c.outcome.split(":")[0]] = outcomes.get(c.outcome.split(":")[0], 0) + 1
+        rtt = rtts.get(key, [])
+        rtt_s = f" probe rtt median={med(rtt)} p90={p90(rtt):5.0f} (n={len(rtt)})" if rtt else ""
+        print(f"{labels[env]} {path} net={network}: {len(group)} connects {outcomes}{rtt_s}")
+        ok = [c for c in group if c.outcome == "ok" and c.steps]
+        if not ok:
+            continue
+        totals = [c.span.ms for c in ok]
+        lives = [(c.live - c.span.start) * 1000 for c in ok if c.live is not None]
+        print(
+            f"    ok total median={med(totals)} p90={p90(totals):5.0f} live median={med(lives)} | median"
+            f" server={med([c.server_ms for c in ok])} network={med([c.network_ms for c in ok])} phone={med([c.phone_ms for c in ok])}"
+        )
+        steps: dict[str, list[Step]] = {}
+        for c in ok:
+            for s in c.steps:
+                steps.setdefault(s.label, []).append(s)
+        for label, ss in sorted(steps.items(), key=lambda kv: PHONE_STEPS.index(kv[0]) if kv[0] in PHONE_STEPS else len(PHONE_STEPS)):
+            server = [s.server_ms for s in ss if s.server_ms is not None]
+            print(
+                f"    {label:10s} n={len(ss):3d} median {med([s.ms for s in ss])}ms = server {med(server)}"
+                f" + network {med([s.network_ms for s in ss])} + stall {med([s.stall_ms for s in ss])}"
+                f" | phone before {med([s.phone_before_ms for s in ss])}"
+            )
+
+
+# --- server-only connects ---------------------------------------------------
+
+
+def fill_setup_compute(paths: list[str], spans: list[Span]) -> None:
+    """The ws, config, and sync spans live as long as the socket; their connect-time work is
+    the burst of child spans right after they start, so measure that instead of the lifetime.
+    RPC requests are children of the ws span too, but they are later stages, not upgrade work."""
+    parents = {s.span_id: s for s in spans if s.kind in LIFETIME_KINDS}
+    for parent in parents.values():
+        parent.compute_ms = 0.0
+    marker = '"parentSpanId":"'
+    for path in paths:
+        with open_trace(path) as f:
+            for line in f:
+                i = line.find(marker)
+                if i < 0 or '"name":"ws.rpc.' in line:
+                    continue
+                parent = parents.get(line[i + len(marker) : i + len(marker) + 16])
+                if parent is None:
+                    continue
+                row = json.loads(line)
+                end = int(row["endTimeUnixNano"]) / 1e9
+                if end - parent.start <= SETUP_WINDOW_S:
+                    parent.compute_ms = max(parent.compute_ms, (end - parent.start) * 1000)
+
+
+def peer_compatible(a: Span, b: Span) -> bool:
+    return not a.peer or not b.peer or a.peer == b.peer
+
+
+def claim(spans: list[Span], kind: str, anchor: Span, lo: float, hi: float, latest: bool) -> Span | None:
+    hits = [s for s in spans if s.kind == kind and not s.claimed and peer_compatible(s, anchor) and lo <= s.start < hi]
+    if not hits:
+        return None
+    best = hits[-1] if latest else hits[0]
+    best.claimed = True
+    return best
+
+
+def build_server_connects(spans: list[Span]) -> list[ServerConnect]:
+    children: dict[str, list[Span]] = {}
+    for s in spans:
+        if s.kind in ("config", "sync"):
+            children.setdefault(s.parent_id, []).append(s)
+    connects = []
+    for ws in (s for s in spans if s.kind == "ws"):
+        steps = [ws]
+        for kind in ("config", "sync"):
+            first = next((s for s in children.get(ws.span_id, []) if s.kind == kind), None)
+            if first:
+                steps.append(first)
+        ticket = claim(spans, "ticket", ws, ws.start - AUTH_WINDOW_S, ws.start, latest=True)
+        if ticket:
+            steps.append(ticket)
+            # The client propagates one traceparent across the ticket and the descriptor
+            # fetches around it, so the same trace id groups the rest of the auth hops.
+            for s in spans:
+                if s.kind in ("descriptor", "token") and not s.claimed and s.trace_id == ticket.trace_id:
+                    if abs(s.start - ticket.start) <= AUTH_WINDOW_S and s.start < ws.start:
+                        s.claimed = True
+                        if s.kind == "descriptor" and s.start > ticket.start:
+                            s.kind = "resolver"
+                        steps.append(s)
+        # Mobile starts the shell snapshot GET once the connection is prepared, so it
+        # can arrive before the WS upgrade; older clients send it after the config.
+        after = (ticket or ws).start
+        shell = claim(spans, "shell", ws, after, after + POST_CONNECT_WINDOW_S, latest=False)
+        if shell:
+            steps.append(shell)
+        connects.append(ServerConnect(ws=ws, steps=sorted(steps, key=lambda s: s.start)))
+    return sorted(connects, key=lambda c: c.start)
+
+
+def print_server_connect(c: ServerConnect, verbose: bool) -> None:
+    total = f"{c.total_ms:6.0f}ms" if c.total_ms is not None else " no-sync"
+    print(
+        f"{fmt_time(c.start)}  {c.client():14s} {c.via():9s} net={c.network:14s} total={total} server={c.server_ms:4.0f}ms "
+        f"socket={c.ws.end - c.ws.start:6.0f}s steps={'/'.join(s.kind for s in c.steps)}"
+    )
+    if not verbose:
+        return
+    prev_end = None
+    for s in c.steps:
+        gap = "" if prev_end is None else f"gap={(s.start - prev_end) * 1000:6.0f}ms"
+        print(f"    +{(s.start - c.start) * 1000:6.0f}ms  {s.kind:10s} server={s.compute_ms:6.1f}ms  {gap}")
+        prev_end = s.start + s.compute_ms / 1000
+
+
+def print_server_aggregates(connects: list[ServerConnect]) -> None:
+    groups: dict[str, list[ServerConnect]] = {}
+    for c in connects:
+        groups.setdefault(f"{c.client()} {c.via()} net={c.network}", []).append(c)
+    print("\n=== Server-only aggregates by client and network (gap = network + client time) ===")
+    for key, group in sorted(groups.items()):
+        totals = [c.total_ms for c in group if c.total_ms is not None]
+        line = f"{key}: {len(group)} connects, {len(totals)} synced"
+        if totals:
+            line += f", total median={med(totals)} p90={p90(totals):5.0f} server median={med([c.server_ms for c in group])}"
+        print(line)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--logs", nargs="+", default=DEFAULT_GLOBS, help="globs of trace files (.ndjson or .ndjson.gz)")
+    ap.add_argument("--since", type=float, help="only read files modified within the last N hours")
+    ap.add_argument("-v", "--verbose", action="store_true", help="per-step waterfall for each connect")
+    args = ap.parse_args()
+
+    paths = sorted({p for pattern in args.logs for p in glob.glob(pattern)})
+    if args.since is not None:
+        cutoff = time.time() - args.since * 3600
+        paths = [p for p in paths if os.path.getmtime(p) >= cutoff]
+    if not paths:
+        raise SystemExit(f"no trace files match {args.logs}")
+    spans, phone = parse_spans(paths)
+    home = home_networks()
+    print(f"{len(paths)} files, {fmt_time(spans[0].start)} .. {fmt_time(spans[-1].start)}, {len(spans)} server spans, {len(phone)} phone spans")
+
+    connects = build_phone_connects(phone, spans, home)
+    labels = env_labels(phone, connects)
+    rtts = probe_rtts(phone, connects)
+    print(f"\n=== Phone connects ({len(connects)}) ===")
+    for c in connects:
+        rtt = rtts.get(c.group())
+        print_phone_connect(c, labels, statistics.median(rtt) if rtt else None, args.verbose)
+    print_phone_aggregates(connects, labels, rtts)
+
+    phone_ids = {s.span_id for s in phone}
+    fill_setup_compute(paths, spans)
+    server = [c for c in build_server_connects(spans) if not any(s.parent_id in phone_ids for s in c.steps)]
+    for c in server:
+        c.network = "tailscale" if c.via() == "tailscale" else network_label(c.ws.peer, home)
+    print(f"\n=== Server-only connects, clients without phone spans ({len(server)}) ===")
+    for c in server:
+        print_server_connect(c, args.verbose)
+    print_server_aggregates(server)
+
+
+if __name__ == "__main__":
+    main()
