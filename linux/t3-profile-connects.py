@@ -32,6 +32,20 @@ machine's public IPv4 address or IPv6 /64, otherwise the reverse-DNS domain or
 address prefix (`unknown` for other environments). The phone buffers 1000
 spans, so some connects lack steps.
 
+Reconnects: a successful connect plus the failed attempts of the same
+environment right before it (each within 30 s of the next and under 60 s
+long; longer ones span an app suspension), which the user waits through as
+one reconnect. Its total runs from the first attempt, or the app resume when
+that is later, to the successful connect's end. JS work in its window (first attempt -> live + 2 s):
+stalls, snapshot body/parse/decode and cache encode for that environment
+(`cache write` is saveShell/saveThread minus encode), and React commits of the
+app-wide Profiler (commits under 4 ms are not recorded). Stalls and commits are
+shared by every environment connecting at once. `screen` comes from the latest
+`client.app.resume` before the connect ends (`?` when none since 30 s before
+the first attempt);
+`on-screen` marks the environment of the thread open at resume. The slowest 5%
+lists reconnects at or above their group's p95 total.
+
 Server-only connects: clients without phone spans (desktop, web, evicted phone
 spans) are rebuilt from server spans: auth hops -> WS upgrade -> config
 subscription -> shell snapshot -> shell subscription. Gaps between server
@@ -76,6 +90,13 @@ PHONE_SERVICE = "t3code-mobile"
 PHONE_MARKER = '"otlp-span"'
 SHELL_SPANS = ("EnvironmentShellState.makeSubscribeInput", "EnvironmentShellState.applyItems", "MobileEnvironmentCache.saveShell")
 SHELL_TAIL_S = 2.0  # shell work this long after the subscription still shows in the waterfall
+SNAPSHOT_STEPS = ("snapshot.body", "snapshot.parse", "snapshot.decode")
+CACHE_SAVES = ("MobileEnvironmentCache.saveShell", "MobileEnvironmentCache.saveThread")
+JS_SPANS = (*SNAPSHOT_STEPS, "cache.encode", *CACHE_SAVES)  # attributed to an environment by trace
+APP_PROFILER = "app"  # the root Profiler; screen Profilers nest inside it
+RETRY_GAP_S = 30.0  # a failed attempt this close before the next one belongs to the same reconnect
+MAX_ATTEMPT_S = 60.0  # longer attempts span an app suspension, so the reconnect starts after them
+RESUME_WINDOW_S = 30.0
 LIFETIME_KINDS = ("ws", "config", "sync")
 AUTH_WINDOW_S = 60.0
 POST_CONNECT_WINDOW_S = 120.0
@@ -110,6 +131,7 @@ class PhoneSpan:
     trace_id: str
     attrs: dict
     error: str  # status message, "" on success
+    env: str = ""  # for JS_SPANS: the environment of their trace, "?" when unknown
 
     @property
     def ms(self) -> float:
@@ -160,6 +182,11 @@ class PhoneConnect:
     prefetch: Step | None = None  # the shell snapshot GET, which runs alongside the connect
     prefetch_ms: float | None = None  # the whole snapshot fetch, GET plus decoding
     shell: list[PhoneSpan] = field(default_factory=list)  # post-connect shell work, see SHELL_SPANS
+    js: list[PhoneSpan] = field(default_factory=list)  # snapshot, cache, and React work in the window, for -v
+
+    @property
+    def window_end(self) -> float:
+        return (self.span.end if self.live is None else self.live) + SHELL_TAIL_S
 
     @property
     def server_ms(self) -> float:
@@ -408,6 +435,11 @@ def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home:
     for s in phone:
         if s.host:
             trace_envs.setdefault(s.trace_id, set()).add(host_env.get(s.host, "?"))
+    js = [s for s in phone if s.name in JS_SPANS]
+    for s in js:
+        envs = trace_envs.get(s.trace_id, set())
+        s.env = next(iter(envs)) if len(envs) == 1 else "?"
+    commits = [s for s in phone if s.name == "react.commit"]
     shell = [s for s in phone if s.name in SHELL_SPANS]
     shell_gets = [s for s in phone if s.name == "http.client GET" and s.attrs["url.path"] == "/api/orchestration/shell"]
     connects.sort(key=lambda c: c.span.start)
@@ -424,6 +456,8 @@ def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home:
         end = c.span.end if c.live is None else c.live
         c.stalls = [s for s in stalls if s.end > c.span.start and s.start < end]
         c.shell = [s for s in shell if mine(s) and c.span.start <= s.start <= end + SHELL_TAIL_S]
+        c.js = [s for s in js if s.env == c.env and s.name not in CACHE_SAVES and c.span.start <= s.start <= c.window_end]
+        c.js += [s for s in commits if c.span.start <= s.start <= c.window_end]
         get = next((s for s in shell_gets if host_env.get(s.host) == c.env and c.span.start <= s.start <= end), None)
         if get:
             linked = server.get(get.span_id)
@@ -479,6 +513,15 @@ def p90(values: list[float]) -> float:
     return sorted(values)[math.ceil(len(values) * 0.9) - 1]
 
 
+def p95(values: list[float]) -> float:
+    return sorted(values)[math.ceil(len(values) * 0.95) - 1]
+
+
+def dist(values: list[float]) -> str:
+    """median/p95"""
+    return f"{statistics.median(values):.0f}/{p95(values):.0f}" if values else "-"
+
+
 def med(values: list[float]) -> str:
     return f"{statistics.median(values):5.0f}" if values else "    -"
 
@@ -508,6 +551,13 @@ def print_phone_connect(c: PhoneConnect, labels: dict[str, str], rtt: float | No
         rows.append((c.prefetch.start, f"{'shell GET':10s} {c.prefetch.ms:6.0f}ms {c.prefetch.split()}  (concurrent{whole})"))
     for s in c.shell:
         rows.append((s.start, f"{s.name.split('.')[-1]:10s} {s.ms:6.0f}ms  (shell)"))
+    for s in c.js:
+        if s.name == "react.commit":
+            a = s.attrs
+            rows.append((s.start, f"{'react':10s} {a['actualDuration']:6.0f}ms  ({a['profiler.id']} {a['phase']})"))
+        else:
+            counts = " ".join(f"{k.removeprefix('snapshot.')}={v}" for k, v in s.attrs.items() if k.startswith("snapshot."))
+            rows.append((s.start, f"{s.name.removeprefix('snapshot.'):10s} {s.ms:6.0f}ms  {counts}"))
     for s in c.stalls:
         rows.append((s.start, f"{'stall':10s} {s.ms:6.0f}ms"))
     for start, text in sorted(rows, key=lambda r: r[0]):
@@ -533,7 +583,7 @@ def print_phone_aggregates(connects: list[PhoneConnect], labels: dict[str, str],
         totals = [c.span.ms for c in ok]
         lives = [(c.live - c.span.start) * 1000 for c in ok if c.live is not None]
         print(
-            f"    ok total median={med(totals)} p90={p90(totals):5.0f} live median={med(lives)} | median"
+            f"    ok total median={med(totals)} p95={p95(totals):5.0f} live median={med(lives)} | median"
             f" server={med([c.server_ms for c in ok])} network={med([c.network_ms for c in ok])} phone={med([c.phone_ms for c in ok])}"
         )
         steps: dict[str, list[Step]] = {}
@@ -547,6 +597,124 @@ def print_phone_aggregates(connects: list[PhoneConnect], labels: dict[str, str],
                 f" + network {med([s.network_ms for s in ss])} + stall {med([s.stall_ms for s in ss])}"
                 f" | phone before {med([s.phone_before_ms for s in ss])}"
             )
+
+
+# --- reconnects -------------------------------------------------------------
+
+JS_COLUMNS = ("stall", "body", "parse", "decode", "react", "encode", "write")
+
+
+@dataclass
+class Reconnect:
+    attempts: list[PhoneConnect]  # time-ordered; the last one succeeded
+    start: float  # the first attempt, or the app resume when that is later
+    screen: str  # at the resume that started it, see RESUME_WINDOW_S
+    on_screen: bool  # its environment's thread was open
+    js: dict[str, float]  # ms per JS_COLUMNS in the window
+    concurrent: set[str] = field(default_factory=set)  # other environments reconnecting in the window
+
+    @property
+    def ok(self) -> PhoneConnect:
+        return self.attempts[-1]
+
+    @property
+    def total_ms(self) -> float:
+        return (self.ok.span.end - self.start) * 1000
+
+    @property
+    def retry_ms(self) -> float:
+        return max(0.0, self.ok.span.start - self.start) * 1000
+
+    def screen_label(self) -> str:
+        return f"{self.screen} ({'this' if self.on_screen else 'other'} env)" if self.screen == "thread" else self.screen
+
+
+def build_reconnects(connects: list[PhoneConnect], phone: list[PhoneSpan]) -> list[Reconnect]:
+    resumes = [s for s in phone if s.name == "client.app.resume"]
+    stalls = [s for s in phone if s.name == "client.jsThread.stall"]
+    commits = [s for s in phone if s.name == "react.commit" and s.attrs["profiler.id"] == APP_PROFILER]
+    js = [s for s in phone if s.name in JS_SPANS]
+    reconnects = []
+    attempts: dict[str, list[PhoneConnect]] = {}
+    for c in connects:
+        mine = attempts.setdefault(c.env, [])
+        if mine and c.span.start - mine[-1].span.end > RETRY_GAP_S:
+            mine.clear()
+        if c.outcome != "ok":
+            if c.span.ms > MAX_ATTEMPT_S * 1000:
+                mine.clear()
+            else:
+                mine.append(c)
+            continue
+        mine.append(c)
+        first, end = mine[0].span.start, c.window_end
+        resume = next((r for r in reversed(resumes) if first - RESUME_WINDOW_S <= r.start <= c.span.end), None)
+        start = max(first, resume.start) if resume else first
+        mine[:] = [a for a in mine if a.span.end > start]
+        work = lambda *names: sum(s.ms for s in js if s.env == c.env and s.name in names and start <= s.start <= end)
+        if c.steps:
+            reconnects.append(Reconnect(
+                attempts=list(mine),
+                start=start,
+                screen=resume.attrs["screen"] if resume else "?",
+                on_screen=resume is not None and resume.attrs.get("screen.environment.id") == c.env,
+                js={
+                    "stall": overlap_ms(stalls, start, end),
+                    "body": work("snapshot.body"),
+                    "parse": work("snapshot.parse"),
+                    "decode": work("snapshot.decode"),
+                    "react": sum(s.attrs["actualDuration"] for s in commits if start <= s.start <= end),
+                    "encode": work("cache.encode"),
+                    "write": work(*CACHE_SAVES) - work("cache.encode"),
+                },
+            ))
+        mine.clear()
+    for r in reconnects:
+        r.concurrent = {o.ok.env for o in reconnects if o.ok.env != r.ok.env and o.start < r.ok.window_end and r.start < o.ok.window_end}
+    return reconnects
+
+
+def reconnect_lines(group: list[Reconnect]) -> list[str]:
+    ok = [r.ok for r in group]
+    return [
+        f"total {dist([r.total_ms for r in group])}  retry {dist([r.retry_ms for r in group])}"
+        f"  final attempt: server {dist([c.server_ms for c in ok])}  network {dist([c.network_ms for c in ok])}  phone {dist([c.phone_ms for c in ok])}",
+        "js " + "  ".join(f"{k} {dist([r.js[k] for r in group])}" for k in JS_COLUMNS),
+    ]
+
+
+def print_reconnects(reconnects: list[Reconnect], labels: dict[str, str]) -> None:
+    groups: dict[tuple[str, str], list[Reconnect]] = {}
+    for r in reconnects:
+        groups.setdefault((r.ok.env, r.ok.path), []).append(r)
+    print("\n=== Reconnects by environment and path (median/p95 ms) ===")
+    for (env, path), group in sorted(groups.items(), key=lambda kv: (labels[kv[0][0]], kv[0][1])):
+        retried = sum(len(r.attempts) > 1 for r in group)
+        print(f"{labels[env]} {path}: {len(group)} reconnects, {retried} after failed attempts")
+        for line in reconnect_lines(group):
+            print(f"    {line}")
+
+    screens: dict[str, list[Reconnect]] = {}
+    for r in reconnects:
+        screens.setdefault(r.screen_label(), []).append(r)
+    print("\n=== Reconnects by screen at resume (median/p95 ms) ===")
+    for label, group in sorted(screens.items()):
+        print(f"{label}: {len(group)} reconnects")
+        for line in reconnect_lines(group):
+            print(f"    {line}")
+
+    print("\n=== Slowest 5%: reconnects at or above their group's p95 total ===")
+    for group in groups.values():
+        cutoff = p95([r.total_ms for r in group])
+        for r in (r for r in group if r.total_ms >= cutoff):
+            c = r.ok
+            tries = ", ".join(f"{a.outcome[:30]} {a.span.ms:.0f}ms" for a in r.attempts)
+            print(
+                f"{fmt_time(r.start)}  {labels[c.env]:16s} {c.path:9s} total={r.total_ms:6.0f}ms screen={r.screen_label()}"
+                f" concurrent=[{', '.join(sorted(labels[e] for e in r.concurrent))}]"
+            )
+            print(f"    attempts: {tries}  retry={r.retry_ms:.0f}ms  final: server={c.server_ms:.0f} network={c.network_ms:.0f} phone={c.phone_ms:.0f}")
+            print("    js " + "  ".join(f"{k}={r.js[k]:.0f}" for k in JS_COLUMNS))
 
 
 # --- server-only connects ---------------------------------------------------
@@ -675,6 +843,7 @@ def main() -> None:
         rtt = rtts.get(c.group())
         print_phone_connect(c, labels, statistics.median(rtt) if rtt else None, args.verbose)
     print_phone_aggregates(connects, labels, rtts)
+    print_reconnects(build_reconnects(connects, phone), labels)
 
     phone_ids = {s.span_id for s in phone}
     fill_setup_compute(paths, spans)
