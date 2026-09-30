@@ -25,6 +25,7 @@ from filelock import FileLock
 REPO = Path(__file__).resolve().parent
 HOME = Path.home().resolve()
 STALE_LOCK_SECONDS = 600
+ERROR_UNTRUSTED_MOUNT_POINT = 448
 # Upstream skills that stay unlinked, by name.
 SKIPPED_UPSTREAM_SKILLS = {
     "code-review",  # shadows Claude Code's bundled skill of the same name
@@ -59,7 +60,15 @@ def read_link(target: Path) -> str:
 
 
 def same_link(target: Path, link_text: str) -> bool:
-    return target.is_symlink() and read_link(target) == link_text
+    if not target.is_symlink() or read_link(target) != link_text:
+        return False
+    try:
+        os.stat(target)
+    except OSError as error:
+        # Sync enforces redirection trust on Windows (see require_trusted_links), so this
+        # is a link that shells under sshd can't follow either: replace it.
+        return getattr(error, "winerror", None) != ERROR_UNTRUSTED_MOUNT_POINT
+    return True
 
 
 def print_diff(target: Path, source: Path) -> None:
@@ -90,15 +99,26 @@ def link(target: Path, link_text: str, is_directory: bool) -> None:
         print_diff(target, source)
         raise SyncError(f"move these changes into {source}, then re-run")
 
-    try:
-        os.symlink(link_text, target, target_is_directory=is_directory)
-    except OSError as error:
-        if sys.platform == "win32":
-            raise SyncError(
-                f"could not create {target}; enable Developer Mode, then re-run"
-            ) from error
-        raise
+    os.symlink(link_text, target, target_is_directory=is_directory)
     print(f"linked {target} -> {link_text}")
+
+
+def require_trusted_links() -> None:
+    """Windows marks links created by a non-elevated process untrusted, and processes that
+    enforce redirection trust (sshd and every shell it spawns) refuse to follow them. Sync
+    therefore runs elevated so its links are trusted, and enforces the same policy on itself
+    so that same_link sees links the way SSH sessions do and replaces the untrusted ones."""
+    import ctypes
+
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        raise SyncError("run sync from an elevated shell: Windows only trusts links created by an elevated process")
+
+    class RedirectionTrustPolicy(ctypes.Structure):
+        _fields_ = [("Flags", ctypes.c_uint32)]
+
+    policy = RedirectionTrustPolicy(1)  # EnforceRedirectionTrust
+    if not ctypes.windll.kernel32.SetProcessMitigationPolicy(16, ctypes.byref(policy), ctypes.sizeof(policy)):
+        raise ctypes.WinError()
 
 
 def install_links(platform: str) -> None:
@@ -453,7 +473,7 @@ def install_pull_schedule(platform: str) -> None:
         # uvw is uv without a console window, so the task runs without a terminal popping up.
         command = subprocess.list2cmdline([shutil.which("uvw"), "run", "--quiet", str(REPO / "sync.py"), "pull"])
         subprocess.run(
-            [schtasks, "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/TR", command],
+            [schtasks, "/Create", "/F", "/TN", "Agent config sync", "/SC", "MINUTE", "/MO", "10", "/IT", "/RL", "HIGHEST", "/TR", command],
             check=True,
             capture_output=True,
         )
@@ -497,7 +517,8 @@ def main() -> None:
         raise SyncError("usage: sync.py [pull]")
 
     platform = platform_name()
-    sync_mattpocock_skills()
+    if platform == "windows":
+        require_trusted_links()
     for directory in (
         HOME / ".claude",
         HOME / ".codex",
@@ -505,7 +526,9 @@ def main() -> None:
         HOME / ".config" / "git",
     ):
         ensure_directory(directory)
+    # Links first: git reads the global ignore file through one of them.
     install_links(platform)
+    sync_mattpocock_skills()
     install_npm_cooldown()
     install_process_wrapper(platform)
     render_codex(platform)
