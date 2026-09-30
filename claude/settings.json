@@ -118,7 +118,6 @@
   "worktree": {
     "baseRef": "head"
   },
-  "enableArtifact": false,
   "statusLine": {
     "type": "command",
     "command": "uv run ~/.claude/statusline.py"
@@ -178,7 +177,6 @@
       ]
     }
   },
-  "feedbackDrafts": "off",
   "effortLevel": "high",
   "autoCompactWindow": 500000,
   "awaySummaryEnabled": false,
@@ -195,7 +193,6 @@
   "preferredNotifChannel": "auto",
   "autoCompactEnabled": true,
   "switchModelsOnFlag": true,
-  "autoContinueAtUsageLimit": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
@@ -231,5 +228,8 @@
       "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi-for-claude`) are routine"
     ]
   },
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "enableArtifact": false,
+  "feedbackDrafts": "off",
+  "autoContinueAtUsageLimit": true
 }
