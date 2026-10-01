@@ -40,8 +40,10 @@ Suspensions: a `client.app.resume` marks each return from background. The
 suspension before it is the longest pause in phone span activity in the 10 s
 before the resume, which the phone records only once its JS thread catches up.
 React commits, stalls, and snapshot and cache spans that contain a suspension
-are dropped. Data without resume spans relies on durations instead: commits
-and stalls over 5 s, and connect attempts over 60 s, span a suspension.
+are dropped. Durations catch suspensions without a resume span (the app can
+run briefly in background, and older data has no resume spans): commits and
+stalls over 5 s, and connect attempts over 20 s (they time out after 15 s),
+span a suspension.
 
 Reconnects: a successful connect plus the failed attempts of the same
 environment right before it (each within 30 s of the next, with no suspension
@@ -124,7 +126,7 @@ ACTIVITY = {  # environment work shown beside the slowest commits
 TRIGGER_S = 1.0  # environment work ending this soon before a commit may have triggered it
 RETRY_GAP_S = 30.0  # a failed attempt this close before the next one belongs to the same reconnect
 RESUME_LAG_S = 10.0  # the phone records a resume once its JS thread catches up, up to this long after JS resumes
-MAX_ATTEMPT_S = 60.0  # a longer attempt spans a suspension, for suspensions without a resume span
+MAX_ATTEMPT_S = 20.0  # attempts time out after 15 s, so a longer one spans a suspension
 MAX_JS_S = 5.0  # a longer commit or stall spans a suspension (the stall monitor's cap too)
 RESUME_WINDOW_S = 30.0  # a reconnect starting this soon after a suspension follows that resume
 LIFETIME_KINDS = ("ws", "config", "sync")
@@ -412,7 +414,7 @@ def find_suspensions(phone: list[PhoneSpan]) -> list[Suspension]:
 
 
 def suspended(suspensions: list[Suspension], start: float, end: float, max_s: float) -> bool:
-    """Whether [start, end] contains a suspension or, for data without resume spans, lasts over max_s."""
+    """Whether [start, end] contains a suspension or lasts over max_s, which catches suspensions without a resume span."""
     return end - start > max_s or any(start <= s.start and s.end <= end for s in suspensions)
 
 
