@@ -1,7 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["pytest"]
-# ///
 import os
 import subprocess
 import sys

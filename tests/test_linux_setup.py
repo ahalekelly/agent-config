@@ -1,7 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["pytest"]
-# ///
 import os
 import shutil
 import subprocess
@@ -63,4 +59,4 @@ def test_setup_renders_home_and_installs_sandbox_dependencies(tmp_path, home_nam
     assert "/home/akelly" not in rendered
     assert ("apt-get install -y bubblewrap socat trash-cli" in log.read_text()) == (missing_command is not None)
     assert (home / "Git").is_dir()
-    subprocess.run(["apparmor_parser", "--skip-kernel-load", "--skip-cache", str(profile)], check=True, capture_output=True, text=True)
+    subprocess.run(["/usr/sbin/apparmor_parser", "--skip-kernel-load", "--skip-cache", str(profile)], check=True, capture_output=True, text=True)
