@@ -11,6 +11,7 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 - `linux/`, `macos/` — OS-specific service and application files.
 - `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills. `bin/t3-thread.py` sends prompts to the local T3 service.
 - `sync.py` — cross-platform config installer.
+- `tests/` — run with `uv run tests/run.py`; extra arguments go to pytest.
 - `pi-for-claude/`, `browser-swarm/` — submodules.
 
 Runtime state, credentials, caches, and `~/.codex/config.toml.rendered` remain outside the repo.
