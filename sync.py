@@ -19,6 +19,7 @@ import sys
 import time
 import traceback
 from collections.abc import Mapping, MutableMapping
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import tomlkit
@@ -489,10 +490,11 @@ def install_pull_schedule(platform: str) -> None:
 def update_agents(platform: str) -> None:
     """Install the latest Claude Code and Codex; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
     claude = str(HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude"))
-    updates = {
-        claude: [claude, "update"],
-        "codex": ["brew", "upgrade", "--cask", "codex"] if platform == "macos" else ["npm", "install", "-g", "--min-release-age=0", "@openai/codex@latest"],
-    }
+    updates = {claude: [claude, "update"]}
+    if platform == "macos":
+        updates["codex"] = ["brew", "upgrade", "--cask", "codex"]
+    elif codex := settled_release("@openai/codex"):
+        updates["codex"] = ["npm", "install", "-g", "--min-release-age=0", codex]
     for tool, command in updates.items():
         # A broken tool still gets the update, since reinstalling is what repairs a half-finished npm install.
         before = tool_version(tool)
@@ -506,6 +508,16 @@ def update_agents(platform: str) -> None:
     run_quietly(["pi-for-claude", "update"])
 
 
+def settled_release(package: str) -> str | None:
+    """The package's latest release once it is an hour old, since npm lists a release minutes before its tarball downloads."""
+    view = json.loads(run_quietly(["npm", "view", package, "dist-tags.latest", "time", "--json"]))
+    version = view["dist-tags.latest"]
+    if datetime.now(UTC) - datetime.fromisoformat(view["time"][version]) < timedelta(hours=1):
+        print(f"keeping the installed {package} until {version} is an hour old")
+        return None
+    return f"{package}@{version}"
+
+
 def tool_version(tool: str) -> str | None:
     """`tool --version`, or None when the tool is missing or fails to run."""
     executable = shutil.which(tool)
@@ -515,7 +527,7 @@ def tool_version(tool: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def run_quietly(command: list[str]) -> None:
+def run_quietly(command: list[str]) -> str:
     # shutil.which finds Windows .cmd shims like npm.cmd, which CreateProcess can't resolve from a bare name.
     executable = shutil.which(command[0])
     if executable is None:
@@ -523,6 +535,7 @@ def run_quietly(command: list[str]) -> None:
     result = subprocess.run([executable, *command[1:]], capture_output=True, text=True)
     if result.returncode:
         raise SyncError(f"{' '.join(command)} exited {result.returncode}:\n{result.stdout}{result.stderr}")
+    return result.stdout
 
 
 def main() -> None:
@@ -554,7 +567,13 @@ def main() -> None:
         install_npm_cooldown()
         install_process_wrapper(platform)
         render_codex(platform)
-        update_agents(platform)
+        try:
+            update_agents(platform)
+        except SyncError as error:
+            # Registries and CDNs fail transiently; a second attempt also repairs a half-finished install.
+            print(f"{error}\nretrying the updates in 5 minutes", file=sys.stderr)
+            time.sleep(300)
+            update_agents(platform)
     else:
         install_pull_schedule(platform)
 
