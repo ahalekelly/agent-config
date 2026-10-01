@@ -489,15 +489,19 @@ def update_agents(platform: str) -> None:
 
 def tool_version(tool: str) -> str | None:
     """`tool --version`, or None when the tool is missing or fails to run."""
-    try:
-        result = subprocess.run([tool, "--version"], capture_output=True, text=True)
-    except FileNotFoundError:
+    executable = shutil.which(tool)
+    if executable is None:
         return None
+    result = subprocess.run([executable, "--version"], capture_output=True, text=True)
     return result.stdout.strip() if result.returncode == 0 else None
 
 
 def run_quietly(command: list[str]) -> None:
-    result = subprocess.run(command, capture_output=True, text=True)
+    # shutil.which finds Windows .cmd shims like npm.cmd, which CreateProcess can't resolve from a bare name.
+    executable = shutil.which(command[0])
+    if executable is None:
+        raise SyncError(f"{command[0]} not found on PATH")
+    result = subprocess.run([executable, *command[1:]], capture_output=True, text=True)
     if result.returncode:
         raise SyncError(f"{' '.join(command)} exited {result.returncode}:\n{result.stdout}{result.stderr}")
 
