@@ -232,6 +232,8 @@ class Runner:
         if not self.attempt("git", "merge", "--no-ff", "-m", message, ref, cwd=worktree).returncode:
             return []
         conflicted = self.capture("git", "diff", "--name-only", "--diff-filter=U", cwd=worktree).split()
+        if not conflicted:
+            raise RuntimeError(f"Merging {ref} failed without conflicts; see {self.log}")
         if conflicted != ["pnpm-lock.yaml"]:
             self.command("git", "merge", "--abort", cwd=worktree)
             return conflicted
@@ -303,8 +305,11 @@ class Runner:
         finally:
             self.command("git", "worktree", "remove", "--force", worktree)
         # The requested run skips the power check; -k cancels a run building the old main.
-        (STATE_DIR / "ship-requested").touch()
-        self.command("launchctl", "kickstart", "-k", f"gui/{os.getuid()}/com.akelly.t3-phone-builds")
+        request = STATE_DIR / "ship-requested"
+        request.touch()
+        if self.attempt("launchctl", "kickstart", "-k", f"gui/{os.getuid()}/com.akelly.t3-phone-builds").returncode:
+            request.unlink()
+            raise RuntimeError(f"Pushed {BRANCH}, but could not start a build: is the launchd job loaded?")
 
     def build(self):
         self.step = "checkout"
@@ -387,9 +392,7 @@ class Runner:
     def run(self):
         self.step = "power check"
         request = STATE_DIR / "ship-requested"
-        requested = request.exists()
-        request.unlink(missing_ok=True)
-        if not requested and "'AC Power'" not in self.capture("pmset", "-g", "batt"):
+        if not request.exists() and "'AC Power'" not in self.capture("pmset", "-g", "batt"):
             self.outcome = "on battery"
             return
         path = STATE_DIR / "state.json"
@@ -403,6 +406,8 @@ class Runner:
         self.step = "fetch branch"
         if not self.fetch():
             return
+        # Fetched, so this run builds the shipped main; a failed fetch leaves the request for the next run.
+        request.unlink(missing_ok=True)
         self.integrate()
         self.step = "fork revision"
         self.revision = self.capture("git", "rev-parse", f"origin/{BRANCH}").strip()
