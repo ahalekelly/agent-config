@@ -472,13 +472,25 @@ def update_agents(platform: str) -> None:
         "codex": ["brew", "upgrade", "--cask", "codex"] if platform == "macos" else ["npm", "install", "-g", "--min-release-age=0", "@openai/codex@latest"],
     }
     for tool, command in updates.items():
-        before = subprocess.run([tool, "--version"], check=True, capture_output=True, text=True).stdout.strip()
+        # A broken tool still gets the update, since reinstalling is what repairs a half-finished npm install.
+        before = tool_version(tool)
         run_quietly(command)
-        after = subprocess.run([tool, "--version"], check=True, capture_output=True, text=True).stdout.strip()
+        after = tool_version(tool)
+        if after is None:
+            raise SyncError(f"{tool} doesn't run after {' '.join(command)}; the next sync reinstalls it")
         if after != before:
             print(f"updated {tool}: {before} -> {after}")
     # Pi ships inside pi-for-claude, whose update installs Pi's latest release and updates its extensions.
     run_quietly(["pi-for-claude", "update"])
+
+
+def tool_version(tool: str) -> str | None:
+    """`tool --version`, or None when the tool is missing or fails to run."""
+    try:
+        result = subprocess.run([tool, "--version"], capture_output=True, text=True)
+    except FileNotFoundError:
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
 
 
 def run_quietly(command: list[str]) -> None:
