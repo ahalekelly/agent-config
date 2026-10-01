@@ -12,8 +12,6 @@ grep -qF '.agents/shell/bashrc.agents' "$HOME/.bashrc" || printf '\n# Agent conf
 npm install -g npm@11
 uv self update
 
-# Fork commit from sindresorhus/trash-cli#43: upstream 7.2.0 silently skips literal paths that look like globs, such as "a (1)".
-command -v trash >/dev/null || npm install -g github:ahalekelly/trash-cli#b207092a560294f0bc00d700b330c5de7771d6d2
 if ! command -v bwrap >/dev/null || ! command -v socat >/dev/null || ! command -v trash-empty >/dev/null; then
   sudo apt-get install -y bubblewrap socat trash-cli
 fi

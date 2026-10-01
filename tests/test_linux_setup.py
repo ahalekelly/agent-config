@@ -30,7 +30,6 @@ def test_setup_renders_home_and_installs_sandbox_dependencies(tmp_path, home_nam
     commands = {
         "npm": "exit 0",
         "uv": "exit 0",
-        "trash": "exit 0",
         "socat": "exit 0",
         "bwrap": "exit 0",
         "trash-empty": "exit 0",
