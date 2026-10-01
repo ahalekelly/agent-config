@@ -12,8 +12,11 @@ stopped. The target project (workspace root <target-root>) must already exist.
 The thread events are appended to the target's event store with the project id
 and workspace root rewritten; the target server projects them when it next
 starts, because projection bootstrap replays events past each projector's
-cursor. Provider resume cursors and checkpoint diff blobs come along. The
-target is backed up next to itself before any write.
+cursor. Until pingdotgg/t3code#14500 ships, that replay runs one projector at a
+time, so a thread with a checkpoint revert loses the assistant messages and
+activities of the turns the revert kept; copy those projection rows from the
+source afterwards. Provider resume cursors and checkpoint diff blobs come
+along. The target is backed up next to itself before any write.
 
 Not copied, so the caller moves them: attachment files (ids are printed),
 checkpoint refs (`git fetch <source-repo> 'refs/t3/*:refs/t3/*'`), and provider
