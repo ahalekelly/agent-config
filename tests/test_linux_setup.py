@@ -28,6 +28,8 @@ def test_setup_renders_home_and_installs_sandbox_dependencies(tmp_path, home_nam
     for name in ("grep", "mkdir"):
         (bin_dir / name).symlink_to(shutil.which(name))
     commands = {
+        "npm": "exit 0",
+        "uv": "exit 0",
         "trash": "exit 0",
         "socat": "exit 0",
         "bwrap": "exit 0",
