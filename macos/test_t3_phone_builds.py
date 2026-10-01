@@ -350,6 +350,48 @@ class IntegrationTests(StateTests):
         self.assertEqual(len(self.events), 1)
         self.assertIn("apps/mobile/app.config.ts", self.events[0][1])
 
+    def ship(self):
+        def attempt(runner, *args, cwd=phone.REPO):
+            return subprocess.CompletedProcess(args, self.git(args)[1])
+
+        def command(runner, *args, cwd=phone.REPO):
+            attempt(runner, *args, cwd=cwd).check_returncode()
+
+        with patch.object(phone.Runner, "capture", lambda _, *args, cwd=phone.REPO: self.git(args)[0]), \
+             patch.object(phone.Runner, "attempt", attempt), \
+             patch.object(phone.Runner, "command", command):
+            phone.Runner().ship("feat/voice")
+
+    def test_ship_regenerates_lockfile_verifies_pushes_and_builds(self):
+        self.conflicts = ["pnpm-lock.yaml"]
+        self.ship()
+        self.assertEqual(self.ran("git", "merge", "--no-ff", "-m", "merge voice", "feat/voice"),
+                         [("git", "merge", "--no-ff", "-m", "merge voice", "feat/voice")])
+        self.assertEqual(len(self.ran("git", "checkout", "--ours", "pnpm-lock.yaml")), 1)
+        steps = [args[:5] for args in self.commands if args[0] in ("npx", "launchctl") or args[1] == "push"]
+        self.assertEqual(steps, [
+            ("npx", "--yes", "corepack", "pnpm", "install"),
+            ("npx", "--yes", "corepack", "pnpm", "install"),
+            ("npx", "--yes", "corepack", "pnpm", "run"),
+            ("git", "push", "origin", "HEAD:refs/heads/main"),
+            ("launchctl", "kickstart", f"gui/{phone.os.getuid()}/com.akelly.t3-phone-builds"),
+        ])
+
+    def test_ship_stops_on_other_conflicts(self):
+        self.conflicts = ["apps/mobile/app.config.ts"]
+        with self.assertRaisesRegex(RuntimeError, "app.config.ts"):
+            self.ship()
+        self.assertEqual(len(self.ran("git", "merge", "--abort")), 1)
+        self.assertEqual(self.ran("git", "push"), [])
+        # One stale-worktree cleanup before the merge, one removal after it.
+        self.assertEqual(len(self.ran("git", "worktree", "remove")), 2)
+
+    def test_ship_refuses_a_branch_already_in_main(self):
+        self.integrated = True
+        with self.assertRaisesRegex(RuntimeError, "already in main"):
+            self.ship()
+        self.assertEqual(self.ran("git", "merge"), [])
+
     def test_conflict_is_not_retried_for_a_day(self):
         self.save({"integration_failure": record(revision=RELEASE)})
         self.conflicts = ["apps/mobile/app.config.ts"]

@@ -19,8 +19,13 @@ also installs it directly with `devicectl device install app`; otherwise a
 notification links the download page. Failed merges and builds back off for a
 day; a network outage waits for the next run and reports after a day.
 
-launchd owns this runner and its dedicated ~/Git/t3code checkout. Run manually
-only while the job is unloaded. State, logs, DerivedData, and the archive live
+`uv run ~/.agents/macos/t3-phone-builds.py ship <branch>` ships a fork branch,
+unsandboxed, from any directory: it merges the branch into main as `merge <last path segment>`, regenerates a conflicted
+pnpm-lock.yaml, installs with the frozen lockfile, typechecks apps/mobile,
+pushes main, and starts a run. It does not push the branch itself.
+
+launchd owns this runner and its dedicated ~/Git/t3code checkout. Run builds
+manually only while the job is unloaded. State, logs, DerivedData, and the archive live
 in ~/Library/Application Support/t3-phone-builds. Notifications open a thread
 in the T3 Code app on this Mac, so it must be open. Work on fixes in a separate
 worktree.
@@ -210,12 +215,30 @@ class Runner:
             self.save()
         return True
 
-    def integrate(self):
-        """Merge the newest stable upstream release into the fork's main branch.
+    def merge(self, ref, message, worktree):
+        """Merge ref into the fork's main branch in a fresh detached worktree.
 
         Fork branches that patch a dependency touch the same pnpm-lock.yaml lines as
-        every release, so that one conflict is regenerated; any other needs a person.
+        main, so that one conflict is regenerated from main's copy. Returns any other
+        conflicted files after aborting the merge; they need a person.
         """
+        self.attempt("git", "worktree", "remove", "--force", worktree)
+        self.command("git", "worktree", "prune")
+        self.command("git", "worktree", "add", "--detach", worktree, f"origin/{BRANCH}")
+        if not self.attempt("git", "merge", "--no-ff", "-m", message, ref, cwd=worktree).returncode:
+            return []
+        conflicted = self.capture("git", "diff", "--name-only", "--diff-filter=U", cwd=worktree).split()
+        if conflicted != ["pnpm-lock.yaml"]:
+            self.command("git", "merge", "--abort", cwd=worktree)
+            return conflicted
+        self.command("git", "checkout", "--ours", "pnpm-lock.yaml", cwd=worktree)
+        self.command("npx", "--yes", "corepack", "pnpm", "install", "--lockfile-only", cwd=worktree)
+        self.command("git", "add", "pnpm-lock.yaml", cwd=worktree)
+        self.command("git", "commit", "--no-edit", cwd=worktree)
+        return []
+
+    def integrate(self):
+        """Merge the newest stable upstream release into the fork's main branch."""
         self.step = "newest release"
         tags = self.capture("git", "tag", "--list", "v[0-9]*.[0-9]*.[0-9]*",
                             "--sort=-v:refname").split()
@@ -229,33 +252,22 @@ class Runner:
         self.revision, self.version, self.phase = commit, tag[1:], "integration_failure"
         self.step = f"merge {tag}"
         worktree = STATE_DIR / "integration"
-        self.attempt("git", "worktree", "remove", "--force", worktree)
-        self.command("git", "worktree", "prune")
-        self.command("git", "worktree", "add", "--detach", worktree, f"origin/{BRANCH}")
         try:
-            if self.attempt("git", "merge", "--no-ff", "-m", f"merge {tag}", tag, cwd=worktree).returncode:
-                conflicted = self.capture("git", "diff", "--name-only", "--diff-filter=U",
-                                          cwd=worktree).split()
-                if conflicted != ["pnpm-lock.yaml"]:
-                    self.command("git", "merge", "--abort", cwd=worktree)
-                    self.state["integration_failure"] = self.record()
-                    self.save()
-                    self.phase = None
-                    head = self.capture("git", "rev-parse", f"origin/{BRANCH}").strip()[:9]
-                    self.notify(
-                        f"iPhone build: merge {tag} into {BRANCH} needs a hand",
-                        f"Merging {tag} ({self.short}) into the fork's {BRANCH} at {head} conflicts in:\n"
-                        + "".join(f"- {name}\n" for name in conflicted)
-                        + f"Integrate in a worktree of your own; {REPO} belongs to the build service.\n"
-                        "Resolve the conflicts, then run pnpm install --frozen-lockfile and "
-                        "tsc --noEmit in apps/mobile, and push the merge to the fork's "
-                        f"{BRANCH}. The next run builds it.")
-                    return
-                self.command("git", "checkout", "--ours", "pnpm-lock.yaml", cwd=worktree)
-                self.command("npx", "--yes", "corepack", "pnpm", "install", "--lockfile-only",
-                             cwd=worktree)
-                self.command("git", "add", "pnpm-lock.yaml", cwd=worktree)
-                self.command("git", "commit", "--no-edit", cwd=worktree)
+            conflicted = self.merge(tag, f"merge {tag}", worktree)
+            if conflicted:
+                self.state["integration_failure"] = self.record()
+                self.save()
+                self.phase = None
+                head = self.capture("git", "rev-parse", f"origin/{BRANCH}").strip()[:9]
+                self.notify(
+                    f"iPhone build: merge {tag} into {BRANCH} needs a hand",
+                    f"Merging {tag} ({self.short}) into the fork's {BRANCH} at {head} conflicts in:\n"
+                    + "".join(f"- {name}\n" for name in conflicted)
+                    + f"Integrate in a worktree of your own; {REPO} belongs to the build service.\n"
+                    "Resolve the conflicts, then run pnpm install --frozen-lockfile and "
+                    "tsc --noEmit in apps/mobile, and push the merge to the fork's "
+                    f"{BRANCH}. The next run builds it.")
+                return
             self.step = f"push {tag}"
             self.command("git", "push", "origin", f"HEAD:refs/heads/{BRANCH}", cwd=worktree)
         finally:
@@ -265,6 +277,29 @@ class Runner:
         self.state.pop("integration_failure", None)
         self.save()
         self.phase = None
+
+    def ship(self, ref):
+        """Merge a fork branch into main, verify it, push it, and start a build now."""
+        self.log = STATE_DIR / "ship.log"
+        self.log.write_text("")
+        self.command("git", "fetch", "--quiet", "origin", f"refs/heads/{BRANCH}:refs/remotes/origin/{BRANCH}")
+        if not self.attempt("git", "merge-base", "--is-ancestor", ref, f"origin/{BRANCH}").returncode:
+            raise RuntimeError(f"{ref} is already in {BRANCH}")
+        worktree = STATE_DIR / "ship"
+        try:
+            conflicted = self.merge(ref, f"merge {ref.rsplit('/', 1)[-1]}", worktree)
+            if conflicted:
+                raise RuntimeError(f"Merging {ref} into {BRANCH} conflicts in {', '.join(conflicted)}; "
+                                   "merge it in a worktree of your own")
+            # The root prepare script writes git config, which this worktree shares with REPO.
+            self.command("npx", "--yes", "corepack", "pnpm", "install", "--frozen-lockfile",
+                         "--ignore-scripts", cwd=worktree)
+            self.command("npx", "--yes", "corepack", "pnpm", "run", "typecheck", cwd=worktree / "apps/mobile")
+            self.command("git", "push", "origin", f"HEAD:refs/heads/{BRANCH}", cwd=worktree)
+        finally:
+            self.command("git", "worktree", "remove", "--force", worktree)
+        # Starts a run unless one is already going; a running build finishes the old main first.
+        self.command("launchctl", "kickstart", f"gui/{os.getuid()}/com.akelly.t3-phone-builds")
 
     def build(self):
         self.step = "checkout"
@@ -412,6 +447,15 @@ class Runner:
 def main():
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     runner = Runner()
+    if sys.argv[1:2] == ["ship"]:
+        if len(sys.argv) != 3:
+            raise SystemExit("usage: t3-phone-builds.py ship <branch>")
+        try:
+            runner.ship(sys.argv[2])
+        except Exception:
+            print(f"Ship failed; command output is in {runner.log}", file=sys.stderr)
+            raise
+        return 0
     try:
         runner.run()
     except Exception:
