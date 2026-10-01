@@ -27,7 +27,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 T3 = Path(os.environ.get("T3CODE_HOME", Path.home() / ".t3"))
-MAC_APP = Path("/Applications/T3 Code (Alpha).app")
+# The desktop apps' Electron binary and bundled server entry point, per platform.
+DESKTOP_APPS = {
+    "darwin": (
+        Path("/Applications/T3 Code (Alpha).app/Contents/MacOS/T3 Code (Alpha)"),
+        Path("/Applications/T3 Code (Alpha).app/Contents/Resources/app.asar/apps/server/dist/bin.mjs"),
+    ),
+    "win32": (
+        Path.home() / "AppData/Local/Programs/t3code/T3 Code (Alpha).exe",
+        Path.home() / "AppData/Local/Programs/t3code/resources/server.asar/apps/server/dist/bin.mjs",
+    ),
+}
 
 
 def now() -> str:
@@ -35,15 +45,15 @@ def now() -> str:
 
 
 def t3_cli() -> tuple[list[str], dict[str, str]]:
-    """The `t3` CLI of the running server: the service install, or else the macOS desktop app's bundled server."""
+    """The `t3` CLI of the running server: the service install, or else the desktop app's bundled server."""
     service_state = T3 / "runtime/service-state.json"
     if service_state.is_file():
         version = json.loads(service_state.read_text())["activeVersion"]
         return [str(T3 / "runtime/versions" / version / "t3")], dict(os.environ)
-    if not MAC_APP.is_dir():
-        raise SystemExit(f"No T3 CLI found: neither {service_state} nor {MAC_APP} exists")
-    electron = MAC_APP / "Contents/MacOS" / MAC_APP.stem
-    server = MAC_APP / "Contents/Resources/app.asar/apps/server/dist/bin.mjs"
+    app = DESKTOP_APPS.get(sys.platform)
+    if not app or not app[0].is_file():
+        raise SystemExit(f"No T3 CLI found: neither {service_state} nor a T3 desktop app for {sys.platform} exists")
+    electron, server = app
     return [str(electron), str(server)], {**os.environ, "ELECTRON_RUN_AS_NODE": "1"}
 
 
