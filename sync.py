@@ -16,11 +16,12 @@ import socket
 import subprocess
 import sys
 import time
+import traceback
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 import tomlkit
-from filelock import FileLock
+from filelock import FileLock, Timeout
 
 REPO = Path(__file__).resolve().parent
 HOME = Path.home().resolve()
@@ -533,10 +534,41 @@ def main() -> None:
         install_pull_schedule(platform)
 
 
+FAILURE_REPORT = HOME / ".agent-config-sync-failure.md"
+
+
+def report_failure(error: str) -> None:
+    """Post a failed scheduled sync to a new thread in this machine's T3, once until a sync succeeds."""
+    if FAILURE_REPORT.exists():
+        return
+    host = socket.gethostname()
+    model = json.loads((HOME / ".t3/userdata/settings.json").read_text(encoding="utf-8"))["defaultModelSelection"]
+    pending = FAILURE_REPORT.with_suffix(".pending")
+    pending.write_text(
+        f"Automated alert from the scheduled agent-config sync on {host}, not a message from Adrian. "
+        f"`sync.py pull` failed:\n\n```\n{error.strip()}\n```\n\n"
+        f"Diagnose and fix it, then report what happened. Later scheduled syncs on {host} stay silent until one succeeds.\n",
+        encoding="utf-8",
+    )
+    subprocess.run(
+        [sys.executable, str(REPO / "bin/t3-thread.py"), "new", str(REPO), f"Sync failed on {host}",
+         model["instanceId"], model["model"], str(pending)],
+        check=True,
+    )
+    pending.replace(FAILURE_REPORT)
+
+
 if __name__ == "__main__":
     try:
         with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
             main()
-    except SyncError as error:
-        print(error, file=sys.stderr)
+    except Timeout:
+        print("another sync is running", file=sys.stderr)
         raise SystemExit(1)
+    except Exception as error:
+        message = str(error) if isinstance(error, SyncError) else traceback.format_exc()
+        print(message, file=sys.stderr)
+        if sys.argv[1:] == ["pull"]:
+            report_failure(message)
+        raise SystemExit(1)
+    FAILURE_REPORT.unlink(missing_ok=True)
