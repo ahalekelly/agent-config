@@ -40,9 +40,10 @@ Codex needs a rendered file, so sync deep-merges `codex/config.toml` with `codex
 
 ## Setup
 
-Requires git and [uv](https://docs.astral.sh/uv/). Windows also requires Developer Mode for symlinks.
+Requires git, [uv](https://docs.astral.sh/uv/), and the [GitHub CLI](https://cli.github.com/), which sync uses to push. Windows also requires Developer Mode for symlinks.
 
 ```sh
+gh auth login && gh auth setup-git
 git clone --recurse-submodules https://github.com/ahalekelly/agent-config.git ~/.agents
 uv run ~/.agents/sync.py
 (cd ~/.agents/pi-for-claude && npm install && npm link)
