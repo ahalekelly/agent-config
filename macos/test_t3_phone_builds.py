@@ -96,6 +96,13 @@ class RunTests(StateTests):
         self.assertEqual(self.builds, 0)
         self.assertEqual(self.events, [])
 
+    def test_shipped_run_builds_on_battery_once(self):
+        self.power = "Now drawing from 'Battery Power'"
+        (self.root / "ship-requested").touch()
+        self.assertEqual(self.run_service(), 0)
+        self.assertEqual(self.builds, 1)
+        self.assertFalse((self.root / "ship-requested").exists())
+
     def test_unreachable_phone_links_download_page_once_and_retries_install(self):
         self.assertEqual(self.run_service(), 0)
         self.assertEqual(self.run_service(), 0)
@@ -374,8 +381,9 @@ class IntegrationTests(StateTests):
             ("npx", "--yes", "corepack", "pnpm", "install"),
             ("npx", "--yes", "corepack", "pnpm", "run"),
             ("git", "push", "origin", "HEAD:refs/heads/main"),
-            ("launchctl", "kickstart", f"gui/{phone.os.getuid()}/com.akelly.t3-phone-builds"),
+            ("launchctl", "kickstart", "-k", f"gui/{phone.os.getuid()}/com.akelly.t3-phone-builds"),
         ])
+        self.assertTrue((self.root / "ship-requested").exists())
 
     def test_ship_stops_on_other_conflicts(self):
         self.conflicts = ["apps/mobile/app.config.ts"]

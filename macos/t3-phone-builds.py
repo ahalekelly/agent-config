@@ -22,7 +22,8 @@ day; a network outage waits for the next run and reports after a day.
 `uv run ~/.agents/macos/t3-phone-builds.py ship <branch>` ships a fork branch,
 unsandboxed, from any directory: it merges the branch into main as `merge <last path segment>`, regenerates a conflicted
 pnpm-lock.yaml, installs with the frozen lockfile, typechecks apps/mobile,
-pushes main, and starts a run. It does not push the branch itself.
+pushes main, and starts a run even on battery, cancelling any run in progress.
+It does not push the branch itself.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Run builds
 manually only while the job is unloaded. State, logs, DerivedData, and the archive live
@@ -165,6 +166,9 @@ class Runner:
                                   capture_output=True)
         if unlocked.returncode:
             raise RuntimeError(f"Could not unlock {KEYCHAIN}: {unlocked.stderr.decode().strip()}")
+        # A cancelled run leaves its archive folder behind.
+        for stale in STATE_DIR.glob("archive-*"):
+            shutil.rmtree(stale)
         with tempfile.TemporaryDirectory(dir=STATE_DIR, prefix="archive-") as folder:
             archive, exported, options = (Path(folder) / name
                                           for name in ("T3Code.xcarchive", "export", "options.plist"))
@@ -298,8 +302,9 @@ class Runner:
             self.command("git", "push", "origin", f"HEAD:refs/heads/{BRANCH}", cwd=worktree)
         finally:
             self.command("git", "worktree", "remove", "--force", worktree)
-        # Starts a run unless one is already going; a running build finishes the old main first.
-        self.command("launchctl", "kickstart", f"gui/{os.getuid()}/com.akelly.t3-phone-builds")
+        # The requested run skips the power check; -k cancels a run building the old main.
+        (STATE_DIR / "ship-requested").touch()
+        self.command("launchctl", "kickstart", "-k", f"gui/{os.getuid()}/com.akelly.t3-phone-builds")
 
     def build(self):
         self.step = "checkout"
@@ -381,7 +386,10 @@ class Runner:
 
     def run(self):
         self.step = "power check"
-        if "'AC Power'" not in self.capture("pmset", "-g", "batt"):
+        request = STATE_DIR / "ship-requested"
+        requested = request.exists()
+        request.unlink(missing_ok=True)
+        if not requested and "'AC Power'" not in self.capture("pmset", "-g", "batt"):
             self.outcome = "on battery"
             return
         path = STATE_DIR / "state.json"
