@@ -11,6 +11,7 @@ import copy
 import difflib
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -44,6 +45,15 @@ def platform_name() -> str:
     if sys.platform == "win32":
         return "windows"
     raise SyncError(f"unsupported platform: {sys.platform}")
+
+
+def dark_wake() -> bool:
+    """Whether macOS is in a dark wake: a maintenance wake during sleep, with the display off and the network about to drop."""
+    state = subprocess.run(["pmset", "-g", "systemstate"], capture_output=True, text=True, check=True).stdout
+    capabilities = re.search(r"^Current System Capabilities are: (.*)$", state, re.MULTILINE)
+    if capabilities is None:
+        raise SyncError(f"pmset -g systemstate lists no capabilities:\n{state}")
+    return "Graphics" not in capabilities[1].split()
 
 
 def ensure_directory(path: Path) -> None:
@@ -578,6 +588,9 @@ def report_failure(error: str) -> None:
 
 if __name__ == "__main__":
     try:
+        # launchd runs overdue jobs in dark wakes, where the Mac sleeps again within seconds and cuts off the sync's downloads.
+        if sys.argv[1:] == ["pull"] and sys.platform == "darwin" and dark_wake():
+            raise SystemExit(0)
         with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
             main()
     except Timeout:
