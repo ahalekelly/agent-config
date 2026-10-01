@@ -491,19 +491,34 @@ def update_agents(platform: str) -> None:
     claude = str(HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude"))
     updates = {
         claude: [claude, "update"],
-        "codex": ["brew", "upgrade", "--cask", "codex"] if platform == "macos" else ["npm", "install", "-g", "--min-release-age=0", "@openai/codex@latest"],
+        "codex": ["brew", "upgrade", "--cask", "codex"] if platform == "macos" else ["npm", "install", "-g", *HOUR_OLD_RELEASES, "@openai/codex@latest"],
     }
     for tool, command in updates.items():
         # A broken tool still gets the update, since reinstalling is what repairs a half-finished npm install.
         before = tool_version(tool)
-        run_quietly(command)
+        run_retrying(command)
         after = tool_version(tool)
         if after is None:
             raise SyncError(f"{tool} doesn't run after {' '.join(command)}; the next sync reinstalls it")
         if after != before:
             print(f"updated {tool}: {before} -> {after}")
     # Pi ships inside pi-for-claude, whose update installs Pi's latest release and updates its extensions.
-    run_quietly(["pi-for-claude", "update"])
+    run_retrying(["pi-for-claude", "update"])
+
+
+# npm lists a release minutes before its tarball downloads, so taking the newest release can 404.
+# Clearing the exclude list puts the trusted tools, which ~/.npmrc exempts, under the hour-long window.
+HOUR_OLD_RELEASES = ["--min-release-age=0.042", "--min-release-age-exclude="]
+
+
+def run_retrying(command: list[str]) -> None:
+    """Run an update, retrying once after a pause, since registries and CDNs fail transiently."""
+    try:
+        run_quietly(command)
+    except SyncError as error:
+        print(f"{error}\nretrying in 5 minutes", file=sys.stderr)
+        time.sleep(300)
+        run_quietly(command)
 
 
 def tool_version(tool: str) -> str | None:
