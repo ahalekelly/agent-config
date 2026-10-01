@@ -159,6 +159,8 @@ def install_npm_cooldown() -> None:
 
     npm reads the exclusions as one comma-separated value; the `key[]=value` form
     that `~/.npmrc` also accepts is not something `npm config set` will write.
+    `config set` runs without the update notifier: in npm 11.19 the notifier reads the
+    just-set exclusions as a string instead of a list and crashes before the file is saved.
     """
     npm = shutil.which("npm")
     if not npm:
@@ -179,7 +181,7 @@ def install_npm_cooldown() -> None:
     wanted = [f"{key}={value}" for key, value in settings.items()]
     if current == wanted:
         return
-    subprocess.run([npm, "config", "set", *wanted, "--location=user"], check=True, capture_output=True, text=True)
+    run_quietly([npm, "config", "set", *wanted, "--location=user", "--no-update-notifier"])
     print(f"set {', '.join(keys)} in {HOME / '.npmrc'}")
 
 
@@ -547,7 +549,8 @@ def report_failure(error: str) -> None:
     pending.write_text(
         f"Automated alert from the scheduled agent-config sync on {host}, not a message from Adrian. "
         f"`sync.py pull` failed:\n\n```\n{error.strip()}\n```\n\n"
-        f"Diagnose and fix it, then report what happened. Later scheduled syncs on {host} stay silent until one succeeds.\n",
+        f"Diagnose it. Fix it only if the fix clearly has no downside; otherwise explain the tradeoff and leave the decision to Adrian. "
+        f"Later scheduled syncs on {host} stay silent until one succeeds.\n",
         encoding="utf-8",
     )
     subprocess.run(
