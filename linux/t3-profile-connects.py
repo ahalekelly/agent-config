@@ -6,20 +6,24 @@
 """Profile client connect waterfalls from T3 server trace logs.
 
 Reads the trace archive kept by t3-trace-archive.py plus the live
-server.trace.ndjson* files.
+server.trace.ndjson* files. Pass several --logs globs to combine servers: the
+phone posts its span buffer to whichever environment is ready, so its spans
+are split across servers' logs. Copy the other machines' server.trace.ndjson*
+files locally and add their globs; spans are deduped by (traceId, spanId).
 
-Phone connects: the mobile app posts its spans (service `t3code-mobile`) to
-whichever environment is ready, so this server's traces hold phone connects to
-every environment, including attempts that never reached this server. Each
+Phone connects: the mobile app's spans (service `t3code-mobile`) hold its
+connects to every environment, including attempts that reached no server. Each
 `ConnectionDriver.connect` is one row: environment (the phone's name for it),
 path (`tailscale` for .ts.net and 100.64.0.0/10 hosts, `relay` for
 t3coderelay, else `direct`), outcome, total, and `live` (connect start -> the
 phone's first shell subscription for that environment; `?` when a
-subscription of unknown environment came first). Each wait (HTTP request,
-ws-open, config) splits three ways:
-  server  - this server's span for the request, linked exactly: it is a child
-            of the phone's request span. Only requests to this server have one;
-            socket waits never do, so their server time counts as network.
+subscription of unknown environment came first). `bg` marks a connect the app
+went to background during. Each wait (HTTP request, ws-open, config) splits
+three ways:
+  server  - the server's span for the request, linked exactly: it is a child
+            of the phone's request span. Only requests to a server whose logs
+            were read have one; socket waits never do, so their server time
+            counts as network.
   phone   - time with no wait in flight, plus `client.jsThread.stall` time
             inside a wait. Stalls under 50 ms go undetected, so network is an
             upper bound.
@@ -27,24 +31,36 @@ ws-open, config) splits three ways:
 `rtt` is the median `RpcClient.server.probe` round trip, minus stalls, for
 that environment, path, and network; the first request shows its network time
 in RTTs, which exposes handshake cost. `net` is `tailscale`, or for relay and
-direct connects the client IP this server saw: `home` when it shares this
+direct connects the client IP the server saw: `home` when it shares this
 machine's public IPv4 address or IPv6 /64, otherwise the reverse-DNS domain or
-address prefix (`unknown` for other environments). The phone buffers 1000
+address prefix (`unknown` without a server span). The phone buffers 1000
 spans, so some connects lack steps.
 
+Suspensions: a `client.app.resume` marks each return from background. The
+suspension before it is the longest pause in phone span activity in the 10 s
+before the resume, which the phone records only once its JS thread catches up.
+React commits, stalls, and snapshot and cache spans that contain a suspension
+are dropped. Data without resume spans relies on durations instead: commits
+and stalls over 5 s, and connect attempts over 60 s, span a suspension.
+
 Reconnects: a successful connect plus the failed attempts of the same
-environment right before it (each within 30 s of the next and under 60 s
-long; longer ones span an app suspension), which the user waits through as
-one reconnect. Its total runs from the first attempt, or the app resume when
-that is later, to the successful connect's end. JS work in its window (first attempt -> live + 2 s):
-stalls, snapshot body/parse/decode and cache encode for that environment
-(`cache write` is saveShell/saveThread minus encode), and React commits of the
-app-wide Profiler (commits under 4 ms are not recorded). Stalls and commits are
-shared by every environment connecting at once. `screen` comes from the latest
-`client.app.resume` before the connect ends (`?` when none since 30 s before
-the first attempt);
-`on-screen` marks the environment of the thread open at resume. The slowest 5%
-lists reconnects at or above their group's p95 total.
+environment right before it (each within 30 s of the next, with no suspension
+between), which the user waits through as one reconnect. Its total runs from
+the first attempt to the successful connect's end; reconnects with an attempt
+the app went to background during are listed separately and left out of the
+stats. `js` covers the window first attempt -> live and is shared by every
+environment connecting at once: stall and React time (commits of the app-wide
+Profiler; commits under 4 ms are not recorded), plus the longest single stall
+and commit, named by the screen Profiler (home, thread) that committed with
+it. `sync` is that environment's work through live + 2 s: snapshot body,
+parse, and decode (from the parse's end, since the schema decodes before its
+span starts), cache encode, and cache write (saveShell/saveThread minus
+encode). `screen` comes from the resume of a suspension ending within 30 s
+before the first attempt (`?` when none); `this/other env` says whether the
+open thread belongs to the reconnecting environment. The slowest 5% lists
+reconnects at or above their group's p95 total. The slowest React commits
+list the environments connecting or syncing during each commit or the second
+before it.
 
 Server-only connects: clients without phone spans (desktop, web, evicted phone
 spans) are rebuilt from server spans: auth hops -> WS upgrade -> config
@@ -57,6 +73,7 @@ Usage:
 """
 
 import argparse
+import bisect
 import glob
 import gzip
 import ipaddress
@@ -67,6 +84,7 @@ import socket
 import statistics
 import subprocess
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
@@ -94,9 +112,21 @@ SNAPSHOT_STEPS = ("snapshot.body", "snapshot.parse", "snapshot.decode")
 CACHE_SAVES = ("MobileEnvironmentCache.saveShell", "MobileEnvironmentCache.saveThread")
 JS_SPANS = (*SNAPSHOT_STEPS, "cache.encode", *CACHE_SAVES)  # attributed to an environment by trace
 APP_PROFILER = "app"  # the root Profiler; screen Profilers nest inside it
+BLOCKING = ("react.commit", "client.jsThread.stall")
+JS_WORK = (*BLOCKING, *JS_SPANS)  # dropped when they span a suspension
+ACTIVITY = {  # environment work shown beside the slowest commits
+    "ConnectionDriver.connect": "connect",
+    "environment.initialSync": "initialSync",
+    "clientRuntime.state.fetchEnvironmentShellSnapshot": "snapshot",
+    "EnvironmentShellState.applyItems": "applyItems",
+    "MobileEnvironmentCache.saveShell": "saveShell",
+}
+TRIGGER_S = 1.0  # environment work ending this soon before a commit may have triggered it
 RETRY_GAP_S = 30.0  # a failed attempt this close before the next one belongs to the same reconnect
-MAX_ATTEMPT_S = 60.0  # longer attempts span an app suspension, so the reconnect starts after them
-RESUME_WINDOW_S = 30.0
+RESUME_LAG_S = 10.0  # the phone records a resume once its JS thread catches up, up to this long after JS resumes
+MAX_ATTEMPT_S = 60.0  # a longer attempt spans a suspension, for suspensions without a resume span
+MAX_JS_S = 5.0  # a longer commit or stall spans a suspension (the stall monitor's cap too)
+RESUME_WINDOW_S = 30.0  # a reconnect starting this soon after a suspension follows that resume
 LIFETIME_KINDS = ("ws", "config", "sync")
 AUTH_WINDOW_S = 60.0
 POST_CONNECT_WINDOW_S = 120.0
@@ -131,7 +161,7 @@ class PhoneSpan:
     trace_id: str
     attrs: dict
     error: str  # status message, "" on success
-    env: str = ""  # for JS_SPANS: the environment of their trace, "?" when unknown
+    env: str = ""  # its nearest ancestor's environment, else its trace's; "?" when unknown
 
     @property
     def ms(self) -> float:
@@ -183,10 +213,15 @@ class PhoneConnect:
     prefetch_ms: float | None = None  # the whole snapshot fetch, GET plus decoding
     shell: list[PhoneSpan] = field(default_factory=list)  # post-connect shell work, see SHELL_SPANS
     js: list[PhoneSpan] = field(default_factory=list)  # snapshot, cache, and React work in the window, for -v
+    suspended: bool = False  # the app went to background before it ended
+
+    @property
+    def end(self) -> float:
+        return self.span.end if self.live is None else self.live
 
     @property
     def window_end(self) -> float:
-        return (self.span.end if self.live is None else self.live) + SHELL_TAIL_S
+        return self.end + SHELL_TAIL_S
 
     @property
     def server_ms(self) -> float:
@@ -237,15 +272,16 @@ def open_trace(path: str):
 
 
 def parse_spans(paths: list[str]) -> tuple[list[Span], list[PhoneSpan]]:
-    spans: dict[str, Span] = {}
-    phone: dict[str, PhoneSpan] = {}
+    """Server and phone spans, deduped by (traceId, spanId), since several servers' logs can hold the same phone span."""
+    spans: dict[tuple[str, str], Span] = {}
+    phone: dict[tuple[str, str], PhoneSpan] = {}
     for path in paths:
         with open_trace(path) as f:
             for line in f:
                 if PHONE_MARKER in line:
                     row = json.loads(line)
                     if row["resourceAttributes"].get("service.name") == PHONE_SERVICE:
-                        phone[row["spanId"]] = PhoneSpan(
+                        phone[row["traceId"], row["spanId"]] = PhoneSpan(
                             name=row["name"],
                             start=int(row["startTimeUnixNano"]) / 1e9,
                             end=int(row["endTimeUnixNano"]) / 1e9,
@@ -281,18 +317,23 @@ def parse_spans(paths: list[str]) -> tuple[list[Span], list[PhoneSpan]]:
                 start = int(row["startTimeUnixNano"]) / 1e9
                 end = int(row["endTimeUnixNano"]) / 1e9
                 query = attrs.get("url.query", "")
-                spans[row["spanId"]] = Span(
+                spans[row["traceId"], row["spanId"]] = Span(
                     kind=kind,
                     start=start,
                     end=end,
                     compute_ms=(end - start) * 1000,
-                    trace_id=row.get("traceId", ""),
+                    trace_id=row["traceId"],
                     span_id=row["spanId"],
                     parent_id=row.get("parentSpanId", ""),
                     peer=attrs.get("http.request.header.cf-connecting-ip") or attrs.get("client.address", ""),
                     host=attrs.get("http.request.header.host", ""),
                     query=dict(kv.split("=", 1) for kv in query.split("&") if "=" in kv),
                 )
+    # The schema decodes eagerly, before its span starts, so decode time runs from the parse's end.
+    parses = {(s.trace_id, s.parent_id): s for s in phone.values() if s.name == "snapshot.parse"}
+    for s in phone.values():
+        if s.name == "snapshot.decode" and (s.trace_id, s.parent_id) in parses:
+            s.start = parses[s.trace_id, s.parent_id].end
     return sorted(spans.values(), key=lambda s: s.start), sorted(phone.values(), key=lambda s: s.start)
 
 
@@ -346,6 +387,33 @@ def host_path(host: str) -> str:
 
 def overlap_ms(spans: list[PhoneSpan], start: float, end: float) -> float:
     return sum(max(0.0, min(s.end, end) - max(s.start, start)) for s in spans) * 1000
+
+
+@dataclass
+class Suspension:
+    start: float  # the phone's last activity before going to background
+    end: float  # JS resuming
+    resume: PhoneSpan
+
+
+def find_suspensions(phone: list[PhoneSpan]) -> list[Suspension]:
+    """Before each return from background, the longest pause in phone span activity ending after
+    the previous resume and at most RESUME_LAG_S before this one: no span starts or ends while the app is suspended."""
+    events = sorted(t for s in phone for t in (s.start, s.end))
+    out = []
+    previous = -math.inf
+    for r in (s for s in phone if s.name == "client.app.resume"):
+        lo = max(1, bisect.bisect_right(events, max(previous, r.start - RESUME_LAG_S)))
+        j = max(range(lo, bisect.bisect_right(events, r.start)), key=lambda j: events[j] - events[j - 1], default=None)
+        if j is not None and not r.attrs["app.launch"]:
+            out.append(Suspension(events[j - 1], events[j], r))
+        previous = r.start
+    return out
+
+
+def suspended(suspensions: list[Suspension], start: float, end: float, max_s: float) -> bool:
+    """Whether [start, end] contains a suspension or, for data without resume spans, lasts over max_s."""
+    return end - start > max_s or any(start <= s.start and s.end <= end for s in suspensions)
 
 
 def stall_ms(step: "Step", stalls: list[PhoneSpan]) -> float:
@@ -402,7 +470,7 @@ def connect_steps(connect: PhoneSpan, tree: list[PhoneSpan], server: dict[str, S
     return steps
 
 
-def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home: list[Net]) -> list[PhoneConnect]:
+def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home: list[Net], suspensions: list[Suspension]) -> list[PhoneConnect]:
     by_id = {s.span_id: s for s in phone}
     children: dict[str, list[PhoneSpan]] = {}
     for s in phone:
@@ -435,10 +503,10 @@ def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home:
     for s in phone:
         if s.host:
             trace_envs.setdefault(s.trace_id, set()).add(host_env.get(s.host, "?"))
-    js = [s for s in phone if s.name in JS_SPANS]
-    for s in js:
+    for s in phone:
         envs = trace_envs.get(s.trace_id, set())
-        s.env = next(iter(envs)) if len(envs) == 1 else "?"
+        s.env = environment_of(s, by_id) or (next(iter(envs)) if len(envs) == 1 else "?")
+    js = [s for s in phone if s.name in JS_SPANS]
     commits = [s for s in phone if s.name == "react.commit"]
     shell = [s for s in phone if s.name in SHELL_SPANS]
     shell_gets = [s for s in phone if s.name == "http.client GET" and s.attrs["url.path"] == "/api/orchestration/shell"]
@@ -453,7 +521,8 @@ def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home:
                 c.live = subscribe.start
             else:
                 c.live_note = "none" if subscribe is None else "?"  # ? = a subscription of unknown environment came first
-        end = c.span.end if c.live is None else c.live
+        end = c.end
+        c.suspended = suspended(suspensions, c.span.start, end, MAX_ATTEMPT_S)
         c.stalls = [s for s in stalls if s.end > c.span.start and s.start < end]
         c.shell = [s for s in shell if mine(s) and c.span.start <= s.start <= end + SHELL_TAIL_S]
         c.js = [s for s in js if s.env == c.env and s.name not in CACHE_SAVES and c.span.start <= s.start <= c.window_end]
@@ -467,26 +536,21 @@ def build_phone_connects(phone: list[PhoneSpan], server_spans: list[Span], home:
     return connects
 
 
-def environment_of(span: PhoneSpan, by_id: dict[str, PhoneSpan]) -> PhoneSpan | None:
-    """The nearest ancestor naming an environment (EnvironmentSupervisor.make or ConnectionDriver.connect)."""
+def environment_of(span: PhoneSpan, by_id: dict[str, PhoneSpan]) -> str | None:
+    """The environment named by the span or its nearest ancestor (EnvironmentSupervisor.make, ConnectionDriver.connect, EnvironmentRpc.request)."""
     while span is not None:
-        if "environment.id" in span.attrs or "connection.environment.id" in span.attrs:
-            return span
+        if env := span.attrs.get("environment.id") or span.attrs.get("connection.environment.id"):
+            return env
         span = by_id.get(span.parent_id)
     return None
 
 
 def probe_rtts(phone: list[PhoneSpan], connects: list[PhoneConnect]) -> dict[tuple[str, str, str], list[float]]:
     """Probe round trips per connect group; a probe runs on the socket of its environment's latest connect."""
-    by_id = {s.span_id: s for s in phone}
     stalls = [s for s in phone if s.name == "client.jsThread.stall"]
     rtts: dict[tuple[str, str, str], list[float]] = {}
     for p in (s for s in phone if s.name == "RpcClient.server.probe" and not s.error):
-        owner = environment_of(p, by_id)
-        if owner is None:
-            continue
-        env = owner.attrs.get("environment.id") or owner.attrs["connection.environment.id"]
-        latest = [c for c in connects if c.env == env and c.outcome == "ok" and c.span.start <= p.start]
+        latest = [c for c in connects if c.env == p.env and c.outcome == "ok" and c.span.start <= p.start]
         if latest:
             rtts.setdefault(latest[-1].group(), []).append(p.ms - overlap_ms(stalls, p.start, p.end))
     return rtts
@@ -529,9 +593,10 @@ def med(values: list[float]) -> str:
 def print_phone_connect(c: PhoneConnect, labels: dict[str, str], rtt: float | None, verbose: bool) -> None:
     live = f"{(c.live - c.span.start) * 1000:5.0f}ms" if c.live is not None else f"{c.live_note or '-':>7s}"
     split = f"server={c.server_ms:4.0f} network={c.network_ms:5.0f} phone={c.phone_ms:4.0f}" if c.steps else "steps evicted"
-    stall = overlap_ms(c.stalls, c.span.start, c.span.end if c.live is None else c.live)
+    stall = overlap_ms(c.stalls, c.span.start, c.end)
+    outcome = c.outcome[:37] + (" bg" if c.suspended else "")
     print(
-        f"{fmt_time(c.span.start)}  {labels[c.env]:16s} {c.path:9s} net={c.network:14s} {c.outcome[:40]:12s} "
+        f"{fmt_time(c.span.start)}  {labels[c.env]:16s} {c.path:9s} net={c.network:14s} {outcome:12s} "
         f"total={c.span.ms:6.0f}ms live={live} {split} stall={stall:4.0f}"
     )
     if not verbose:
@@ -573,11 +638,12 @@ def print_phone_aggregates(connects: list[PhoneConnect], labels: dict[str, str],
         env, path, network = key
         outcomes: dict[str, int] = {}
         for c in group:
-            outcomes[c.outcome.split(":")[0]] = outcomes.get(c.outcome.split(":")[0], 0) + 1
+            kind = "background" if c.suspended else c.outcome.split(":")[0]
+            outcomes[kind] = outcomes.get(kind, 0) + 1
         rtt = rtts.get(key, [])
         rtt_s = f" probe rtt median={med(rtt)} p90={p90(rtt):5.0f} (n={len(rtt)})" if rtt else ""
         print(f"{labels[env]} {path} net={network}: {len(group)} connects {outcomes}{rtt_s}")
-        ok = [c for c in group if c.outcome == "ok" and c.steps]
+        ok = [c for c in group if c.outcome == "ok" and c.steps and not c.suspended]
         if not ok:
             continue
         totals = [c.span.ms for c in ok]
@@ -601,16 +667,16 @@ def print_phone_aggregates(connects: list[PhoneConnect], labels: dict[str, str],
 
 # --- reconnects -------------------------------------------------------------
 
-JS_COLUMNS = ("stall", "body", "parse", "decode", "react", "encode", "write")
+JS_COLUMNS = ("stall", "max stall", "react", "max commit")  # JS thread time in the window, shared by all environments
+SYNC_COLUMNS = ("body", "parse", "decode", "encode", "write")  # this environment's work through live + SHELL_TAIL_S
 
 
 @dataclass
 class Reconnect:
     attempts: list[PhoneConnect]  # time-ordered; the last one succeeded
-    start: float  # the first attempt, or the app resume when that is later
-    screen: str  # at the resume that started it, see RESUME_WINDOW_S
-    on_screen: bool  # its environment's thread was open
-    js: dict[str, float]  # ms per JS_COLUMNS in the window
+    resume: PhoneSpan | None  # of the suspension ending within RESUME_WINDOW_S before it
+    js: dict[str, float]  # ms per JS_COLUMNS and SYNC_COLUMNS
+    longest: str  # profiler and phase of the longest commit
     concurrent: set[str] = field(default_factory=set)  # other environments reconnecting in the window
 
     @property
@@ -618,60 +684,75 @@ class Reconnect:
         return self.attempts[-1]
 
     @property
+    def start(self) -> float:
+        return self.attempts[0].span.start
+
+    @property
     def total_ms(self) -> float:
         return (self.ok.span.end - self.start) * 1000
 
     @property
     def retry_ms(self) -> float:
-        return max(0.0, self.ok.span.start - self.start) * 1000
+        return (self.ok.span.start - self.start) * 1000
 
     def screen_label(self) -> str:
-        return f"{self.screen} ({'this' if self.on_screen else 'other'} env)" if self.screen == "thread" else self.screen
+        if self.resume is None:
+            return "?"
+        screen = self.resume.attrs["screen"]
+        on_screen = self.resume.attrs.get("screen.environment.id") == self.ok.env
+        return f"{screen} ({'this' if on_screen else 'other'} env)" if screen == "thread" else screen
 
 
-def build_reconnects(connects: list[PhoneConnect], phone: list[PhoneSpan]) -> list[Reconnect]:
-    resumes = [s for s in phone if s.name == "client.app.resume"]
+def profiler_of(commit: PhoneSpan, commits: list[PhoneSpan]) -> str:
+    """The innermost Profiler of an app commit: the screen Profiler that committed with it."""
+    return next((s.attrs["profiler.id"] for s in commits if s.attrs["profiler.id"] != APP_PROFILER
+                 and abs(s.start - commit.start) < 1e-3 and abs(s.end - commit.end) < 1e-3), APP_PROFILER)
+
+
+def build_reconnects(connects: list[PhoneConnect], phone: list[PhoneSpan], suspensions: list[Suspension]) -> tuple[list[Reconnect], list[Reconnect]]:
+    """Reconnects, and those interrupted by the app going to background."""
     stalls = [s for s in phone if s.name == "client.jsThread.stall"]
-    commits = [s for s in phone if s.name == "react.commit" and s.attrs["profiler.id"] == APP_PROFILER]
+    commits = [s for s in phone if s.name == "react.commit"]
+    app_commits = [s for s in commits if s.attrs["profiler.id"] == APP_PROFILER]
     js = [s for s in phone if s.name in JS_SPANS]
     reconnects = []
     attempts: dict[str, list[PhoneConnect]] = {}
     for c in connects:
         mine = attempts.setdefault(c.env, [])
-        if mine and c.span.start - mine[-1].span.end > RETRY_GAP_S:
+        if mine and suspended(suspensions, mine[-1].span.end, c.span.start, RETRY_GAP_S):
             mine.clear()
-        if c.outcome != "ok":
-            if c.span.ms > MAX_ATTEMPT_S * 1000:
-                mine.clear()
-            else:
-                mine.append(c)
-            continue
         mine.append(c)
-        first, end = mine[0].span.start, c.window_end
-        resume = next((r for r in reversed(resumes) if first - RESUME_WINDOW_S <= r.start <= c.span.end), None)
-        start = max(first, resume.start) if resume else first
-        mine[:] = [a for a in mine if a.span.end > start]
-        work = lambda *names: sum(s.ms for s in js if s.env == c.env and s.name in names and start <= s.start <= end)
-        if c.steps:
-            reconnects.append(Reconnect(
-                attempts=list(mine),
-                start=start,
-                screen=resume.attrs["screen"] if resume else "?",
-                on_screen=resume is not None and resume.attrs.get("screen.environment.id") == c.env,
-                js={
-                    "stall": overlap_ms(stalls, start, end),
-                    "body": work("snapshot.body"),
-                    "parse": work("snapshot.parse"),
-                    "decode": work("snapshot.decode"),
-                    "react": sum(s.attrs["actualDuration"] for s in commits if start <= s.start <= end),
-                    "encode": work("cache.encode"),
-                    "write": work(*CACHE_SAVES) - work("cache.encode"),
-                },
-            ))
+        if c.outcome != "ok":
+            continue
+        chain = list(mine)
         mine.clear()
+        if not c.steps:
+            continue
+        start, end = chain[0].span.start, c.end
+        in_window = lambda spans: [s for s in spans if s.end > start and s.start < end]
+        work = lambda *names: sum(s.ms for s in js if s.env == c.env and s.name in names and start <= s.start <= c.window_end)
+        window_stalls, window_commits = in_window(stalls), in_window(app_commits)
+        longest = max(window_commits, key=lambda s: s.attrs["actualDuration"], default=None)
+        reconnects.append(Reconnect(
+            attempts=chain,
+            resume=next((s.resume for s in reversed(suspensions) if start - RESUME_WINDOW_S <= s.end <= start), None),
+            js={
+                "stall": overlap_ms(window_stalls, start, end),
+                "max stall": max((s.ms for s in window_stalls), default=0.0),
+                "react": overlap_ms(window_commits, start, end),
+                "max commit": longest.attrs["actualDuration"] if longest else 0.0,
+                "body": work("snapshot.body"),
+                "parse": work("snapshot.parse"),
+                "decode": work("snapshot.decode"),
+                "encode": work("cache.encode"),
+                "write": work(*CACHE_SAVES) - work("cache.encode"),
+            },
+            longest=f"{profiler_of(longest, commits)} {longest.attrs['phase']}" if longest else "-",
+        ))
     for r in reconnects:
-        r.concurrent = {o.ok.env for o in reconnects if o.ok.env != r.ok.env and o.start < r.ok.window_end and r.start < o.ok.window_end}
-    return reconnects
+        r.concurrent = {o.ok.env for o in reconnects if o.ok.env != r.ok.env and o.start < r.ok.end and r.start < o.ok.end}
+    interrupted = [r for r in reconnects if any(a.suspended for a in r.attempts)]
+    return [r for r in reconnects if r not in interrupted], interrupted
 
 
 def reconnect_lines(group: list[Reconnect]) -> list[str]:
@@ -680,10 +761,23 @@ def reconnect_lines(group: list[Reconnect]) -> list[str]:
         f"total {dist([r.total_ms for r in group])}  retry {dist([r.retry_ms for r in group])}"
         f"  final attempt: server {dist([c.server_ms for c in ok])}  network {dist([c.network_ms for c in ok])}  phone {dist([c.phone_ms for c in ok])}",
         "js " + "  ".join(f"{k} {dist([r.js[k] for r in group])}" for k in JS_COLUMNS),
+        "sync " + "  ".join(f"{k} {dist([r.js[k] for r in group])}" for k in SYNC_COLUMNS),
     ]
 
 
-def print_reconnects(reconnects: list[Reconnect], labels: dict[str, str]) -> None:
+def print_reconnect(r: Reconnect, labels: dict[str, str]) -> None:
+    c = r.ok
+    tries = ", ".join(f"{a.outcome[:30]}{' bg' if a.suspended else ''} {a.span.ms:.0f}ms" for a in r.attempts)
+    print(
+        f"{fmt_time(r.start)}  {labels[c.env]:16s} {c.path:9s} total={r.total_ms:6.0f}ms screen={r.screen_label()}"
+        f" concurrent=[{', '.join(sorted(labels[e] for e in r.concurrent))}]"
+    )
+    print(f"    attempts: {tries}  retry={r.retry_ms:.0f}ms  final: server={c.server_ms:.0f} network={c.network_ms:.0f} phone={c.phone_ms:.0f}")
+    print("    js " + "  ".join(f"{k}={r.js[k]:.0f}" for k in JS_COLUMNS) + f" ({r.longest})")
+    print("    sync " + "  ".join(f"{k}={r.js[k]:.0f}" for k in SYNC_COLUMNS))
+
+
+def print_reconnects(reconnects: list[Reconnect], interrupted: list[Reconnect], labels: dict[str, str]) -> None:
     groups: dict[tuple[str, str], list[Reconnect]] = {}
     for r in reconnects:
         groups.setdefault((r.ok.env, r.ok.path), []).append(r)
@@ -707,14 +801,26 @@ def print_reconnects(reconnects: list[Reconnect], labels: dict[str, str]) -> Non
     for group in groups.values():
         cutoff = p95([r.total_ms for r in group])
         for r in (r for r in group if r.total_ms >= cutoff):
-            c = r.ok
-            tries = ", ".join(f"{a.outcome[:30]} {a.span.ms:.0f}ms" for a in r.attempts)
-            print(
-                f"{fmt_time(r.start)}  {labels[c.env]:16s} {c.path:9s} total={r.total_ms:6.0f}ms screen={r.screen_label()}"
-                f" concurrent=[{', '.join(sorted(labels[e] for e in r.concurrent))}]"
-            )
-            print(f"    attempts: {tries}  retry={r.retry_ms:.0f}ms  final: server={c.server_ms:.0f} network={c.network_ms:.0f} phone={c.phone_ms:.0f}")
-            print("    js " + "  ".join(f"{k}={r.js[k]:.0f}" for k in JS_COLUMNS))
+            print_reconnect(r, labels)
+
+    print(f"\n=== Reconnects interrupted by background, excluded above ({len(interrupted)}) ===")
+    for r in interrupted:
+        print_reconnect(r, labels)
+
+
+def print_slowest_commits(phone: list[PhoneSpan], labels: dict[str, str], count: int = 10) -> None:
+    commits = [s for s in phone if s.name == "react.commit"]
+    activity = [s for s in phone if s.name in ACTIVITY]
+    print(f"\n=== Slowest {count} React commits and the environment work in or just before them ===")
+    for c in sorted((s for s in commits if s.attrs["profiler.id"] == APP_PROFILER), key=lambda s: -s.attrs["actualDuration"])[:count]:
+        busy: dict[str, list[str]] = {}
+        for s in activity:
+            if s.start < c.end and s.end > c.start - TRIGGER_S:
+                kinds = busy.setdefault(labels.get(s.env, s.env), [])
+                if ACTIVITY[s.name] not in kinds:
+                    kinds.append(ACTIVITY[s.name])
+        envs = "; ".join(f"{env} {'+'.join(kinds)}" for env, kinds in busy.items()) or "-"
+        print(f"{fmt_time(c.start)}  {c.attrs['actualDuration']:6.0f}ms  {profiler_of(c, commits):6s} {c.attrs['phase']:13s} {envs}")
 
 
 # --- server-only connects ---------------------------------------------------
@@ -743,12 +849,13 @@ def fill_setup_compute(paths: list[str], spans: list[Span]) -> None:
                     parent.compute_ms = max(parent.compute_ms, (end - parent.start) * 1000)
 
 
-def peer_compatible(a: Span, b: Span) -> bool:
-    return not a.peer or not b.peer or a.peer == b.peer
+def same_connect(a: Span, b: Span) -> bool:
+    """Whether two spans can belong to one connect: the same client IP and, when logs of several servers are read, the same server host."""
+    return (not a.peer or not b.peer or a.peer == b.peer) and (not a.host or not b.host or a.host == b.host)
 
 
 def claim(spans: list[Span], kind: str, anchor: Span, lo: float, hi: float, latest: bool) -> Span | None:
-    hits = [s for s in spans if s.kind == kind and not s.claimed and peer_compatible(s, anchor) and lo <= s.start < hi]
+    hits = [s for s in spans if s.kind == kind and not s.claimed and same_connect(s, anchor) and lo <= s.start < hi]
     if not hits:
         return None
     best = hits[-1] if latest else hits[0]
@@ -774,7 +881,7 @@ def build_server_connects(spans: list[Span]) -> list[ServerConnect]:
             # The client propagates one traceparent across the ticket and the descriptor
             # fetches around it, so the same trace id groups the rest of the auth hops.
             for s in spans:
-                if s.kind in ("descriptor", "token") and not s.claimed and s.trace_id == ticket.trace_id:
+                if s.kind in ("descriptor", "token") and not s.claimed and s.trace_id == ticket.trace_id and same_connect(s, ws):
                     if abs(s.start - ticket.start) <= AUTH_WINDOW_S and s.start < ws.start:
                         s.claimed = True
                         if s.kind == "descriptor" and s.start > ticket.start:
@@ -793,7 +900,7 @@ def build_server_connects(spans: list[Span]) -> list[ServerConnect]:
 def print_server_connect(c: ServerConnect, verbose: bool) -> None:
     total = f"{c.total_ms:6.0f}ms" if c.total_ms is not None else " no-sync"
     print(
-        f"{fmt_time(c.start)}  {c.client():14s} {c.via():9s} net={c.network:14s} total={total} server={c.server_ms:4.0f}ms "
+        f"{fmt_time(c.start)}  {c.client():14s} {c.via():9s} {c.ws.host:22s} net={c.network:14s} total={total} server={c.server_ms:4.0f}ms "
         f"socket={c.ws.end - c.ws.start:6.0f}s steps={'/'.join(s.kind for s in c.steps)}"
     )
     if not verbose:
@@ -808,8 +915,8 @@ def print_server_connect(c: ServerConnect, verbose: bool) -> None:
 def print_server_aggregates(connects: list[ServerConnect]) -> None:
     groups: dict[str, list[ServerConnect]] = {}
     for c in connects:
-        groups.setdefault(f"{c.client()} {c.via()} net={c.network}", []).append(c)
-    print("\n=== Server-only aggregates by client and network (gap = network + client time) ===")
+        groups.setdefault(f"{c.client()} {c.via()} {c.ws.host} net={c.network}", []).append(c)
+    print("\n=== Server-only aggregates by client, server, and network (gap = network + client time) ===")
     for key, group in sorted(groups.items()):
         totals = [c.total_ms for c in group if c.total_ms is not None]
         line = f"{key}: {len(group)} connects, {len(totals)} synced"
@@ -820,7 +927,7 @@ def print_server_aggregates(connects: list[ServerConnect]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--logs", nargs="+", default=DEFAULT_GLOBS, help="globs of trace files (.ndjson or .ndjson.gz)")
+    ap.add_argument("--logs", nargs="+", default=DEFAULT_GLOBS, help="globs of trace files (.ndjson or .ndjson.gz), from any number of servers")
     ap.add_argument("--since", type=float, help="only read files modified within the last N hours")
     ap.add_argument("-v", "--verbose", action="store_true", help="per-step waterfall for each connect")
     args = ap.parse_args()
@@ -833,17 +940,25 @@ def main() -> None:
         raise SystemExit(f"no trace files match {args.logs}")
     spans, phone = parse_spans(paths)
     home = home_networks()
-    print(f"{len(paths)} files, {fmt_time(spans[0].start)} .. {fmt_time(spans[-1].start)}, {len(spans)} server spans, {len(phone)} phone spans")
+    suspensions = find_suspensions(phone)
+    dropped = [s for s in phone if s.name in JS_WORK and suspended(suspensions, s.start, s.end, MAX_JS_S if s.name in BLOCKING else math.inf)]
+    dropped_ids = {id(s) for s in dropped}
+    phone = [s for s in phone if id(s) not in dropped_ids]
+    print(
+        f"{len(paths)} files, {fmt_time(spans[0].start)} .. {fmt_time(spans[-1].start)}, {len(spans)} server spans, {len(phone)} phone spans"
+        f" ({len(suspensions)} suspensions; dropped {', '.join(f'{n} {k}' for k, n in Counter(s.name for s in dropped).items()) or 'nothing'} spanning a suspension)"
+    )
 
-    connects = build_phone_connects(phone, spans, home)
+    connects = build_phone_connects(phone, spans, home, suspensions)
     labels = env_labels(phone, connects)
     rtts = probe_rtts(phone, connects)
-    print(f"\n=== Phone connects ({len(connects)}) ===")
+    print(f"\n=== Phone connects ({len(connects)}, bg = the app went to background before it ended) ===")
     for c in connects:
         rtt = rtts.get(c.group())
         print_phone_connect(c, labels, statistics.median(rtt) if rtt else None, args.verbose)
     print_phone_aggregates(connects, labels, rtts)
-    print_reconnects(build_reconnects(connects, phone), labels)
+    print_reconnects(*build_reconnects(connects, phone, suspensions), labels)
+    print_slowest_commits(phone, labels)
 
     phone_ids = {s.span_id for s in phone}
     fill_setup_compute(paths, spans)
