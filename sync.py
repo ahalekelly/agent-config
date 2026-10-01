@@ -380,10 +380,19 @@ def sync_repository(repo: Path) -> None:
     if git(repo, "diff", "--cached", "--name-only"):
         git(repo, "commit", "-m", f"Sync configuration from {socket.gethostname()}")
         print(f"committed {repo}", flush=True)
-    git(repo, "-c", "submodule.recurse=false", "pull", "--no-rebase", "--no-edit")
-    if git(repo, "rev-list", "--count", "@{upstream}..HEAD") != "0":
-        git(repo, "push")
+    # Other machines and agents push to the same remote, so a push can lose a race; pull again and retry.
+    for attempt in range(3):
+        git(repo, "-c", "submodule.recurse=false", "pull", "--no-rebase", "--no-edit")
+        if git(repo, "rev-list", "--count", "@{upstream}..HEAD") == "0":
+            return
+        try:
+            git(repo, "push")
+        except SyncError:
+            if attempt == 2:
+                raise
+            continue
         print(f"pushed {repo}", flush=True)
+        return
 
 
 def sync_submodules() -> None:
