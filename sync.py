@@ -553,7 +553,8 @@ def report_failure(error: str) -> None:
     pending.write_text(
         f"Automated alert from the scheduled agent-config sync on {host}, not a message from Adrian. "
         f"`sync.py pull` failed:\n\n```\n{error.strip()}\n```\n\n"
-        f"Diagnose it. Fix it only if the fix clearly has no downside; otherwise explain the tradeoff and leave the decision to Adrian. "
+        f"Diagnose the root cause. Fix it properly for the long term, not with a band-aid, and make sync robust to this kind of failure in the future. "
+        f"Make the fix only if it clearly has no downside; otherwise explain the tradeoff and leave the decision to Adrian. "
         f"Later scheduled syncs on {host} stay silent until one succeeds.\n",
         encoding="utf-8",
     )
