@@ -330,10 +330,13 @@ class Runner:
         self.save()
         self.step = "fingerprint"
         # Pods reference packages by their pnpm store paths, which the lockfile
-        # decides, so the lockfile joins Expo's native fingerprint.
+        # decides, so the lockfile joins Expo's native fingerprint. The fingerprint
+        # skips the config's JS-only extra section, whose buildTime changes every run.
         fingerprint = self.capture(
-            "node", "-e", "require('expo/fingerprint').createFingerprintAsync(process.cwd(), "
-            "{ platforms: ['ios'], silent: true }).then(fp => console.log(fp.hash))",
+            "node", "-e", "const { createFingerprintAsync, SourceSkips } = require('expo/fingerprint'); "
+            "createFingerprintAsync(process.cwd(), { platforms: ['ios'], silent: true, sourceSkips: "
+            "SourceSkips.PackageJsonAndroidAndIosScriptsIfNotContainRun | SourceSkips.ExpoConfigExtraSection })"
+            ".then(fp => console.log(fp.hash))",
             cwd=REPO / "apps/mobile").strip()
         native = f"{fingerprint} {self.capture('git', 'rev-parse', 'HEAD:pnpm-lock.yaml').strip()}"
         # An unchanged native project keeps apps/mobile/ios and its pods, so the
