@@ -126,6 +126,8 @@ export type World = {
  * @param now where the clock starts
  * @param stored what the plugin's store holds already
  * @param profile the session's Claude account profile
+ * @param credential what the session runs on: a setup token, or the stored
+ *   login, whose handle `$.session.authorize()` answers
  * @returns the world, to read what was called and to change what answers
  */
 export const world = (
@@ -133,6 +135,7 @@ export const world = (
   now: number,
   stored: Readonly<Record<string, unknown>> = {},
   profile = 'personal',
+  credential: 'token' | 'login' = 'token',
 ): World => {
   const it: World = {
     clock: mock.clock(on, { now }),
@@ -152,7 +155,13 @@ export const world = (
   }
 
   mock.store(on, stored)
-  mock.env(on, { HOME, USER: 'a', CLAUDE_PROFILE: profile })
+  mock.env(on, {
+    HOME,
+    USER: 'a',
+    CLAUDE_PROFILE: profile,
+    ...(credential === 'token' ? { CLAUDE_CODE_OAUTH_TOKEN: 'setup-token' } : {}),
+  })
+  on('session.authorize', () => ({ value: { handle: 'session-login', kind: 'bearer' as const } }))
 
   on('fs.read', ($, e) => {
     const text = it.files[e.path]

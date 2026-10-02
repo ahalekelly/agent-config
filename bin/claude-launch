@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
-# Single Claude Code launcher for the terminal functions and T3 Code. The
-# account comes from CLAUDE_CODE_OAUTH_TOKEN in the environment, a one-year
-# token from `command claude setup-token`, so sessions never depend on a
-# refreshable login. Token sessions can't use claude.ai connectors or Remote
-# Control.
+# Single Claude Code launcher for the terminal functions and T3 Code.
+# CLAUDE_PROFILE names the account. A work session needs CLAUDE_CODE_OAUTH_TOKEN,
+# a one-year token from `command claude setup-token`; a personal session uses it
+# when set and otherwise runs on the personal login stored in ~/.claude.
+# Token sessions can't use claude.ai connectors or Remote Control.
 # CLAUDE_CONFIG_DIR is never set, so every session shares ~/.claude: Claude Code
 # keys its macOS Keychain entry on whether the variable is set, so setting it
 # even to the default would split state from tools that launch `claude` bare.
-if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-  echo "claude-launch: CLAUDE_CODE_OAUTH_TOKEN is unset; use the claude or claudew shell function, or set it from ~/.agents/claude-token.env or ~/.agents/claudew-token.env" >&2
-  exit 1
-fi
+case "${CLAUDE_PROFILE:-}" in
+  personal) ;;
+  work)
+    if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+      echo "claude-launch: the work profile needs CLAUDE_CODE_OAUTH_TOKEN; use the claudew shell function or set it from ~/.agents/claudew-token.env" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "claude-launch: CLAUDE_PROFILE must be personal or work; use the claude or claudew shell function, or set it from ~/.agents/claude-token.env or ~/.agents/claudew-token.env" >&2
+    exit 1
+    ;;
+esac
 source "$HOME/.agents/shell/agent-wrappers.sh"
 _scrub_secrets "$HOME/.agents/bin/claude-process-wrapper" claude "$@"

@@ -163,11 +163,11 @@ const hostOf = ($: EngineInterface): Promise<string> =>
 const CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e'
 
 /**
- * The Claude Code login's access token, live. The login is stored in the
- * Keychain on macOS and in `~/.claude/.credentials.json` on Linux; a session
- * runs on a setup token and never renews it, so a stored token within a minute
- * of expiry is refreshed here and the renewed login written back where it came
- * from.
+ * The stored Claude Code login's access token, live, for a session on a setup
+ * token. The login is stored in the Keychain on macOS and in
+ * `~/.claude/.credentials.json` on Linux; where every personal session runs on
+ * a token nothing else renews it, so a stored token within a minute of expiry
+ * is refreshed here and the renewed login written back where it came from.
  *
  * Sessions refresh on timers of their own and each renewal answers with a new
  * refresh token that replaces the stored one, so two sessions renewing at once
@@ -270,17 +270,25 @@ const claudeAgent = async ($: EngineInterface): Promise<string> => {
  * `weekly_scoped` entry whose scope names Fable, measured against half that
  * budget.
  *
+ * A session on the stored login asks with its own credential, which Claude
+ * Code refreshes under its own lock; renewing that login here as well would
+ * race it. A session on a setup token, whose scope the endpoint refuses, asks
+ * with the stored login instead.
+ *
  * @param $ the engine
  * @returns the snapshot
  */
 const fetchClaude = async ($: EngineInterface): Promise<Snapshot> => {
-  const response = await $.http.fetch('https://api.anthropic.com/api/oauth/usage', {
-    headers: {
-      authorization: `Bearer ${await claudeToken($)}`,
-      'anthropic-beta': 'oauth-2025-04-20',
-      'user-agent': await claudeAgent($),
-    },
-  })
+  const headers = { 'anthropic-beta': 'oauth-2025-04-20', 'user-agent': await claudeAgent($) }
+  const response =
+    (await $.env.get('CLAUDE_CODE_OAUTH_TOKEN')) === undefined
+      ? await $.http.fetch('https://api.anthropic.com/api/oauth/usage', {
+          headers,
+          auth: (await $.session.authorize())?.handle,
+        })
+      : await $.http.fetch('https://api.anthropic.com/api/oauth/usage', {
+          headers: { ...headers, authorization: `Bearer ${await claudeToken($)}` },
+        })
   if (!response.ok) throw new Error(`oauth/usage returned ${response.status}`)
 
   const body = JSON.parse(response.text)

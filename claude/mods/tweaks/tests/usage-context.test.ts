@@ -280,6 +280,20 @@ describe('usage-context', () => {
     expect(sentTo(seen, CLAUDE_URL)[0]?.headers?.authorization).toBe('Bearer claude-token')
   })
 
+  test('a session on the login asks with its own credential, renewing nothing', async ($, on) => {
+    const seen = world(on, NOW, {}, 'personal', 'login')
+    seen.files[LOGIN_PATH] = login(NOW)
+    seen.responses[CLAUDE_URL] = { status: 200, text: claudeUsage(RESETS) }
+
+    await $.session.start({ cwd: '/repo', surface: null, isInteractive: false })
+    await seen.clock.settle()
+
+    expect(sentTo(seen, TOKEN_URL)).toEqual([])
+    expect(lockRuns(seen)).toEqual([])
+    expect(sentTo(seen, CLAUDE_URL)[0]?.auth).toBe('session-login')
+    expect(sentTo(seen, CLAUDE_URL)[0]?.headers?.authorization).toBeUndefined()
+  })
+
   test('an expired token is renewed and the whole login written back', async ($, on) => {
     const seen = world(on, NOW)
     seen.files[LOGIN_PATH] = login(NOW)
