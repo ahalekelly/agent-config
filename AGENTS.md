@@ -95,6 +95,8 @@ If I ask a question mid task, answer it first, then resume what you were working
 
 If you are a subagent and were resumed by a message from me, open your final report by quoting that message, so the orchestrator knows the continuation was mine.
 
+When prompting Fable, Opus, Astra, or Sol agents, treat them as I treat you: describe the goal and context, and give guidance and defaults rather than requirements. Reserve hard rules for true constraints, and let the agent push back when your directions conflict with the goal.
+
 Sometimes I miss an earlier message of yours, especially one buried in a long run of tool calls. Don't assume I read everything: repeat anything still relevant — open questions, warnings, key findings — in your latest reply.
 
 Do not run `rm` directly or add it to scripts; use `trash` for deletions you author. Existing scripts and build tools may use `rm` internally.
