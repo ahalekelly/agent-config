@@ -25,13 +25,15 @@ pnpm-lock.yaml, installs with the frozen lockfile, typechecks apps/mobile,
 pushes main, and starts a run even on battery, cancelling any run in progress.
 It does not push the branch itself.
 
-launchd owns this runner and its dedicated ~/Git/t3code checkout. Run builds
-manually only while the job is unloaded. State, logs, DerivedData, and the archive live
-in ~/Library/Application Support/t3-phone-builds. Notifications open a thread
+launchd owns this runner and its dedicated ~/Git/t3code checkout. Runs share
+that checkout, so a run waits for any other run to exit. State, logs,
+DerivedData, and the archive live in ~/Library/Application Support/t3-phone-builds.
+Notifications open a thread
 in the T3 Code app on this Mac, so it must be open. Work on fixes in a separate
 worktree.
 """
 
+import fcntl
 import json
 import os
 import plistlib
@@ -469,6 +471,10 @@ def main():
             print(f"Ship failed; command output is in {runner.log}", file=sys.stderr)
             raise
         return 0
+    # A manual run, or the one ship's kickstart starts while the cancelled run exits,
+    # would otherwise rebuild apps/mobile/ios under a running xcodebuild.
+    lock = (STATE_DIR / "run.lock").open("w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
     try:
         runner.run()
     except Exception:
