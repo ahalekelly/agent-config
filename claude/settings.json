@@ -118,6 +118,7 @@
   "worktree": {
     "baseRef": "head"
   },
+  "enableArtifact": false,
   "statusLine": {
     "type": "command",
     "command": "uv run ~/.claude/statusline.py"
@@ -126,7 +127,9 @@
     "clangd-lsp@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true
+    "swift-lsp@claude-plugins-official": true,
+    "next-steps@claude-community": true,
+    "eli5@claude-community": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -148,6 +151,12 @@
         "repo": "OpenCairn/OpenCairn"
       },
       "autoUpdate": true
+    },
+    "claude-community": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-community"
+      }
     }
   },
   "sandbox": {
@@ -177,9 +186,18 @@
       ]
     }
   },
+  "feedbackDrafts": "off",
   "effortLevel": "high",
   "autoCompactWindow": 500000,
   "awaySummaryEnabled": false,
+  "pluginConfigs": {
+    "next-steps@claude-community": {
+      "options": {
+        "minAnswerChars": 1000,
+        "suggestSkills": true
+      }
+    }
+  },
   "autoUpdatesChannel": "latest",
   "tui": "fullscreen",
   "voice": {
@@ -193,6 +211,7 @@
   "preferredNotifChannel": "auto",
   "autoCompactEnabled": true,
   "switchModelsOnFlag": true,
+  "autoContinueAtUsageLimit": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
@@ -228,8 +247,5 @@
       "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi-for-claude`) are routine"
     ]
   },
-  "voiceEnabled": true,
-  "enableArtifact": false,
-  "feedbackDrafts": "off",
-  "autoContinueAtUsageLimit": true
+  "voiceEnabled": true
 }

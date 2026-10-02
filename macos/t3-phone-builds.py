@@ -175,10 +175,13 @@ class Runner:
             archive, exported, options = (Path(folder) / name
                                           for name in ("T3Code.xcarchive", "export", "options.plist"))
             # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
+            # Prebuild regenerates the project each run, so only the compilation cache,
+            # keyed by file content, spares the pods a full recompile.
             self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                          "-configuration", "Release", "-destination", "generic/platform=iOS",
                          "-derivedDataPath", STATE_DIR / "DerivedData", "-archivePath", archive,
-                         *signing, "CODE_SIGN_STYLE=Automatic", f"DEVELOPMENT_TEAM={TEAM}",
+                         *signing, "COMPILATION_CACHE_ENABLE_CACHING=YES",
+                         "CODE_SIGN_STYLE=Automatic", f"DEVELOPMENT_TEAM={TEAM}",
                          f"CURRENT_PROJECT_VERSION={self.build_number}", "archive")
             self.step = "export IPA"
             options.write_bytes(plistlib.dumps({
