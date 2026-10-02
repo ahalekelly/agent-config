@@ -689,8 +689,8 @@ class Reconnect:
         if self.resume is None:
             return "?"
         screen = self.resume.attrs["screen"]
-        on_screen = self.resume.attrs.get("screen.environment.id") == self.ok.env
-        return f"{screen} ({'this' if on_screen else 'other'} env)" if screen == "thread" else screen
+        env = self.resume.attrs.get("screen.environment.id")
+        return screen if env is None else f"{screen} ({'this' if env == self.ok.env else 'other'} env)"
 
 
 def profiler_of(commit: PhoneSpan, commits: list[PhoneSpan]) -> str:
