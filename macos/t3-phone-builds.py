@@ -10,7 +10,9 @@ main and export an ad hoc IPA signed by Adrian's paid Apple team. xcodebuild
 manages certificates and profiles through an App Store Connect API key; ad hoc
 profiles cover only devices registered to the team. Each build's
 CFBundleVersion is the fork revision's commit count, so `xcrun devicectl device
-info apps` shows which build the iPhone runs.
+info apps` shows which build the iPhone runs. Prebuild and CocoaPods run only
+when Expo's native fingerprint or the lockfile changes; otherwise the archive
+rebuilds incrementally.
 
 Every build is published to akelly-desktop, whose `tailscale serve` serves
 ~/t3-builds at DOWNLOAD_URL; the page there installs it over the air from
@@ -175,8 +177,8 @@ class Runner:
             archive, exported, options = (Path(folder) / name
                                           for name in ("T3Code.xcarchive", "export", "options.plist"))
             # Expo disables Metro's release cache reset in CI, leaving stale worklet transforms.
-            # Prebuild regenerates the project each run, so only the compilation cache,
-            # keyed by file content, spares the pods a full recompile.
+            # Prebuild regenerates the project, so only the compilation cache, keyed by
+            # file content, spares the pods a full recompile after it.
             self.command("env", "CI=0", "xcodebuild", "-workspace", workspace, "-scheme", workspace.stem,
                          "-configuration", "Release", "-destination", "generic/platform=iOS",
                          "-derivedDataPath", STATE_DIR / "DerivedData", "-archivePath", archive,
