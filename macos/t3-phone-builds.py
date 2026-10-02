@@ -323,18 +323,33 @@ class Runner:
         self.command("git", "checkout", "--detach", self.revision)
         self.step = "dependencies"
         self.command("npx", "--yes", "corepack", "pnpm", "install", "--frozen-lockfile")
-        self.step = "prebuild"
-        # Prebuild and xcodebuild replace the one artifact this state describes.
+        # xcodebuild replaces the one artifact this state describes.
         self.state.pop("packaged", None)
         self.save()
-        self.command("npx", "expo", "prebuild", "--clean", "--platform", "ios", "--no-install",
-                     cwd=REPO / "apps/mobile")
-        self.step = "CocoaPods"
-        # Pods compile host stubs with a bare clang, which takes its SDK from the
-        # Command Line Tools. Apple ships those ahead of Xcode, and an SDK newer than
-        # Xcode's linker leaves it unable to read libSystem, so name Xcode's own SDK.
-        sdk = self.capture("xcrun", "--sdk", "macosx", "--show-sdk-path").strip()
-        self.command("env", f"SDKROOT={sdk}", "pod", "install", cwd=REPO / "apps/mobile/ios")
+        self.step = "fingerprint"
+        # Pods reference packages by their pnpm store paths, which the lockfile
+        # decides, so the lockfile joins Expo's native fingerprint.
+        fingerprint = self.capture(
+            "node", "-e", "require('expo/fingerprint').createFingerprintAsync(process.cwd(), "
+            "{ platforms: ['ios'], silent: true }).then(fp => console.log(fp.hash))",
+            cwd=REPO / "apps/mobile").strip()
+        native = f"{fingerprint} {self.capture('git', 'rev-parse', 'HEAD:pnpm-lock.yaml').strip()}"
+        # An unchanged native project keeps apps/mobile/ios and its pods, so the
+        # archive rebuilds incrementally and only rebundles the JS.
+        if self.state.get("prebuilt") != native:
+            self.step = "prebuild"
+            self.state.pop("prebuilt", None)
+            self.save()
+            self.command("npx", "expo", "prebuild", "--clean", "--platform", "ios", "--no-install",
+                         cwd=REPO / "apps/mobile")
+            self.step = "CocoaPods"
+            # Pods compile host stubs with a bare clang, which takes its SDK from the
+            # Command Line Tools. Apple ships those ahead of Xcode, and an SDK newer than
+            # Xcode's linker leaves it unable to read libSystem, so name Xcode's own SDK.
+            sdk = self.capture("xcrun", "--sdk", "macosx", "--show-sdk-path").strip()
+            self.command("env", f"SDKROOT={sdk}", "pod", "install", cwd=REPO / "apps/mobile/ios")
+            self.state["prebuilt"] = native
+            self.save()
         self.step = "xcodebuild"
         self.xcodebuild()
         self.state["packaged"] = self.record()
