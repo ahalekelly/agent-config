@@ -22,10 +22,12 @@ notification links the download page. Failed merges and builds back off for a
 day; a network outage waits for the next run and reports after a day.
 
 `uv run ~/.agents/macos/t3-phone-builds.py ship <branch>` ships a fork branch,
-unsandboxed, from any directory: it merges the branch into main as `merge <last path segment>`, regenerates a conflicted
-pnpm-lock.yaml, installs with the frozen lockfile, typechecks apps/mobile,
-pushes main, and starts a run even on battery, cancelling any run in progress.
-It does not push the branch itself.
+unsandboxed, from any directory: it fetches the branch from origin and merges
+origin/<branch> into main as `merge <last path segment>`, regenerates a
+conflicted pnpm-lock.yaml, installs with the frozen lockfile, typechecks
+apps/mobile, pushes main, and starts a run even on battery, cancelling any run
+in progress. Push the branch first; local branches in the runner's checkout are
+never read.
 
 launchd owns this runner and its dedicated ~/Git/t3code checkout. Runs share
 that checkout, so a run waits for any other run to exit. State, logs,
@@ -291,16 +293,22 @@ class Runner:
         self.save()
         self.phase = None
 
-    def ship(self, ref):
-        """Merge a fork branch into main, verify it, push it, and start a build now."""
+    def ship(self, branch):
+        """Merge the fork's pushed branch into main, verify it, push it, and start a build now.
+
+        The branch is fetched from origin and merged as origin/<branch>, so a stale
+        local branch of the same name in this checkout cannot ship old code.
+        """
         self.log = STATE_DIR / "ship.log"
         self.log.write_text("")
-        self.command("git", "fetch", "--quiet", "origin", f"refs/heads/{BRANCH}:refs/remotes/origin/{BRANCH}")
+        self.command("git", "fetch", "--quiet", "origin",
+                     *(f"refs/heads/{name}:refs/remotes/origin/{name}" for name in (BRANCH, branch)))
+        ref = f"origin/{branch}"
         if not self.attempt("git", "merge-base", "--is-ancestor", ref, f"origin/{BRANCH}").returncode:
             raise RuntimeError(f"{ref} is already in {BRANCH}")
         worktree = STATE_DIR / "ship"
         try:
-            conflicted = self.merge(ref, f"merge {ref.rsplit('/', 1)[-1]}", worktree)
+            conflicted = self.merge(ref, f"merge {branch.rsplit('/', 1)[-1]}", worktree)
             if conflicted:
                 raise RuntimeError(f"Merging {ref} into {BRANCH} conflicts in {', '.join(conflicted)}; "
                                    "merge it in a worktree of your own")
