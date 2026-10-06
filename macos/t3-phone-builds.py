@@ -169,6 +169,8 @@ class Runner:
             "CI": "1",
             # rebase --continue and conflicted merge commits keep git's message.
             "GIT_EDITOR": "true",
+            # Upstream's lockfile already passed pnpm's default one-day quarantine there.
+            "pnpm_config_minimum_release_age": "1440",
         }
 
     def command(self, *args, cwd=REPO):

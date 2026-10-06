@@ -42,7 +42,7 @@ Run subagents in the background. Don't create large numbers of subagents. Make s
 </model>
 GPT models come in 3 classes: Astra (Fable class, for second opinions), Sol (Opus class, for general purpose subagents), and Luna (Sonnet class, for low-complexity or repetitive tasks).
 
-Production code should be written by Opus or Sol, or for very complicated code Fable, or Astra, never Sonnet or Luna.
+Production code should be written by Opus or Sol, or for very complicated code Fable or Astra, never Sonnet or Luna.
 
 Never use Haiku.
 

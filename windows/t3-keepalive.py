@@ -13,8 +13,9 @@ from pathlib import Path
 
 import psutil
 
-IMAGE = "T3 Code (Alpha).exe"
-EXE = Path(os.environ["LOCALAPPDATA"]) / "Programs/t3code" / IMAGE
+# Each release channel names its executable differently.
+IMAGES = ("T3 Code (Nightly).exe", "T3 Code (Alpha).exe")
+INSTALL_DIR = Path(os.environ["LOCALAPPDATA"]) / "Programs/t3code"
 LOG = Path(os.environ["LOCALAPPDATA"]) / "t3-keepalive/t3-keepalive.log"
 SW_MINIMIZE = 6
 
@@ -47,10 +48,14 @@ def visible_window(pid: int) -> int | None:
 # Only minimize launches initiated here; opening T3 from the Start menu stays visible.
 log("Watching T3; existing windows remain unchanged")
 while True:
-    if not any(p.info["name"] == IMAGE for p in psutil.process_iter(["name"])):
+    if not any(p.info["name"] in IMAGES for p in psutil.process_iter(["name"])):
+        exe = next((INSTALL_DIR / image for image in IMAGES if (INSTALL_DIR / image).is_file()), None)
+        if not exe:
+            log(f"Cannot launch T3: none of {IMAGES} is installed in {INSTALL_DIR}")
+            sys.exit(1)
         # T3 holds Electron's single-instance lock, so a launch that races its self-update restart just quits.
         try:
-            startup = subprocess.Popen([EXE])
+            startup = subprocess.Popen([exe])
         except OSError as error:
             log(f"Cannot launch T3: {error}")
             sys.exit(1)
