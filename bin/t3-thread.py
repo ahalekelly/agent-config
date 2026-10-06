@@ -1,18 +1,20 @@
 # /// script
 # requires-python = ">=3.11"
+# dependencies = ["websockets>=14"]
 # ///
 """Send a prompt to T3 Code, either in a new thread or into an existing one.
 
 Usage: t3-thread.py new <project-dir> <title> <provider-instance> <model> <prompt-file>
        t3-thread.py resume <thread-id> <prompt-file>
 
-Thread ids are listed by GET /api/orchestration/snapshot.
+Thread ids are listed by GET /api/orchestration/shell (threads[].id, with title).
 Provider instances are the keys of `providerInstances` in userdata/settings.json
 (e.g. `claudeAgent`, `claudeAgent_claude_work`).
 Run against a ready T3 server; T3CODE_HOME selects its data directory (default ~/.t3).
 
 Auth: mint a short-lived pairing token with `t3 pair`, exchange it for an
-access token, then dispatch commands to the local T3 server.
+access token, then call the server's HTTP API for projects and its WebSocket
+RPC (orchestration protocol 2) for threads.
 """
 
 import json
@@ -23,10 +25,12 @@ import sys
 import urllib.parse
 import urllib.request
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
+from websockets.sync.client import connect
+
 T3 = Path(os.environ.get("T3CODE_HOME", Path.home() / ".t3"))
+ORCHESTRATION_PROTOCOL = 2
 # The desktop apps' Electron binary and bundled server entry point, per platform and release channel.
 DESKTOP_APPS = {
     "darwin": [
@@ -44,10 +48,6 @@ DESKTOP_APPS = {
         for channel in ("Nightly", "Alpha")
     ],
 }
-
-
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def t3_cli() -> tuple[list[str], dict[str, str]]:
@@ -89,7 +89,6 @@ def main() -> None:
         thread_id = None
     elif args[:1] == ["resume"] and len(args) == 3:
         _, thread_id, prompt_file = args
-        project_dir = instance_id = model = None
         title = f"resume {thread_id[:8]}"
     else:
         raise SystemExit(__doc__)
@@ -102,31 +101,48 @@ def main() -> None:
         )
     origin = json.loads(runtime.read_text())["origin"]
     headers = {"authorization": f"Bearer {mint_access_token(origin, title)}", "content-type": "application/json"}
+    text = Path(prompt_file).read_text()
 
-    def get(path: str):
-        with urllib.request.urlopen(urllib.request.Request(origin + path, headers=headers)) as r:
+    def http(path: str, body: dict | None = None):
+        data = None if body is None else json.dumps(body).encode()
+        with urllib.request.urlopen(urllib.request.Request(origin + path, data=data, headers=headers)) as r:
             return json.load(r)
 
-    def dispatch(command: dict):
-        body = json.dumps({**command, "commandId": str(uuid.uuid4()), "createdAt": now()}).encode()
-        with urllib.request.urlopen(urllib.request.Request(f"{origin}/api/orchestration/dispatch", data=body, headers=headers)) as r:
-            return json.load(r)
+    def rpc(method: str, payload: dict):
+        """One Effect RPC request over the server's WebSocket; returns the success value."""
+        ws_origin = "ws" + origin.removeprefix("http")
+        with connect(f"{ws_origin}/ws?orchestrationProtocol={ORCHESTRATION_PROTOCOL}", additional_headers=headers) as ws:
+            ws.send(json.dumps({"_tag": "Request", "id": "1", "tag": method, "payload": payload, "headers": []}))
+            while True:
+                message = json.loads(ws.recv())
+                if message["_tag"] == "Exit":
+                    break
+        exit_ = message["exit"]
+        if exit_["_tag"] != "Success":
+            raise SystemExit(f"{method} failed: {json.dumps(exit_['cause'])}")
+        return exit_["value"]
 
     if thread_id is None:
         project_dir = str(Path(project_dir).resolve())
-        projects = {p["workspaceRoot"]: p["id"] for p in get("/api/orchestration/snapshot")["projects"]}
+        projects = {p["workspaceRoot"]: p["id"] for p in http("/api/projects")["projects"] if p["deletedAt"] is None}
         project_id = projects.get(project_dir)
         if project_id is None:
-            project_id = str(uuid.uuid4())
-            dispatch({"type": "project.create", "projectId": project_id, "title": Path(project_dir).name, "workspaceRoot": project_dir})
-        thread_id = str(uuid.uuid4())
-        dispatch({"type": "thread.create", "threadId": thread_id, "projectId": project_id,
-                  "title": title, "modelSelection": {"instanceId": instance_id, "model": model},
-                  "runtimeMode": "full-access", "branch": "main", "worktreePath": None})
-    dispatch({"type": "thread.turn.start", "threadId": thread_id,
-              "runtimeMode": "full-access", "interactionMode": "default",
-              "message": {"messageId": str(uuid.uuid4()), "role": "user",
-                          "text": Path(prompt_file).read_text(), "attachments": []}})
+            project_id = http("/api/projects/mutate", {
+                "type": "project.create", "commandId": str(uuid.uuid4()), "projectId": str(uuid.uuid4()),
+                "title": Path(project_dir).name, "workspaceRoot": project_dir,
+            })["id"]
+        thread_id = rpc("orchestration.launchThread", {
+            "commandId": str(uuid.uuid4()), "creationSource": "server", "projectId": project_id,
+            "title": title, "modelSelection": {"instanceId": instance_id, "model": model},
+            "runtimeMode": "full-access", "interactionMode": "default", "workspaceStrategy": {"type": "root"},
+            "initialMessage": {"text": text, "attachments": []},
+        })["threadId"]
+    else:
+        rpc("orchestration.dispatchCommand", {
+            "type": "message.dispatch", "commandId": str(uuid.uuid4()), "createdBy": "user", "creationSource": "server",
+            "threadId": thread_id, "messageId": str(uuid.uuid4()), "text": text, "attachments": [],
+            "deliveryIntent": "auto", "dispatchMode": {"type": "start_immediately"},
+        })
     print(f"sent prompt to thread {thread_id}: {title}")
 
 
