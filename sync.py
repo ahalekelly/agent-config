@@ -598,7 +598,7 @@ def report_failure(error: str) -> None:
         encoding="utf-8",
     )
     subprocess.run(
-        [sys.executable, str(REPO / "bin/t3-thread.py"), "new", str(REPO), f"Sync failed on {host}",
+        [shutil.which("uv"), "run", "--quiet", str(REPO / "bin/t3-thread.py"), "new", str(REPO), f"Sync failed on {host}",
          model["instanceId"], model["model"], str(pending)],
         check=True,
     )
