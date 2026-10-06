@@ -85,6 +85,8 @@ ADRIAN-DESKTOP is the Burnbot machine, on the personal tailnet as `adrian-deskto
 
 `show-in-browser`, the Obsidian CLI, and `open` aren't installed. Show an HTML or Markdown file with `Start-Process <absolute-path>` from PowerShell. `trash` is npm's trash-cli, built from the ahalekelly/trash-cli fork until sindresorhus/trash-cli#43 merges, and moves files to the Recycle Bin. Over SSH, trashing a folder moves it but `windows-trash.exe` never exits (files are fine): after a folder delete, Windows' IFileOperation prunes Quick Access's frequent-folder list, which binds the SOLIDWORKS PDM vault entries there, and PDM opens an invisible login dialog because its auto-login fails in the SSH logon session. Recycle folders with `[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(<path>, 'OnlyErrorDialogs', 'SendToRecycleBin')` in PowerShell after `Add-Type -AssemblyName Microsoft.VisualBasic`. It refuses read-only files (clear them with `attrib -r /s /d`) and paths over 260 characters (move the folder to a shorter path first).
 
+Windows blocks symlinks in SSH sessions ("untrusted mount point"), so `git` in `~/.agents` fails there on the linked global gitignore. To sync over SSH, run `schtasks /Run /TN "Agent config sync"` instead.
+
 Schedule recurring jobs with Windows Task Scheduler (`Register-ScheduledTask` from PowerShell). Wrap commands that write to stderr in `cmd.exe /c "... > log 2>&1"` inside a hidden PowerShell so stderr doesn't get reported as a failed exit code.
 
 ## Workflow
