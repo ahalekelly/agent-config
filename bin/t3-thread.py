@@ -27,16 +27,22 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 T3 = Path(os.environ.get("T3CODE_HOME", Path.home() / ".t3"))
-# The desktop apps' Electron binary and bundled server entry point, per platform.
+# The desktop apps' Electron binary and bundled server entry point, per platform and release channel.
 DESKTOP_APPS = {
-    "darwin": (
-        Path("/Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)"),
-        Path("/Applications/T3 Code (Nightly).app/Contents/Resources/app.asar/apps/server/dist/bin.mjs"),
-    ),
-    "win32": (
-        Path.home() / "AppData/Local/Programs/t3code/T3 Code (Alpha).exe",
-        Path.home() / "AppData/Local/Programs/t3code/resources/server.asar/apps/server/dist/bin.mjs",
-    ),
+    "darwin": [
+        (
+            Path(f"/Applications/T3 Code ({channel}).app/Contents/MacOS/T3 Code ({channel})"),
+            Path(f"/Applications/T3 Code ({channel}).app/Contents/Resources/app.asar/apps/server/dist/bin.mjs"),
+        )
+        for channel in ("Nightly", "Alpha")
+    ],
+    "win32": [
+        (
+            Path.home() / f"AppData/Local/Programs/t3code/T3 Code ({channel}).exe",
+            Path.home() / "AppData/Local/Programs/t3code/resources/server.asar/apps/server/dist/bin.mjs",
+        )
+        for channel in ("Nightly", "Alpha")
+    ],
 }
 
 
@@ -50,8 +56,8 @@ def t3_cli() -> tuple[list[str], dict[str, str]]:
     if service_state.is_file():
         version = json.loads(service_state.read_text())["activeVersion"]
         return [str(T3 / "runtime/versions" / version / "t3")], dict(os.environ)
-    app = DESKTOP_APPS.get(sys.platform)
-    if not app or not app[0].is_file():
+    app = next((app for app in DESKTOP_APPS.get(sys.platform, []) if app[0].is_file()), None)
+    if not app:
         raise SystemExit(f"No T3 CLI found: neither {service_state} nor a T3 desktop app for {sys.platform} exists")
     electron, server = app
     return [str(electron), str(server)], {**os.environ, "ELECTRON_RUN_AS_NODE": "1"}

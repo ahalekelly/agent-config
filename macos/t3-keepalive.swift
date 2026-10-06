@@ -2,7 +2,6 @@ import AppKit
 import CoreGraphics
 
 let bundleID = "com.t3tools.t3code"
-let appURL = URL(fileURLWithPath: "/Applications/T3 Code (Nightly).app")
 let workspace = NSWorkspace.shared
 var launching = false
 
@@ -48,6 +47,11 @@ let timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
           NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
     else { return }
 
+    // Launch Services resolves the bundle ID to whichever release channel is installed.
+    guard let appURL = workspace.urlForApplication(withBundleIdentifier: bundleID) else {
+        log("Cannot launch T3: no app with bundle ID \(bundleID) is installed")
+        exit(1)
+    }
     launching = true
     let configuration = NSWorkspace.OpenConfiguration()
     configuration.activates = false
