@@ -2,7 +2,7 @@ import AppKit
 import CoreGraphics
 
 let bundleID = "com.t3tools.t3code"
-let appURL = URL(fileURLWithPath: "/Applications/T3 Code (Alpha).app")
+let appURL = URL(fileURLWithPath: "/Applications/T3 Code (Nightly).app")
 let workspace = NSWorkspace.shared
 var launching = false
 

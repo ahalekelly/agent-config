@@ -30,8 +30,8 @@ T3 = Path(os.environ.get("T3CODE_HOME", Path.home() / ".t3"))
 # The desktop apps' Electron binary and bundled server entry point, per platform.
 DESKTOP_APPS = {
     "darwin": (
-        Path("/Applications/T3 Code (Alpha).app/Contents/MacOS/T3 Code (Alpha)"),
-        Path("/Applications/T3 Code (Alpha).app/Contents/Resources/app.asar/apps/server/dist/bin.mjs"),
+        Path("/Applications/T3 Code (Nightly).app/Contents/MacOS/T3 Code (Nightly)"),
+        Path("/Applications/T3 Code (Nightly).app/Contents/Resources/app.asar/apps/server/dist/bin.mjs"),
     ),
     "win32": (
         Path.home() / "AppData/Local/Programs/t3code/T3 Code (Alpha).exe",
