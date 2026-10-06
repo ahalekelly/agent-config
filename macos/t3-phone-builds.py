@@ -112,6 +112,8 @@ class Runner:
             "T3CODE_IOS_TEAM_ID": TEAM,
             "EXPO_NO_GIT_STATUS": "1",
             "CI": "1",
+            # Upstream's lockfile already passed pnpm's default one-day quarantine there.
+            "pnpm_config_minimum_release_age": "1440",
         }
 
     def command(self, *args, cwd=REPO):
