@@ -68,8 +68,15 @@ Focus-wait A/B: builds that flip a coin per wakeup tag each gated connect with
 Thread-screen resume is split by its connects' arm (`none` when no connect
 was gated, e.g. every session passed its probe). `usable` runs from the
 resume to the environment's first passing probe or successful connect within
-15 s; the focused environment is the open thread's. The difference line is
-skip minus wait mean with a 95% interval.
+15 s; the focused environment is the open thread's. Since usable is mostly
+network, the gate's target, JS-thread contention from other environments'
+connects, shows better in `focused connect`: the focused environment's first
+successful attempt in the window, from attempt start (after the resume's
+probes) to connected, split per environment and path because relay and
+tailscale differ. `phone` is that attempt's JS-side time (see phone
+connects), a lower bound on contention, since stalls under 50 ms and delays in
+handling responses count as network. Difference lines are skip minus wait mean
+with a 95% interval.
 
 Server-only connects: clients without phone spans (desktop, web, evicted phone
 spans) are rebuilt from server spans: auth hops -> WS upgrade -> config
@@ -811,18 +818,29 @@ def print_reconnects(reconnects: list[Reconnect], interrupted: list[Reconnect], 
         print_reconnect(r, labels)
 
 
-def print_focus_wait_ab(phone: list[PhoneSpan], connects: list[PhoneConnect]) -> None:
+def skip_minus_wait(wait: list[float], skip: list[float]) -> str:
+    half = 1.96 * math.sqrt(statistics.variance(wait) / len(wait) + statistics.variance(skip) / len(skip))
+    diff = statistics.mean(skip) - statistics.mean(wait)
+    return f"{diff:+.0f} ms (95% interval {diff - half:+.0f} .. {diff + half:+.0f})"
+
+
+def print_focus_wait_ab(phone: list[PhoneSpan], connects: list[PhoneConnect], labels: dict[str, str]) -> None:
     resumes = [s for s in phone if s.name == "client.app.resume" and not s.attrs["app.launch"]
                and s.attrs["screen"] == "Thread" and "screen.environment.id" in s.attrs]
     backgrounds = [s.start for s in phone if s.name == "client.app.background"]
     probes = [s for s in phone if s.name == "RpcClient.server.probe" and not s.error]
     arms: dict[str, dict[str, list[float]]] = {}
+    attempts: dict[tuple[str, str], dict[str, list[PhoneConnect]]] = {}  # (environment, path) -> arm -> focused attempts
     for r in resumes:
         focused = r.attrs["screen.environment.id"]
         horizon = min(r.start + 15, next((b for b in backgrounds if b > r.start), math.inf))
         window = lambda s: r.start - 0.05 <= s.start and s.end < horizon
         gated = [c for c in connects if window(c.span) and "connection.focus_wait.arm" in c.span.attrs]
-        stats = arms.setdefault(gated[0].span.attrs["connection.focus_wait.arm"] if gated else "none", {})
+        arm = gated[0].span.attrs["connection.focus_wait.arm"] if gated else "none"
+        stats = arms.setdefault(arm, {})
+        attempt = next((c for c in connects if c.env == focused and window(c.span) and c.outcome == "ok" and c.steps), None)
+        if attempt and arm != "none":
+            attempts.setdefault((labels[focused], attempt.path), {}).setdefault(arm, []).append(attempt)
         usable: dict[str, float] = {}
         for s in [*(p for p in probes if window(p)), *(c.span for c in connects if window(c.span) and c.outcome == "ok")]:
             env = s.env if s.name == "RpcClient.server.probe" else s.attrs["connection.environment.id"]
@@ -841,10 +859,16 @@ def print_focus_wait_ab(phone: list[PhoneSpan], connects: list[PhoneConnect]) ->
             v = stats.get(key, [])
             print(f"    {key}: n={len(v)} {dist(v)}/{statistics.mean(v):.0f}" if v else f"    {key}: n=0")
     if all(len(arms.get(arm, {}).get("focused usable", [])) > 1 for arm in ("wait", "skip")):
-        w, k = arms["wait"]["focused usable"], arms["skip"]["focused usable"]
-        half = 1.96 * math.sqrt(statistics.variance(w) / len(w) + statistics.variance(k) / len(k))
-        diff = statistics.mean(k) - statistics.mean(w)
-        print(f"focused usable, skip - wait: {diff:+.0f} ms (95% interval {diff - half:+.0f} .. {diff + half:+.0f})")
+        print(f"focused usable, skip - wait: {skip_minus_wait(arms['wait']['focused usable'], arms['skip']['focused usable'])}")
+    print("focused connect, attempt start -> connected (median/p95/mean ms):")
+    for (env, path), by_arm in sorted(attempts.items()):
+        print(f"    {env} {path}: " + "  ".join(
+            f"{arm} n={len(cs)} {dist([c.span.ms for c in cs])}/{statistics.mean(c.span.ms for c in cs):.0f}"
+            f" phone {statistics.mean(c.phone_ms for c in cs):.0f}" for arm, cs in sorted(by_arm.items())))
+        if all(len(by_arm.get(arm, [])) > 1 for arm in ("wait", "skip")):
+            w, k = by_arm["wait"], by_arm["skip"]
+            print(f"        skip - wait: {skip_minus_wait([c.span.ms for c in w], [c.span.ms for c in k])},"
+                  f" phone {skip_minus_wait([c.phone_ms for c in w], [c.phone_ms for c in k])}")
 
 
 def print_slowest_commits(phone: list[PhoneSpan], labels: dict[str, str], count: int = 10) -> None:
@@ -998,7 +1022,7 @@ def main() -> None:
         print_phone_connect(c, labels, statistics.median(rtt) if rtt else None, args.verbose)
     print_phone_aggregates(connects, labels, rtts)
     print_reconnects(*build_reconnects(connects, phone, background), labels)
-    print_focus_wait_ab(phone, connects)
+    print_focus_wait_ab(phone, connects, labels)
     print_slowest_commits(phone, labels)
 
     phone_ids = {s.span_id for s in phone}
