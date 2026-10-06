@@ -63,6 +63,14 @@ reconnects at or above their group's p95 total. The slowest React commits
 list the environments connecting or syncing during each commit or the second
 before it.
 
+Focus-wait A/B: builds that flip a coin per wakeup tag each gated connect with
+`connection.focus_wait.arm` (wait/skip) and `connection.focus_wait.ms`. Each
+Thread-screen resume is split by its connects' arm (`none` when no connect
+was gated, e.g. every session passed its probe). `usable` runs from the
+resume to the environment's first passing probe or successful connect within
+15 s; the focused environment is the open thread's. The difference line is
+skip minus wait mean with a 95% interval.
+
 Server-only connects: clients without phone spans (desktop, web, evicted phone
 spans) are rebuilt from server spans: auth hops -> WS upgrade -> config
 subscription -> shell snapshot -> shell subscription. Gaps between server
@@ -803,6 +811,42 @@ def print_reconnects(reconnects: list[Reconnect], interrupted: list[Reconnect], 
         print_reconnect(r, labels)
 
 
+def print_focus_wait_ab(phone: list[PhoneSpan], connects: list[PhoneConnect]) -> None:
+    resumes = [s for s in phone if s.name == "client.app.resume" and not s.attrs["app.launch"]
+               and s.attrs["screen"] == "Thread" and "screen.environment.id" in s.attrs]
+    backgrounds = [s.start for s in phone if s.name == "client.app.background"]
+    probes = [s for s in phone if s.name == "RpcClient.server.probe" and not s.error]
+    arms: dict[str, dict[str, list[float]]] = {}
+    for r in resumes:
+        focused = r.attrs["screen.environment.id"]
+        horizon = min(r.start + 15, next((b for b in backgrounds if b > r.start), math.inf))
+        window = lambda s: r.start - 0.05 <= s.start and s.end < horizon
+        gated = [c for c in connects if window(c.span) and "connection.focus_wait.arm" in c.span.attrs]
+        stats = arms.setdefault(gated[0].span.attrs["connection.focus_wait.arm"] if gated else "none", {})
+        usable: dict[str, float] = {}
+        for s in [*(p for p in probes if window(p)), *(c.span for c in connects if window(c.span) and c.outcome == "ok")]:
+            env = s.env if s.name == "RpcClient.server.probe" else s.attrs["connection.environment.id"]
+            if env in ("", "?"):
+                continue
+            usable[env] = min(usable.get(env, math.inf), (s.end - r.start) * 1000)
+        stats.setdefault("resumes", []).append(1)
+        stats.setdefault("focused usable", []).extend([usable[focused]] if focused in usable else [])
+        stats.setdefault("focused never usable", []).extend([] if focused in usable else [1])
+        stats.setdefault("others usable", []).extend(ms for env, ms in usable.items() if env != focused)
+        stats.setdefault("others wait", []).extend(c.span.attrs["connection.focus_wait.ms"] for c in gated if c.env != focused)
+    print("\n=== Focus-wait A/B, Thread-screen resumes (median/p95/mean ms) ===")
+    for arm, stats in sorted(arms.items()):
+        print(f"{arm}: {len(stats['resumes'])} resumes, focused never usable {len(stats['focused never usable'])}")
+        for key in ("focused usable", "others usable", "others wait"):
+            v = stats.get(key, [])
+            print(f"    {key}: n={len(v)} {dist(v)}/{statistics.mean(v):.0f}" if v else f"    {key}: n=0")
+    if all(len(arms.get(arm, {}).get("focused usable", [])) > 1 for arm in ("wait", "skip")):
+        w, k = arms["wait"]["focused usable"], arms["skip"]["focused usable"]
+        half = 1.96 * math.sqrt(statistics.variance(w) / len(w) + statistics.variance(k) / len(k))
+        diff = statistics.mean(k) - statistics.mean(w)
+        print(f"focused usable, skip - wait: {diff:+.0f} ms (95% interval {diff - half:+.0f} .. {diff + half:+.0f})")
+
+
 def print_slowest_commits(phone: list[PhoneSpan], labels: dict[str, str], count: int = 10) -> None:
     commits = [s for s in phone if s.name == "react.commit"]
     activity = [s for s in phone if s.name in ACTIVITY]
@@ -954,6 +998,7 @@ def main() -> None:
         print_phone_connect(c, labels, statistics.median(rtt) if rtt else None, args.verbose)
     print_phone_aggregates(connects, labels, rtts)
     print_reconnects(*build_reconnects(connects, phone, background), labels)
+    print_focus_wait_ab(phone, connects)
     print_slowest_commits(phone, labels)
 
     phone_ids = {s.span_id for s in phone}
