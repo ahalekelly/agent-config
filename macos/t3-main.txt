@@ -3,9 +3,10 @@
 # the tag, or on the earlier branch listed here that it builds on. `#` starts a comment.
 #
 # DRAFT, not yet live: the branches still sit on the old fork main rather than the
-# tag, and the fork-only commits listed at the end have no branches yet. Rebase and
+# tag, and the fork commits listed at the end have no branches yet. Rebase and
 # create them, then drop this paragraph at cutover.
 v0.0.46-nightly.20261005.2702
+fix/single-tilde-strikethrough  # open upstream PR #9021
 perf/mobile-reconnect
 perf/mobile-client-traces
 feat/voice  # fork-only: all voice work
@@ -39,7 +40,4 @@ measure/prioritize-ab  # temporary A/B; remove when the measurement ends
 # Fork commits made directly on the old main, each needing a branch:
 # - personal iOS signing (068b5df010, 8163bd91f4, ad7ba9849b, 8ba4c08a2e); fork-only, list it first
 # - personal build info in About (894ef314f5, 0b8957f1cf); fork-only
-# - Reanimated 4.6 for Reduce Motion layouts (175d01ae07); fork-only
-# - keyboard-controller 1.22.5 chat scroll fix (13e9174884); fork-only, needs Reanimated 4.6
 # - iOS widget and Lock Screen chat controls (b9cac13d31 through a508011ba0, 6ce79bca21)
-# - fix/single-tilde-strikethrough (1fbb4b6f28, aec3389c69); open upstream PR #9021
