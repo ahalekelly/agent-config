@@ -1,43 +1,33 @@
 # The fork's main: the first entry is the upstream tag it is built on, the rest are
 # origin branches t3-phone-builds.py merges onto it in this order. Each branch sits on
 # the tag, or on the earlier branch listed here that it builds on. `#` starts a comment.
-#
-# DRAFT, not yet live: the branches still sit on the old fork main rather than the
-# tag, and the fork commits listed at the end have no branches yet. Rebase and
-# create them, then drop this paragraph at cutover.
 v0.0.46-nightly.20261005.2702
+feat/ios-chat-controls  # iOS widget and Lock Screen controls that open a project chat
+fork/personal-signing  # fork-only: sign with your own paid Apple team; sits on ios-chat-controls
+fork/about-build-info  # fork-only: release, commit, and build time in About; sits on personal-signing
 fix/single-tilde-strikethrough  # open upstream PR #9021
 perf/mobile-reconnect
-perf/mobile-client-traces
+perf/mobile-client-traces  # sits on mobile-reconnect
 feat/voice  # fork-only: all voice work
 perf/single-descriptor-fetch
-perf/mobile-render-traces
-perf/prioritize-open-environment
-perf/decode-span
-perf/app-lifecycle-traces
-perf/app-suspend-traces
-fix/resume-screen-label
+perf/mobile-render-traces  # sits on mobile-client-traces
+perf/prioritize-open-environment  # sits on mobile-reconnect
+perf/decode-span  # sits on mobile-render-traces
+perf/app-lifecycle-traces  # sits on mobile-render-traces
+perf/app-suspend-traces  # sits on app-lifecycle-traces
+fix/resume-screen-label  # sits on mobile-render-traces
 perf/home-render-stability
-fork/git-status-optional-locks  # upstream merged fix/git-status-optional-locks (#14718); likely drops out
+fork/git-status-optional-locks  # upstream merged it as #14718 after this nightly; drops out at the next tag
 feat/splash-until-cache
-fix/splash-trace
-perf/cache-load-spans
-fix/splash-after-home-paint
-refactor/launch-screen-simplify
+fix/splash-after-home-paint  # sits on splash-until-cache
+refactor/launch-screen-simplify  # sits on splash-after-home-paint
 perf/render-survey
-perf/hedge-connect-requests
+perf/hedge-connect-requests  # sits on prioritize-open-environment
 perf/composer-first-mount
 fix/markdown-cutoff
-perf/dictation-prepare
 fix/thread-catchup-batch
-simplify/render
-simplify/connection
-simplify/catchup
-fix/macroscope-predictions
-fix/shell-stale-attempt
-measure/prioritize-ab  # temporary A/B; remove when the measurement ends
-#
-# Fork commits made directly on the old main, each needing a branch:
-# - personal iOS signing (068b5df010, 8163bd91f4, ad7ba9849b, 8ba4c08a2e); fork-only, list it first
-# - personal build info in About (894ef314f5, 0b8957f1cf); fork-only
-# - iOS widget and Lock Screen chat controls (b9cac13d31 through a508011ba0, 6ce79bca21)
+simplify/render  # sits on render-survey
+simplify/catchup  # sits on thread-catchup-batch
+fix/macroscope-predictions  # sits on launch-screen-simplify
+fix/shell-stale-attempt  # sits on simplify/catchup
+measure/prioritize-ab  # temporary A/B; remove when the measurement ends; sits on hedge-connect-requests
