@@ -17,10 +17,8 @@ spec = importlib.util.spec_from_file_location("phone", Path(__file__).with_name(
 phone = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(phone)
 NOW = datetime(2026, 9, 5, tzinfo=timezone.utc)
-FORK = "a" * 40          # origin/main before an upstream release is merged in
-MERGED = "b" * 40        # origin/main after the release is merged and pushed
-RELEASE = "c" * 40       # the commit the newest stable tag points at
-TAG = "v0.0.39"
+FORK = "a" * 40    # origin/main
+MERGED = "b" * 40  # a later origin/main
 
 
 def record(days=0, revision=FORK, version="0.0.38"):
@@ -83,7 +81,7 @@ class RunTests(StateTests):
 
         with patch.object(phone.Runner, "capture", capture), \
              patch.object(phone.Runner, "attempt", lambda _, *a, cwd=None: subprocess.CompletedProcess(a, 0)), \
-             patch.object(phone.Runner, "integrate", lambda _: None), \
+             patch.object(phone.Runner, "update_main", lambda _: None), \
              patch.object(phone.Runner, "build", build), \
              patch.object(phone.Runner, "publish", publish), \
              patch.object(phone.Runner, "install", install), \
@@ -262,155 +260,189 @@ class InstallTests(StateTests):
         self.assertEqual(self.install_commands, 1)
 
 
-class IntegrationTests(StateTests):
-    """Drive run() against a git that answers from self.head and self.conflicts."""
+class ManifestTests(unittest.TestCase):
+    """Rebuild main, ship, and rebase against real git repositories.
+
+    A fake npx stands in for pnpm: it writes a marker into pnpm-lock.yaml when asked to
+    regenerate it, and succeeds for the frozen install and the typecheck.
+    """
 
     def setUp(self):
-        super().setUp()
-        self.head = FORK
-        self.integrated = False
-        self.conflicts = []
-        self.builds = []
-        self.commands = []
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.root = Path(folder.name).resolve()
+        tools = self.root / "bin"
+        tools.mkdir()
+        (tools / "npx").write_text('#!/bin/sh\ncase "$*" in *--lockfile-only*) echo regenerated > pnpm-lock.yaml;; esac\n')
+        (tools / "npx").chmod(0o755)
+        environment = patch.dict(phone.os.environ, {
+            "HOME": str(self.root), "PATH": f"{tools}:{phone.os.environ['PATH']}",
+            "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@example.com",
+            "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@example.com"})
+        environment.start()
+        self.addCleanup(environment.stop)
+        # REPO and STATE_DIR come from HOME, and the methods bind REPO as a default.
+        module_spec = importlib.util.spec_from_file_location("phone_git", phone.__file__)
+        self.phone = importlib.util.module_from_spec(module_spec)
+        module_spec.loader.exec_module(self.phone)
+        self.phone.MANIFEST = self.root / "t3-main.txt"
+        self.phone.STATE_DIR.mkdir(parents=True)
+        self.events = []
+        self.builds_started = 0
+        for name, replacement in (("notify", lambda _, title, body: self.events.append((title, body))),
+                                  ("start_build", lambda _: setattr(self, "builds_started", self.builds_started + 1))):
+            item = patch.object(self.phone.Runner, name, replacement)
+            item.start()
+            self.addCleanup(item.stop)
+        self.upstream = self.root / "upstream"
+        self.git(self.root, "init", "--quiet", "--initial-branch=main", self.upstream)
+        self.write(self.upstream, {"app.txt": "one\ntwo\nthree\n", "pnpm-lock.yaml": "base\n",
+                                   "apps/mobile/package.json": "{}\n"}, "upstream", tag="v1.0.0")
+        self.git(self.root, "init", "--quiet", "--bare", "--initial-branch=main", self.root / "origin.git")
+        self.git(self.upstream, "push", "--quiet", self.root / "origin.git", "main")
+        self.work = self.root / "work"
+        self.git(self.root, "clone", "--quiet", self.root / "origin.git", self.work)
+        self.git(self.work, "remote", "add", "upstream", self.upstream)
+        self.git(self.work, "fetch", "--quiet", "upstream", "--tags")
+        self.repo = self.phone.REPO
+        self.git(self.root, "clone", "--quiet", self.root / "origin.git", self.repo)
+        self.git(self.repo, "remote", "add", "upstream", self.upstream)
 
-    def git(self, args):
-        self.commands.append(tuple(str(item) for item in args))
-        if args[0] == "pmset":
-            return "Now drawing from 'AC Power'", 0
-        if args[1] == "tag":
-            return f"{TAG}-nightly.2\n{TAG}\nv0.0.38\n", 0
-        if args[1] == "rev-parse":
-            return (RELEASE if args[2].startswith(TAG) else self.head) + "\n", 0
-        if args[1] == "describe":
-            return TAG + "\n", 0
-        if args[1] == "merge-base":
-            return "", 0 if self.integrated else 1
-        if args[1] == "merge" and args[2] == "--no-ff":
-            return "", 1 if self.conflicts else 0
-        if args[1] == "diff":
-            return "".join(f"{name}\n" for name in self.conflicts), 0
-        if args[1] == "push":
-            self.head = MERGED
-            return "", 0
-        return "", 0
+    def git(self, cwd, *args):
+        return subprocess.run(["git", *map(str, args)], cwd=cwd, check=True,
+                              capture_output=True, text=True).stdout.strip()
 
-    def run_service(self):
-        def capture(runner, *args, cwd=phone.REPO):
-            output, code = self.git(args)
-            if code:
-                raise subprocess.CalledProcessError(code, args)
-            return output
+    def write(self, repo, files, message, tag=None):
+        for name, content in files.items():
+            (repo / name).parent.mkdir(parents=True, exist_ok=True)
+            (repo / name).write_text(content)
+        self.git(repo, "add", "--all")
+        self.git(repo, "commit", "--quiet", "-m", message)
+        if tag:
+            self.git(repo, "tag", tag)
+        return self.git(repo, "rev-parse", "HEAD")
 
-        def attempt(runner, *args, cwd=phone.REPO):
-            return subprocess.CompletedProcess(args, self.git(args)[1])
+    def branch(self, name, start, files):
+        """Push a one-commit branch on start to origin and return its tip."""
+        self.git(self.work, "checkout", "--quiet", "-B", name, start)
+        tip = self.write(self.work, files, name)
+        self.git(self.work, "push", "--quiet", "--force", "origin", name)
+        return tip
 
-        def command(runner, *args, cwd=phone.REPO):
-            attempt(runner, *args, cwd=cwd).check_returncode()
+    def manifest(self, base, *branches):
+        self.phone.MANIFEST.write_text("# Fork main\n" + base + "\n"
+                                       + "".join(f"{branch}  # note\n" for branch in branches))
 
-        def build(runner):
-            self.builds.append(runner.revision)
-            runner.state["packaged"] = record(revision=runner.revision, version=runner.version)
-            runner.save()
+    def origin(self, ref):
+        return self.git(self.root / "origin.git", "rev-parse", ref)
 
-        with patch.object(phone.Runner, "capture", capture), \
-             patch.object(phone.Runner, "attempt", attempt), \
-             patch.object(phone.Runner, "command", command), \
-             patch.object(phone.Runner, "build", build), \
-             patch.object(phone.Runner, "publish", lambda _: None), \
-             patch.object(phone.Runner, "install", lambda _: "the iPhone is unreachable"), \
-             patch.object(phone.Runner, "notify", lambda _, title, body:
-                          self.events.append((title, body)) if not title.startswith("iPhone: update") else None):
-            return phone.main()
+    def merged_tips(self):
+        """The second parents along origin main's first-parent chain, oldest first."""
+        return [line.split()[2] for line in self.git(
+            self.root / "origin.git", "rev-list", "--first-parent", "--parents", "--reverse",
+            f"{self.git(self.upstream, 'rev-parse', 'v1.0.0')}..main").splitlines()]
 
-    def ran(self, *prefix):
-        return [args for args in self.commands if args[:len(prefix)] == prefix]
+    def update(self):
+        runner = self.phone.Runner()
+        state = self.phone.STATE_DIR / "state.json"
+        runner.state = json.loads(state.read_text()) if state.exists() else {}
+        self.assertTrue(runner.fetch())
+        runner.update_main()
+        return runner
 
-    def test_release_already_in_main_is_left_alone(self):
-        self.integrated = True
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.ran("git", "merge"), [])
-        self.assertEqual(self.ran("git", "push"), [])
-        self.assertEqual(self.builds, [FORK])
-
-    def test_clean_merge_is_pushed_and_built(self):
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(len(self.ran("git", "push")), 1)
-        self.assertEqual(self.builds, [MERGED])
+    def test_rebuild_merges_the_manifest_once(self):
+        first = self.branch("feat/one", "v1.0.0", {"one.txt": "1\n"})
+        second = self.branch("fix/two", "v1.0.0", {"two.txt": "2\n"})
+        self.manifest("v1.0.0", "feat/one", "fix/two")
+        self.update()
+        self.assertEqual(self.merged_tips(), [first, second])
+        self.assertEqual(self.git(self.root / "origin.git", "log", "-1", "--format=%s", "main"), "merge two")
+        main = self.origin("main")
+        self.update()
+        self.assertEqual(self.origin("main"), main)
         self.assertEqual(self.events, [])
+        self.assertTrue(self.git(self.repo, "config", "rerere.enabled"))
 
     def test_lockfile_conflict_is_regenerated(self):
-        self.conflicts = ["pnpm-lock.yaml"]
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(len(self.ran("git", "checkout", "--ours", "pnpm-lock.yaml")), 1)
-        self.assertEqual(len(self.ran("npx", "--yes", "corepack", "pnpm", "install", "--lockfile-only")), 1)
-        self.assertEqual(len(self.ran("git", "push")), 1)
-        self.assertEqual(self.builds, [MERGED])
-        self.assertEqual(self.events, [])
+        self.branch("feat/one", "v1.0.0", {"pnpm-lock.yaml": "one\n"})
+        self.branch("feat/two", "v1.0.0", {"pnpm-lock.yaml": "two\n"})
+        self.manifest("v1.0.0", "feat/one", "feat/two")
+        self.update()
+        self.assertEqual(self.git(self.root / "origin.git", "show", "main:pnpm-lock.yaml"), "regenerated")
 
-    def test_other_conflict_asks_for_help_and_builds_the_old_revision(self):
-        self.conflicts = ["pnpm-lock.yaml", "apps/mobile/app.config.ts"]
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(len(self.ran("git", "merge", "--abort")), 1)
-        self.assertEqual(self.ran("git", "push"), [])
-        self.assertEqual(self.builds, [FORK])
-        self.assertEqual(self.state()["integration_failure"]["revision"], RELEASE)
+    def test_conflict_keeps_main_and_a_recorded_resolution_replays(self):
+        self.branch("feat/one", "v1.0.0", {"app.txt": "one\nTWO\nthree\n"})
+        second = self.branch("feat/two", "v1.0.0", {"app.txt": "one\nzwei\nthree\n"})
+        self.manifest("v1.0.0", "feat/one", "feat/two")
+        main = self.origin("main")
+        runner = self.update()
+        self.assertEqual(self.origin("main"), main)
+        self.assertEqual([title for title, _ in self.events], ["iPhone build: merging feat/two needs a hand"])
+        self.assertIn("- app.txt\n", self.events[0][1])
+        self.assertIn("integration_failure", runner.state)
+        self.update()  # The same inputs wait a day.
         self.assertEqual(len(self.events), 1)
-        self.assertIn("apps/mobile/app.config.ts", self.events[0][1])
+        with self.assertRaises(self.phone.Conflict):
+            self.phone.Runner().ship()
+        checkout = self.phone.STATE_DIR / "ship"
+        (checkout / "app.txt").write_text("one\nTWO zwei\nthree\n")
+        self.git(checkout, "commit", "--quiet", "--all", "--no-edit")
+        self.phone.Runner().ship()
+        self.assertEqual(self.merged_tips()[1], second)
+        self.assertEqual(self.git(self.root / "origin.git", "show", "main:app.txt"), "one\nTWO zwei\nthree")
+        self.assertEqual(self.builds_started, 1)
+        self.assertFalse(checkout.exists())
 
-    def ship(self):
-        def attempt(runner, *args, cwd=phone.REPO):
-            return subprocess.CompletedProcess(args, self.git(args)[1])
+    def test_ship_appends_a_new_branch_and_refuses_a_current_main(self):
+        first = self.branch("feat/one", "v1.0.0", {"one.txt": "1\n"})
+        self.manifest("v1.0.0", "feat/one")
+        self.update()
+        second = self.branch("feat/two", "v1.0.0", {"two.txt": "2\n"})
+        self.phone.Runner().ship("feat/two")
+        self.assertEqual(self.merged_tips(), [first, second])
+        self.assertEqual(self.phone.read_manifest(), ("v1.0.0", ["feat/one", "feat/two"]))
+        self.assertIn("feat/one  # note\n", self.phone.MANIFEST.read_text())
+        with self.assertRaisesRegex(RuntimeError, "already merges"):
+            self.phone.Runner().ship("feat/two")
 
-        def command(runner, *args, cwd=phone.REPO):
-            attempt(runner, *args, cwd=cwd).check_returncode()
+    def test_branch_with_nothing_new_fails_loudly(self):
+        self.branch("feat/one", "v1.0.0", {"one.txt": "1\n"})
+        self.git(self.work, "push", "--quiet", "origin", "v1.0.0^{commit}:refs/heads/feat/empty")
+        self.manifest("v1.0.0", "feat/one", "feat/empty")
+        with self.assertRaisesRegex(RuntimeError, "feat/empty adds nothing"):
+            self.update()
 
-        with patch.object(phone.Runner, "capture", lambda _, *args, cwd=phone.REPO: self.git(args)[0]), \
-             patch.object(phone.Runner, "attempt", attempt), \
-             patch.object(phone.Runner, "command", command):
-            phone.Runner().ship("feat/voice")
+    def test_rebase_moves_branches_stacks_and_drops_merged_ones(self):
+        first = self.branch("feat/one", "v1.0.0", {"one.txt": "1\n"})
+        self.branch("feat/stacked", first, {"stacked.txt": "s\n"})
+        self.branch("fix/upstreamed", "v1.0.0", {"fix.txt": "f\n"})
+        self.branch("feat/lock", "v1.0.0", {"pnpm-lock.yaml": "lock\n"})
+        self.manifest("v1.0.0", "feat/one", "feat/stacked", "fix/upstreamed", "feat/lock")
+        self.update()
+        self.write(self.upstream, {"fix.txt": "f\n", "pnpm-lock.yaml": "newer\n"}, "upstream fix", tag="v1.1.0")
+        self.phone.Runner().rebase("v1.1.0")
+        self.assertEqual(self.phone.read_manifest(), ("v1.1.0", ["feat/one", "feat/stacked", "feat/lock"]))
+        base = self.git(self.upstream, "rev-parse", "v1.1.0")
+        one = self.origin("feat/one")
+        self.assertEqual(self.git(self.root / "origin.git", "rev-parse", "feat/one^"), base)
+        self.assertEqual(self.git(self.root / "origin.git", "rev-parse", "feat/stacked^"), one)
+        self.assertEqual(self.git(self.root / "origin.git", "show", "feat/lock:pnpm-lock.yaml"), "regenerated")
+        self.assertEqual(self.origin("fix/upstreamed"), self.git(self.work, "rev-parse", "fix/upstreamed"))
+        tips = self.git(self.root / "origin.git", "rev-list", "--first-parent", "--parents", "--reverse",
+                        f"{base}..main").splitlines()
+        self.assertEqual([line.split()[2] for line in tips],
+                         [one, self.origin("feat/stacked"), self.origin("feat/lock")])
+        self.assertEqual(self.builds_started, 1)
 
-    def test_ship_regenerates_lockfile_verifies_pushes_and_builds(self):
-        self.conflicts = ["pnpm-lock.yaml"]
-        self.ship()
-        self.assertEqual(self.ran("git", "merge", "--no-ff", "-m", "merge voice", "feat/voice"),
-                         [("git", "merge", "--no-ff", "-m", "merge voice", "feat/voice")])
-        self.assertEqual(len(self.ran("git", "checkout", "--ours", "pnpm-lock.yaml")), 1)
-        steps = [args[:5] for args in self.commands if args[0] in ("npx", "launchctl") or args[1] == "push"]
-        self.assertEqual(steps, [
-            ("npx", "--yes", "corepack", "pnpm", "install"),
-            ("npx", "--yes", "corepack", "pnpm", "install"),
-            ("npx", "--yes", "corepack", "pnpm", "run"),
-            ("git", "push", "origin", "HEAD:refs/heads/main"),
-            ("launchctl", "kickstart", "-k", f"gui/{phone.os.getuid()}/com.akelly.t3-phone-builds"),
-        ])
-        self.assertTrue((self.root / "ship-requested").exists())
-
-    def test_ship_stops_on_other_conflicts(self):
-        self.conflicts = ["apps/mobile/app.config.ts"]
-        with self.assertRaisesRegex(RuntimeError, "app.config.ts"):
-            self.ship()
-        self.assertEqual(len(self.ran("git", "merge", "--abort")), 1)
-        self.assertEqual(self.ran("git", "push"), [])
-        # One stale-worktree cleanup before the merge, one removal after it.
-        self.assertEqual(len(self.ran("git", "worktree", "remove")), 2)
-
-    def test_ship_refuses_a_branch_already_in_main(self):
-        self.integrated = True
-        with self.assertRaisesRegex(RuntimeError, "already in main"):
-            self.ship()
-        self.assertEqual(self.ran("git", "merge"), [])
-
-    def test_conflict_is_not_retried_for_a_day(self):
-        self.save({"integration_failure": record(revision=RELEASE)})
-        self.conflicts = ["apps/mobile/app.config.ts"]
-        self.assertEqual(self.run_service(), 0)
-        self.assertEqual(self.ran("git", "merge"), [])
-        self.assertEqual(self.events, [])
-        self.assertEqual(self.builds, [FORK])
-        with patch.object(phone, "now", return_value=NOW + phone.DAY):
-            self.run_service()
-        self.assertEqual(len(self.ran("git", "merge", "--abort")), 1)
-        self.assertEqual(len(self.events), 1)
+    def test_newer_release_is_announced_once(self):
+        self.manifest("v1.0.0")
+        self.write(self.upstream, {"later.txt": "l\n"}, "release", tag="v1.1.0")
+        self.write(self.upstream, {"nightly.txt": "n\n"}, "nightly", tag="v1.2.0-nightly.1")
+        runner = self.update()
+        runner.update_main()
+        self.assertEqual([title for title, _ in self.events], ["T3 Code v1.1.0 is out"])
+        self.assertEqual(self.origin("main"), self.git(self.upstream, "rev-parse", "v1.0.0"))
 
 
 class CocoaPodsTests(StateTests):
