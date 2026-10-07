@@ -127,12 +127,13 @@ def install_links(platform: str) -> None:
         claude / "skills": REPO / "skills",
         claude / "output-styles": REPO / "claude" / "output-styles",
         codex / "AGENTS.md": REPO / "AGENTS.md",
-        pi / "AGENTS.md": REPO / "AGENTS.md",
-        pi / "settings.json": REPO / "pi" / "settings.json",
-        pi / "extensions" / "prevent-rm.ts": REPO / "hooks" / "prevent-rm-pi.ts",
-        pi / "extensions" / "timestamp.ts": REPO / "hooks" / "timestamp-pi.ts",
         git / "ignore": REPO / "shell" / "gitignore-global",
     }
+    if platform != "windows":
+        static[pi / "AGENTS.md"] = REPO / "AGENTS.md"
+        static[pi / "settings.json"] = REPO / "pi" / "settings.json"
+        static[pi / "extensions" / "prevent-rm.ts"] = REPO / "hooks" / "prevent-rm-pi.ts"
+        static[pi / "extensions" / "timestamp.ts"] = REPO / "hooks" / "timestamp-pi.ts"
     if platform in {"linux", "macos"}:
         static[HOME / ".config" / "uv" / "uv.toml"] = REPO / "uv" / "uv.toml"
     else:
@@ -508,7 +509,8 @@ def update_agents(platform: str) -> None:
         updates["codex"] = ["brew", "upgrade", "--cask", "codex"]
     elif codex := settled_release("@openai/codex"):
         updates["codex"] = ["npm", "install", "-g", "--min-release-age=0", codex]
-    if pi := settled_release("@earendil-works/pi-coding-agent"):
+    # Pi runs on macOS and Linux (WSL included); its sandbox runtime is alpha on native Windows.
+    if platform != "windows" and (pi := settled_release("@earendil-works/pi-coding-agent")):
         updates["pi"] = ["npm", "install", "-g", "--min-release-age=0", pi]
     for tool, command in updates.items():
         # A broken tool still gets the update, since reinstalling is what repairs a half-finished npm install.
@@ -521,7 +523,8 @@ def update_agents(platform: str) -> None:
             print(f"updated {tool}: {before} -> {after}")
     # Pi installs packages listed in pi/settings.json when they are missing but never updates them.
     # --no-approve skips project settings, so only the shared package list is reconciled.
-    run_quietly(["pi", "update", "--extensions", "--no-approve"])
+    if platform != "windows":
+        run_quietly(["pi", "update", "--extensions", "--no-approve"])
 
 
 def settled_release(package: str) -> str | None:
