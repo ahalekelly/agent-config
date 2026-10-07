@@ -36,10 +36,6 @@ Check `ps` before relaunching a run you think died.
 Any task that requires taste or hard thinking should be done by Fable, including feature planning, bug finding, auditing for correctness and edge cases, UI, copy, obscure knowledge, novel algorithms, and non-code reasoning. Fable should delegate all other tasks that take more than a minute to a smaller model like Opus or GPT Sol: writing code, doing research, mechanical work, and any work they don't feel like doing.
 </model>
 
-<model: fable, opus>
-Run subagents in the background. Don't create large numbers of subagents. Make sure Claude subagents don't have overlapping tasks. Don't create more than a couple concurrent subagents.
-
-</model>
 GPT models come in 3 classes: Astra (Fable class, for second opinions), Sol (Opus class, for general purpose subagents), and Luna (Sonnet class, for low-complexity or repetitive tasks).
 
 Production code should be written by Opus or Sol, or for very complicated code Fable or Astra, never Sonnet or Luna.
@@ -56,6 +52,10 @@ As a subagent, you may delegate simple research and mechanical non-code work to 
 </model>
 <model: sonnet subagent>
 As a subagent, do the work yourself; never delegate.
+
+</model>
+<model: fable, opus>
+Run subagents in the background. Don't create large numbers of subagents. Make sure Claude subagents don't have overlapping tasks. Don't create more than a couple concurrent subagents.
 
 </model>
 GPT uses a different search engine from Claude, so for difficult web research tasks, delegate to both a Sol and Opus subagent, and have them surface the most promising links for you to review, quoting the relevant sections of their sources exactly in their responses.

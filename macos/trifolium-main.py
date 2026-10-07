@@ -5,7 +5,8 @@
 
 The fork (origin, ahalekelly/trifolium-controller) carries every pending patch on main for
 hardware testing. Main is generated, never edited: each change lives on its own branch,
-which can become an upstream PR to davidpyo/trifolium-controller.
+which can become an upstream PR to davidpyo/trifolium-controller. The fork's "Release and site"
+workflow is disabled, so main publishes nothing; each rebuild starts CI on it instead.
 
     uv run trifolium-main.py            rebuild main from the manifest
     uv run trifolium-main.py <branch>   push <branch> to origin, append it to the manifest,
@@ -62,6 +63,8 @@ def main():
 
     git("push", "--force", "origin", f"{head}:refs/heads/main")
     git("branch", "--force", "main", head)
+    subprocess.run(["gh", "workflow", "run", "ci.yml", "--repo", "ahalekelly/trifolium-controller",
+                    "--ref", "main"], check=True)
     print(f"main = {base} + {', '.join(branches)} at {head[:9]}")
 
 
