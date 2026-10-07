@@ -1,0 +1,33 @@
+# The fork's main: the first entry is the upstream tag it is built on, the rest are
+# origin branches t3-phone-builds.py merges onto it in this order. Each branch sits on
+# the tag, or on the earlier branch listed here that it builds on. `#` starts a comment.
+v0.0.46-nightly.20261005.2702
+feat/ios-chat-controls  # iOS widget and Lock Screen controls that open a project chat
+fork/personal-signing  # fork-only: sign with your own paid Apple team; sits on ios-chat-controls
+fork/about-build-info  # fork-only: release, commit, and build time in About; sits on personal-signing
+fix/single-tilde-strikethrough  # open upstream PR #9021
+perf/mobile-reconnect
+perf/mobile-client-traces  # sits on mobile-reconnect
+feat/voice  # fork-only: all voice work
+perf/single-descriptor-fetch
+perf/mobile-render-traces  # sits on mobile-client-traces
+perf/prioritize-open-environment  # sits on mobile-reconnect
+perf/decode-span  # sits on mobile-render-traces
+perf/app-lifecycle-traces  # sits on mobile-render-traces
+perf/app-suspend-traces  # sits on app-lifecycle-traces
+fix/resume-screen-label  # sits on mobile-render-traces
+perf/home-render-stability
+fork/git-status-optional-locks  # upstream merged it as #14718 after this nightly; drops out at the next tag
+feat/splash-until-cache
+fix/splash-after-home-paint  # sits on splash-until-cache
+refactor/launch-screen-simplify  # sits on splash-after-home-paint
+perf/render-survey
+perf/hedge-connect-requests  # sits on prioritize-open-environment
+perf/composer-first-mount
+fix/markdown-cutoff
+fix/thread-catchup-batch
+simplify/render  # sits on render-survey
+simplify/catchup  # sits on thread-catchup-batch
+fix/macroscope-predictions  # sits on launch-screen-simplify
+fix/shell-stale-attempt  # sits on simplify/catchup
+measure/prioritize-ab  # temporary A/B; remove when the measurement ends; sits on hedge-connect-requests

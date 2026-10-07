@@ -28,3 +28,17 @@ ehthumbs.db
 *.swo
 
 **/.claude/.cc-writes/
+
+# Claude Code's sandbox mounts /dev/null over these at the repo root to block writes,
+# so sandboxed `git status` lists them as untracked though they don't exist on disk.
+/.bash_profile
+/.bashrc
+/.gitconfig
+/.gitmodules
+/.idea
+/.mcp.json
+/.profile
+/.ripgreprc
+/.vscode
+/.zprofile
+/.zshrc

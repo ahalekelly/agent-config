@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.akelly.voice-model-check</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/uv</string>
+		<string>run</string>
+		<string>--quiet</string>
+		<string>/Users/akelly/.agents/bin/t3-thread.py</string>
+		<string>new</string>
+		<string>/Users/akelly/Git/t3code</string>
+		<string>Weekly voice model check</string>
+		<string>claudeAgent</string>
+		<string>claude-opus-5-5</string>
+		<string>/Users/akelly/.agents/macos/voice-model-check.md</string>
+	</array>
+	<!-- Mondays at 10:00; launchd runs a missed time when the Mac wakes. -->
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Weekday</key>
+		<integer>1</integer>
+		<key>Hour</key>
+		<integer>10</integer>
+		<key>Minute</key>
+		<integer>0</integer>
+	</dict>
+	<key>StandardErrorPath</key>
+	<string>/Users/akelly/Library/Logs/voice-model-check.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/akelly/Library/Logs/voice-model-check.log</string>
+</dict>
+</plist>

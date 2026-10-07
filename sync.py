@@ -11,6 +11,7 @@ import copy
 import difflib
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -18,6 +19,7 @@ import sys
 import time
 import traceback
 from collections.abc import Mapping, MutableMapping
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import tomlkit
@@ -44,6 +46,15 @@ def platform_name() -> str:
     if sys.platform == "win32":
         return "windows"
     raise SyncError(f"unsupported platform: {sys.platform}")
+
+
+def dark_wake() -> bool:
+    """Whether macOS is in a dark wake: a maintenance wake during sleep, with the display off and the network about to drop."""
+    state = subprocess.run(["pmset", "-g", "systemstate"], capture_output=True, text=True, check=True).stdout
+    capabilities = re.search(r"^Current System Capabilities are: (.*)$", state, re.MULTILINE)
+    if capabilities is None:
+        raise SyncError(f"pmset -g systemstate lists no capabilities:\n{state}")
+    return "Graphics" not in capabilities[1].split()
 
 
 def ensure_directory(path: Path) -> None:
@@ -376,14 +387,36 @@ def sync_repository(repo: Path) -> None:
     upstream = git(repo, "rev-parse", "--abbrev-ref", "@{upstream}")
     if upstream != default or branch != default.removeprefix("origin/"):
         raise SyncError(f"{repo}: auto-sync requires the default branch {default}")
+    # A pull that removes a submodule leaves its checkout behind, and git add would commit it back as a gitlink with no .gitmodules entry, which breaks submodule commands on every machine.
+    modules = Path(git(repo, "rev-parse", "--path-format=absolute", "--git-path", "modules"))
+    for path in git(repo, "ls-files", "-z", "--others", "--exclude-standard").split("\0"):
+        if not path.endswith("/"):
+            continue
+        checkout = repo / path
+        git_dir = Path(git(checkout, "rev-parse", "--absolute-git-dir"))
+        if not git_dir.is_relative_to(modules):
+            raise SyncError(f"{checkout}: untracked nested repository; delete it or register it with git submodule add")
+        if git(checkout, "status", "--porcelain") or git(checkout, "log", "HEAD", "--branches", "--not", "--remotes", "--oneline"):
+            raise SyncError(f"{checkout}: the checkout of a removed submodule has unpushed work; save it, then delete the checkout and {git_dir}")
+        run_quietly(["trash", str(checkout), str(git_dir)])
+        print(f"removed the checkout of removed submodule {checkout}", flush=True)
     git(repo, "add", "--all")
     if git(repo, "diff", "--cached", "--name-only"):
         git(repo, "commit", "-m", f"Sync configuration from {socket.gethostname()}")
         print(f"committed {repo}", flush=True)
-    git(repo, "-c", "submodule.recurse=false", "pull", "--no-rebase", "--no-edit")
-    if git(repo, "rev-list", "--count", "@{upstream}..HEAD") != "0":
-        git(repo, "push")
+    # Other machines and agents push to the same remote, so a push can lose a race; pull again and retry.
+    for attempt in range(3):
+        git(repo, "-c", "submodule.recurse=false", "pull", "--no-rebase", "--no-edit")
+        if git(repo, "rev-list", "--count", "@{upstream}..HEAD") == "0":
+            return
+        try:
+            git(repo, "push")
+        except SyncError:
+            if attempt == 2:
+                raise
+            continue
         print(f"pushed {repo}", flush=True)
+        return
 
 
 def sync_submodules() -> None:
@@ -468,12 +501,15 @@ def install_pull_schedule(platform: str) -> None:
 
 
 def update_agents(platform: str) -> None:
-    """Install the latest Claude Code and Codex; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
+    """Install the latest Claude Code, Codex, and Pi; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
     claude = str(HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude"))
-    updates = {
-        claude: [claude, "update"],
-        "codex": ["brew", "upgrade", "--cask", "codex"] if platform == "macos" else ["npm", "install", "-g", "--min-release-age=0", "@openai/codex@latest"],
-    }
+    updates = {claude: [claude, "update"]}
+    if platform == "macos":
+        updates["codex"] = ["brew", "upgrade", "--cask", "codex"]
+    elif codex := settled_release("@openai/codex"):
+        updates["codex"] = ["npm", "install", "-g", "--min-release-age=0", codex]
+    if pi := settled_release("@earendil-works/pi-coding-agent"):
+        updates["pi"] = ["npm", "install", "-g", "--min-release-age=0", pi]
     for tool, command in updates.items():
         # A broken tool still gets the update, since reinstalling is what repairs a half-finished npm install.
         before = tool_version(tool)
@@ -483,26 +519,43 @@ def update_agents(platform: str) -> None:
             raise SyncError(f"{tool} doesn't run after {' '.join(command)}; the next sync reinstalls it")
         if after != before:
             print(f"updated {tool}: {before} -> {after}")
-    # Pi ships inside pi-for-claude, whose update installs Pi's latest release and updates its extensions.
-    run_quietly(["pi-for-claude", "update"])
+    # Pi installs packages listed in pi/settings.json when they are missing but never updates them.
+    # --no-approve skips project settings, so only the shared package list is reconciled.
+    run_quietly(["pi", "update", "--extensions", "--no-approve"])
+
+
+def settled_release(package: str) -> str | None:
+    """The package's latest release once it is an hour old, since npm lists a release minutes before its tarball downloads."""
+    view = json.loads(run_quietly(["npm", "view", package, "dist-tags.latest", "time", "--json"]))
+    version = view["dist-tags.latest"]
+    if datetime.now(UTC) - datetime.fromisoformat(view["time"][version]) < timedelta(hours=1):
+        print(f"keeping the installed {package} until {version} is an hour old")
+        return None
+    return f"{package}@{version}"
 
 
 def tool_version(tool: str) -> str | None:
     """`tool --version`, or None when the tool is missing or fails to run."""
-    try:
-        result = subprocess.run([tool, "--version"], capture_output=True, text=True)
-    except FileNotFoundError:
+    executable = shutil.which(tool)
+    if executable is None:
         return None
+    result = subprocess.run([executable, "--version"], capture_output=True, text=True)
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def run_quietly(command: list[str]) -> None:
-    result = subprocess.run(command, capture_output=True, text=True)
+def run_quietly(command: list[str]) -> str:
+    # shutil.which finds Windows .cmd shims like npm.cmd, which CreateProcess can't resolve from a bare name.
+    executable = shutil.which(command[0])
+    if executable is None:
+        raise SyncError(f"{command[0]} not found on PATH")
+    result = subprocess.run([executable, *command[1:]], capture_output=True, text=True)
     if result.returncode:
         raise SyncError(f"{' '.join(command)} exited {result.returncode}:\n{result.stdout}{result.stderr}")
+    return result.stdout
 
 
-def main() -> None:
+def main() -> bool:
+    """Return True when the pull changed this script, so the caller reruns the sync with the new code."""
     if REPO != HOME / ".agents":
         raise SyncError(
             f"sync only runs from {HOME / '.agents'}, not a worktree or other clone ({REPO})"
@@ -526,14 +579,24 @@ def main() -> None:
     render_codex(platform)
     if args == ["pull"]:
         sync_submodules()
+        running = Path(__file__).read_bytes()
         sync_repository(REPO)
+        if Path(__file__).read_bytes() != running:
+            return True
         install_links(platform)
         install_npm_cooldown()
         install_process_wrapper(platform)
         render_codex(platform)
-        update_agents(platform)
+        try:
+            update_agents(platform)
+        except SyncError as error:
+            # Registries and CDNs fail transiently; a second attempt also repairs a half-finished install.
+            print(f"{error}\nretrying the updates in 5 minutes", file=sys.stderr)
+            time.sleep(300)
+            update_agents(platform)
     else:
         install_pull_schedule(platform)
+    return False
 
 
 FAILURE_REPORT = HOME / ".agent-config-sync-failure.md"
@@ -549,12 +612,14 @@ def report_failure(error: str) -> None:
     pending.write_text(
         f"Automated alert from the scheduled agent-config sync on {host}, not a message from Adrian. "
         f"`sync.py pull` failed:\n\n```\n{error.strip()}\n```\n\n"
-        f"Diagnose it. Fix it only if the fix clearly has no downside; otherwise explain the tradeoff and leave the decision to Adrian. "
+        f"Diagnose the root cause. Fix it properly for the long term, not with a band-aid, and make sync robust to this kind of failure in the future. "
+        f"Make the fix only if it clearly has no downside; otherwise explain the tradeoff and leave the decision to Adrian. "
+        f"Run /code-review on the fix before committing, as CLAUDE.md describes. "
         f"Later scheduled syncs on {host} stay silent until one succeeds.\n",
         encoding="utf-8",
     )
     subprocess.run(
-        [sys.executable, str(REPO / "bin/t3-thread.py"), "new", str(REPO), f"Sync failed on {host}",
+        [shutil.which("uv"), "run", "--quiet", str(REPO / "bin/t3-thread.py"), "new", str(REPO), f"Sync failed on {host}",
          model["instanceId"], model["model"], str(pending)],
         check=True,
     )
@@ -563,8 +628,14 @@ def report_failure(error: str) -> None:
 
 if __name__ == "__main__":
     try:
+        # launchd runs overdue jobs in dark wakes, where the Mac sleeps again within seconds and cuts off the sync's downloads.
+        if sys.argv[1:] == ["pull"] and sys.platform == "darwin" and dark_wake():
+            raise SystemExit(0)
         with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
-            main()
+            pulled = main()
+        if pulled:
+            # Finish with the pulled code, not the stale copy in memory, which may call tools the pull removed.
+            raise SystemExit(subprocess.run([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"]).returncode)
     except Timeout:
         print("another sync is running", file=sys.stderr)
         raise SystemExit(1)

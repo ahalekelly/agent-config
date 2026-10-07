@@ -38,5 +38,4 @@ __pycache__/
 skills/synced/
 
 # Linked worktrees of the submodules, checked out beside them.
-/pi-for-claude-*/
 /browser-swarm-*/

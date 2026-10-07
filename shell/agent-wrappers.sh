@@ -11,8 +11,6 @@ _scrub_secrets() {
 }
 
 codex() { _scrub_secrets codex "$@"; }
-# Keep the interactive Pi CLI at the version used by pi-for-claude.
-pi() { _scrub_secrets "$HOME/.agents/pi-for-claude/node_modules/.bin/pi" "$@"; }
 
 # One launcher, two accounts: each function exports the token and profile from
 # its env file (see README.md) and runs bin/claude-launch.
