@@ -542,7 +542,7 @@ def run_quietly(command: list[str]) -> str:
 
 
 def main() -> bool:
-    """Return True when the pull changed this repository, so the caller reruns the sync with the new code."""
+    """Return True when the pull changed this script, so the caller reruns the sync with the new code."""
     if REPO != HOME / ".agents":
         raise SyncError(
             f"sync only runs from {HOME / '.agents'}, not a worktree or other clone ({REPO})"
@@ -566,9 +566,9 @@ def main() -> bool:
     render_codex(platform)
     if args == ["pull"]:
         sync_submodules()
-        before = git(REPO, "rev-parse", "HEAD")
+        running = Path(__file__).read_bytes()
         sync_repository(REPO)
-        if git(REPO, "rev-parse", "HEAD") != before:
+        if Path(__file__).read_bytes() != running:
             return True
         install_links(platform)
         install_npm_cooldown()
@@ -621,7 +621,7 @@ if __name__ == "__main__":
         with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
             pulled = main()
         if pulled:
-            # The pull can change this script, its dependencies, or the tools it calls; finish with the new code, not the copy in memory.
+            # Finish with the pulled code, not the stale copy in memory, which may call tools the pull removed.
             raise SystemExit(subprocess.run([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"]).returncode)
     except Timeout:
         print("another sync is running", file=sys.stderr)
