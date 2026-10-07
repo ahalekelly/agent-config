@@ -10,3 +10,4 @@ low-voltage-cutoff  # cutoff spins down and holds until reboot; sits on safe-men
 spinup-timeout  # rampup timeout latches and covers PLASMA; sits on low-voltage-cutoff
 stale-rpm-telemetry  # stop firing on stale eRPM; sits on spinup-timeout
 macos-sim  # simulator builds and runs on macOS; test port race fix
+esc-current-log  # log the ESC current-sense pin in RPM captures; sits on motor-voltage-limit (fixture conflict)
