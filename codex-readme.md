@@ -20,7 +20,6 @@ Codex config cannot be linked because Codex edits it. Sync deep-merges `codex/co
 - Claude uses sandbox permissions, an `rm` hook, shared skills, a Python status line, and terminal tab-state hooks.
 - The `claude` and `claudew` shell functions run one launcher with different account tokens; all sessions share `~/.claude`, so configuration and project state are common.
 - Codex uses a workspace-write sandbox, local MCP servers, plugins, desktop settings where available, and the shared `rm` hook.
-- Pi stores project sessions under `.agents/sessions` and loads `hooks/prevent-rm-pi.ts` as an extension.
-- `pi-for-claude` manages delegated Pi sessions and worktrees.
+- Pi loads `hooks/prevent-rm-pi.ts` as an extension and installs the packages listed in `pi/settings.json`.
 
 See [README.md](README.md) for setup and syncing commands.

@@ -488,13 +488,15 @@ def install_pull_schedule(platform: str) -> None:
 
 
 def update_agents(platform: str) -> None:
-    """Install the latest Claude Code and Codex; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
+    """Install the latest Claude Code, Codex, and Pi; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
     claude = str(HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude"))
     updates = {claude: [claude, "update"]}
     if platform == "macos":
         updates["codex"] = ["brew", "upgrade", "--cask", "codex"]
     elif codex := settled_release("@openai/codex"):
         updates["codex"] = ["npm", "install", "-g", "--min-release-age=0", codex]
+    if pi := settled_release("@earendil-works/pi-coding-agent"):
+        updates["pi"] = ["npm", "install", "-g", "--min-release-age=0", pi]
     for tool, command in updates.items():
         # A broken tool still gets the update, since reinstalling is what repairs a half-finished npm install.
         before = tool_version(tool)
@@ -504,8 +506,9 @@ def update_agents(platform: str) -> None:
             raise SyncError(f"{tool} doesn't run after {' '.join(command)}; the next sync reinstalls it")
         if after != before:
             print(f"updated {tool}: {before} -> {after}")
-    # Pi ships inside pi-for-claude, whose update installs Pi's latest release and updates its extensions.
-    run_quietly(["pi-for-claude", "update"])
+    # Pi installs packages listed in pi/settings.json when they are missing but never updates them.
+    # --no-approve skips project settings, so only the shared package list is reconciled.
+    run_quietly(["pi", "update", "--extensions", "--no-approve"])
 
 
 def settled_release(package: str) -> str | None:
@@ -538,7 +541,8 @@ def run_quietly(command: list[str]) -> str:
     return result.stdout
 
 
-def main() -> None:
+def main() -> bool:
+    """Return True when the pull changed this script, so the caller reruns the sync with the new code."""
     if REPO != HOME / ".agents":
         raise SyncError(
             f"sync only runs from {HOME / '.agents'}, not a worktree or other clone ({REPO})"
@@ -562,7 +566,10 @@ def main() -> None:
     render_codex(platform)
     if args == ["pull"]:
         sync_submodules()
+        running = Path(__file__).read_bytes()
         sync_repository(REPO)
+        if Path(__file__).read_bytes() != running:
+            return True
         install_links(platform)
         install_npm_cooldown()
         install_process_wrapper(platform)
@@ -576,6 +583,7 @@ def main() -> None:
             update_agents(platform)
     else:
         install_pull_schedule(platform)
+    return False
 
 
 FAILURE_REPORT = HOME / ".agent-config-sync-failure.md"
@@ -611,7 +619,10 @@ if __name__ == "__main__":
         if sys.argv[1:] == ["pull"] and sys.platform == "darwin" and dark_wake():
             raise SystemExit(0)
         with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
-            main()
+            pulled = main()
+        if pulled:
+            # Finish with the pulled code, not the stale copy in memory, which may call tools the pull removed.
+            raise SystemExit(subprocess.run([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"]).returncode)
     except Timeout:
         print("another sync is running", file=sys.stderr)
         raise SystemExit(1)

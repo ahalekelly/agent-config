@@ -12,7 +12,7 @@ Versioned configuration for Claude Code, Codex, and Pi. The repo lives at `~/.ag
 - `hooks/`, `bin/`, `skills/` — shared hooks, command guards, and skills. `bin/t3-thread.py` sends prompts to the local T3 service.
 - `sync.py` — cross-platform config installer.
 - `tests/` — run with `uv run tests/run.py`; extra arguments go to pytest.
-- `pi-for-claude/`, `browser-swarm/` — submodules.
+- `browser-swarm/` — submodule.
 
 Runtime state, credentials, caches, and `~/.codex/config.toml.rendered` remain outside the repo.
 
@@ -46,9 +46,9 @@ Requires git, [uv](https://docs.astral.sh/uv/), and the [GitHub CLI](https://cli
 gh auth login && gh auth setup-git
 git clone --recurse-submodules https://github.com/ahalekelly/agent-config.git ~/.agents
 uv run ~/.agents/sync.py
-(cd ~/.agents/pi-for-claude && npm install && npm link)
-pi-for-claude setup
 ```
+
+The first scheduled sync installs Pi; then run `pi` and `/login` to sign in.
 
 Create `~/.agents/secrets.env` for keys agents may use and `~/.secrets.env` for keys agents must not see. The shell wrappers scrub the latter from agent processes.
 
@@ -66,7 +66,7 @@ On macOS, sync also links `.zshrc`, `.zprofile`, and the iTerm2 dynamic profile.
 
 On Windows, rerun sync after enabling Developer Mode if symlink creation fails, and install `jq` (`winget install jqlang.jq`) for the prompt hooks. Windows paths and native Codex settings live in `codex/config.windows.toml`. The `T3 keepalive` scheduled task checks every 5 minutes and reopens T3 Code if it has quit, minimizing the new window; existing windows stay untouched. Logs are in `%LOCALAPPDATA%\t3-keepalive\t3-keepalive.log`. Stop it with `schtasks /Delete /TN "T3 keepalive" /F`, then end the watcher, which outlives the task: `Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%t3-keepalive.py%'" | Invoke-CimMethod -MethodName Terminate`. Running sync installs it again.
 
-Every Claude Code launch, terminal or T3 Code, goes through `bin/claude-launch`, which takes its account from `CLAUDE_PROFILE` and `CLAUDE_CODE_OAUTH_TOKEN` in the environment. The `claude` and `claudew` shell functions export them from the gitignored, owner-readable `~/.agents/claude-token.env` and `~/.agents/claudew-token.env`, which hold `CLAUDE_PROFILE=personal` or `work` and a one-year `CLAUDE_CODE_OAUTH_TOKEN` from `command claude setup-token`. Work always runs on its token. Personal runs on its token on akelly-desktop and in WSL; on the Mac, `claude-token.env` leaves the token commented out, so personal runs on the personal login stored in `~/.claude`, which Claude Code refreshes itself and which lets T3 Code show its usage limits. Never run `/login` in a work session: it replaces the stored personal login. A T3 Code provider points at the absolute `~/.agents/bin/claude-launch` with an empty home path and sets the same variables under Environment variables, the token marked sensitive. Every session shares `~/.claude`, so `CLAUDE_CONFIG_DIR` is never set. Token sessions can't use claude.ai connectors or Remote Control, and the weekly usage lines in prompt context come from the personal login, so they appear only in personal sessions. Claude Code and Codex check for updates only from their interactive terminal UIs, which T3 Code sessions never open, so every sync run installs their latest releases: `claude update`, and for Codex an npm install of its latest hour-old release or on macOS `brew upgrade --cask codex`. Pi ships as a dependency of the `pi-for-claude` submodule, so each run also runs `pi-for-claude update`, which installs Pi's latest hour-old release and updates its extensions; sync commits the resulting lockfile change. Threads already open keep their binary; new ones get the update.
+Every Claude Code launch, terminal or T3 Code, goes through `bin/claude-launch`, which takes its account from `CLAUDE_PROFILE` and `CLAUDE_CODE_OAUTH_TOKEN` in the environment. The `claude` and `claudew` shell functions export them from the gitignored, owner-readable `~/.agents/claude-token.env` and `~/.agents/claudew-token.env`, which hold `CLAUDE_PROFILE=personal` or `work` and a one-year `CLAUDE_CODE_OAUTH_TOKEN` from `command claude setup-token`. Work always runs on its token. Personal runs on its token on akelly-desktop and in WSL; on the Mac, `claude-token.env` leaves the token commented out, so personal runs on the personal login stored in `~/.claude`, which Claude Code refreshes itself and which lets T3 Code show its usage limits. Never run `/login` in a work session: it replaces the stored personal login. A T3 Code provider points at the absolute `~/.agents/bin/claude-launch` with an empty home path and sets the same variables under Environment variables, the token marked sensitive. Every session shares `~/.claude`, so `CLAUDE_CONFIG_DIR` is never set. Token sessions can't use claude.ai connectors or Remote Control, and the weekly usage lines in prompt context come from the personal login, so they appear only in personal sessions. Claude Code and Codex check for updates only from their interactive terminal UIs, which T3 Code sessions never open, so every sync run installs their latest releases: `claude update`, and for Codex an npm install of its latest hour-old release or on macOS `brew upgrade --cask codex`. Pi installs globally through npm the same way on every platform, then `pi update --extensions` installs and updates the packages listed in `pi/settings.json`, which follow the npm quarantine. Threads already open keep their binary; new ones get the update.
 
 Autodesk Fusion's local MCP endpoint is configured in the Codex macOS overlay. Enable it in Fusion under Preferences > General > API and keep Fusion running. Register it globally in Claude Code with `claude mcp add --transport http --scope user fusion http://127.0.0.1:27182/mcp`.
 
@@ -78,6 +78,6 @@ claude mcp add-json --scope user gmail '{"type":"http","url":"https://gmailmcp.g
 
 ## History
 
-The repo's history is continuous through the bare-repo-to-normal-repo conversion (2026-07-11, `b8c99d9a`); commits before it use the old dotfile layout (`.claude/…`, `.codex/…`, `.agents/pi-run/…`), so `git log --follow` doesn't track files across the conversion. The exception is `pi-for-claude/`, which was split into its own repository at the conversion: the submodule's history starts there, and its earlier history is the `.agents/pi-run/` commits here.
+The repo's history is continuous through the bare-repo-to-normal-repo conversion (2026-07-11, `b8c99d9a`); commits before it use the old dotfile layout (`.claude/…`, `.codex/…`, `.agents/pi-run/…`), so `git log --follow` doesn't track files across the conversion. The exception is pi-for-claude, which was split into its own repository (`ahalekelly/pi-for-claude`) at the conversion; its earlier history is the `.agents/pi-run/` commits here.
 
 The bare repo `~/Git/agent-config.git.before-normal-repo-20260711-233133` (local only, never pushed) archives the history-rewrite work from the day of the conversion: refs `bak1`/`bak2` are intermediate rewrite stages, plus reflogs and a dangling pre-rewrite tip. `bak1` holds the only copy of `.agents/advisor-protocol.md`, the advisor-tool protocol extracted verbatim from the Claude Code binary.
