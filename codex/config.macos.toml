@@ -1,5 +1,5 @@
 notify = ["/Users/akelly/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
-model = "gpt-6-astra"
+model = "gpt-6-luna"
 
 [features]
 prevent_idle_sleep = true
@@ -134,6 +134,9 @@ enabled = false
 [[skills.config]]
 path = "/Users/akelly/.codex/skills/codex-primary-runtime/spreadsheets/SKILL.md"
 enabled = false
+
+[tui]
+screen_reader_detection_done = true
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
