@@ -9,3 +9,4 @@ safe-menu-spindown  # SAFE or menu spins the flywheels down from any state
 low-voltage-cutoff  # cutoff spins down and holds until reboot; sits on safe-menu-spindown
 spinup-timeout  # rampup timeout latches and covers PLASMA; sits on low-voltage-cutoff
 stale-rpm-telemetry  # stop firing on stale eRPM; sits on spinup-timeout
+macos-sim  # simulator builds and runs on macOS; test port race fix
