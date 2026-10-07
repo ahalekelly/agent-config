@@ -541,7 +541,8 @@ def run_quietly(command: list[str]) -> str:
     return result.stdout
 
 
-def main() -> None:
+def main() -> bool:
+    """Return True when the pull changed this repository, so the caller reruns the sync with the new code."""
     if REPO != HOME / ".agents":
         raise SyncError(
             f"sync only runs from {HOME / '.agents'}, not a worktree or other clone ({REPO})"
@@ -565,7 +566,10 @@ def main() -> None:
     render_codex(platform)
     if args == ["pull"]:
         sync_submodules()
+        before = git(REPO, "rev-parse", "HEAD")
         sync_repository(REPO)
+        if git(REPO, "rev-parse", "HEAD") != before:
+            return True
         install_links(platform)
         install_npm_cooldown()
         install_process_wrapper(platform)
@@ -579,6 +583,7 @@ def main() -> None:
             update_agents(platform)
     else:
         install_pull_schedule(platform)
+    return False
 
 
 FAILURE_REPORT = HOME / ".agent-config-sync-failure.md"
@@ -614,7 +619,10 @@ if __name__ == "__main__":
         if sys.argv[1:] == ["pull"] and sys.platform == "darwin" and dark_wake():
             raise SystemExit(0)
         with FileLock(str(HOME / ".agent-config-sync.lock"), timeout=0):
-            main()
+            pulled = main()
+        if pulled:
+            # The pull can change this script, its dependencies, or the tools it calls; finish with the new code, not the copy in memory.
+            raise SystemExit(subprocess.run([shutil.which("uv"), "run", "--quiet", str(REPO / "sync.py"), "pull"]).returncode)
     except Timeout:
         print("another sync is running", file=sys.stderr)
         raise SystemExit(1)
