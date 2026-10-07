@@ -19,7 +19,7 @@ Read `vendors.md` beside this file before searching. It contains preferred-vendo
 
 Launch both engines in parallel, in the background — they use different search indexes and reliably find different things:
 
-- **GPT Sol** via pi-for-claude (`run` with a plan file, in a persistent Monitor). Answer its consult questions promptly via the answer file.
+- **GPT Sol** via T3 Code's Pi provider (`delegate_task`, background, the latest Sol model from `orchestrator_capabilities`). It cannot ask you questions mid-task, so tell it to state its assumptions and continue.
 - **A Claude Opus subagent** (`model: "opus"`, background) with WebSearch/WebFetch.
 
 Give each: the criteria in priority order with hard/soft markings, the relevant rows from `vendors.md`, the source channels chosen from the techniques list, and the deliverable shape (viability-sorted table + most promising links + frank assessment). Their instructions should also say: specifically check every plausible preferred and decent vendor from `vendors.md`; double-check that each candidate matches all criteria; list useful near-misses with the deviation; accept that an empty category is a valuable result; and mention a promising source even when access is blocked.

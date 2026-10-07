@@ -243,8 +243,8 @@
       "### User-specific",
       "**Primary use of Claude Code**: software development — maintaining this coding-agent configuration repo (~/.agents), including Claude/Codex/Pi dotfiles, hooks, and skills",
       "**Trusted repo**: this repo (github.com/ahalekelly/agent-config) at ~/.agents, which is PUBLIC — only this repo's own work belongs here; confidential material (secrets.env, private.pem, anything under ~/.secrets.env) is never cleared for commit or push regardless of visibility",
-      "**Org-specific CLIs**: None configured — repo-local tools observed in usage: `trash`, `pi-run`, `pi-for-claude`, `agy` (routine under this repo's own tooling)",
-      "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi-for-claude`) are routine"
+      "**Org-specific CLIs**: None configured — repo-local tools observed in usage: `trash`, `pi`, `agy` (routine under this repo's own tooling)",
+      "**routine under ~/.agents/ prefix**: local file operations, git operations against the `origin` remote, and invocations of this repo's own bin/ shims (e.g. `trash`, `pi`) are routine"
     ]
   },
   "voiceEnabled": true
