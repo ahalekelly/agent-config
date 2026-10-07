@@ -1,0 +1,7 @@
+# The ahalekelly/trifolium-controller fork's main, for hardware testing: the first entry is
+# the upstream (davidpyo) tag it is built on, the rest are origin branches trifolium-main.py
+# merges onto it in this order. Each branch sits on the tag, or on the earlier branch listed
+# here that it builds on. `#` starts a comment.
+v2.1.1
+motor-voltage-limit  # per-motor max spin-up voltage, battery averaging fix
+storage-discharge-esc  # Storage Discharge drives only ESCs attached this boot
