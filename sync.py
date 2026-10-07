@@ -488,13 +488,15 @@ def install_pull_schedule(platform: str) -> None:
 
 
 def update_agents(platform: str) -> None:
-    """Install the latest Claude Code and Codex; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
+    """Install the latest Claude Code, Codex, and Pi; their own updaters run only in interactive TUIs, which T3 Code sessions never open."""
     claude = str(HOME / ".local" / "bin" / ("claude.exe" if platform == "windows" else "claude"))
     updates = {claude: [claude, "update"]}
     if platform == "macos":
         updates["codex"] = ["brew", "upgrade", "--cask", "codex"]
     elif codex := settled_release("@openai/codex"):
         updates["codex"] = ["npm", "install", "-g", "--min-release-age=0", codex]
+    if pi := settled_release("@earendil-works/pi-coding-agent"):
+        updates["pi"] = ["npm", "install", "-g", "--min-release-age=0", pi]
     for tool, command in updates.items():
         # A broken tool still gets the update, since reinstalling is what repairs a half-finished npm install.
         before = tool_version(tool)
@@ -504,8 +506,9 @@ def update_agents(platform: str) -> None:
             raise SyncError(f"{tool} doesn't run after {' '.join(command)}; the next sync reinstalls it")
         if after != before:
             print(f"updated {tool}: {before} -> {after}")
-    # Pi ships inside pi-for-claude, whose update installs Pi's latest release and updates its extensions.
-    run_quietly(["pi-for-claude", "update"])
+    # Pi installs packages listed in pi/settings.json when they are missing but never updates them.
+    # --no-approve skips project settings, so only the shared package list is reconciled.
+    run_quietly(["pi", "update", "--extensions", "--no-approve"])
 
 
 def settled_release(package: str) -> str | None:

@@ -12,7 +12,9 @@
     "google/gemini-flash-latest"
   ],
   "packages": [
+    "git:github.com/ahalekelly/pi-sandbox@main",
     "npm:pi-web-access",
+    "npm:pi-agent-browser-native",
     "npm:pi-docparser",
     "npm:pi-mcp-adapter"
   ],
