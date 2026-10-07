@@ -5,3 +5,7 @@
 v2.1.1
 motor-voltage-limit  # per-motor max spin-up voltage, battery averaging fix
 storage-discharge-esc  # Storage Discharge drives only ESCs attached this boot
+safe-menu-spindown  # SAFE or menu spins the flywheels down from any state
+low-voltage-cutoff  # cutoff spins down and holds until reboot; sits on safe-menu-spindown
+spinup-timeout  # rampup timeout latches and covers PLASMA; sits on low-voltage-cutoff
+stale-rpm-telemetry  # stop firing on stale eRPM; sits on spinup-timeout
