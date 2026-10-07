@@ -312,14 +312,13 @@ def test_auto_sync_leaves_feature_branches_untouched(repositories, sync_module):
     assert sync_module.git(first, "diff", "--name-only") == "config.txt"
 
 
-def test_auto_sync_refuses_to_commit_a_nested_repository(repositories, sync_module):
+def test_auto_sync_refuses_an_unregistered_nested_repository(repositories, sync_module):
     first, _ = repositories
-    (first / "removed-submodule").mkdir()
-    sync_module.git(first / "removed-submodule", "init")
-    sync_module.git(first / "removed-submodule", "-c", "user.name=Sync test", "-c", "user.email=sync@example.test", "commit", "--allow-empty", "-m", "Leftover")
-    with pytest.raises(sync_module.SyncError, match="no submodule mapping found in .gitmodules for path .removed-submodule."):
+    (first / "nested").mkdir()
+    sync_module.git(first / "nested", "init")
+    with pytest.raises(sync_module.SyncError, match="untracked nested repository"):
         sync_module.sync_repository(first)
-    assert sync_module.git(first, "rev-list", "--count", "origin/main..HEAD") == "0"
+    assert sync_module.git(first, "status", "--porcelain") == "?? nested/"
 
 
 @pytest.fixture
