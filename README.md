@@ -28,6 +28,8 @@ Sync installs a job that runs every 10 minutes: a systemd user timer on Linux, a
 
 Sync also quarantines fresh package releases: uv, npm, and pnpm refuse versions published in the last 3 days, configured through `uv/uv.toml`, `pnpm/config.yaml`, and `~/.npmrc`. Tools updated on purpose, such as Codex and Claude Code, are exempt by name; their dependencies are not. Sync's own Codex and Pi installs move to a release once it is an hour old, since npm lists a release minutes before its tarball downloads, and skip the quarantine for its dependencies. Failed updates retry once after 5 minutes. npm 11.15 or newer is required.
 
+Scheduled sync stages T3 background-service updates while agents work. It restarts only after two idle observations at least five minutes apart, with no intervening thread events and a final activity check. With the ten-minute sync schedule, this normally takes at least ten minutes. Running or queued turns, approval/input waits, and background tasks defer the restart. Desktop apps use their own updater. Standalone terminal commands are not tracked; a new turn can still race the final check.
+
 Claude and Pi config files are links. If a tool replaces one with a regular file, sync prints its diff and stops. Move the changes into the named repo file, remove the generated file, and rerun sync.
 
 Matt Pocock's skills update from `mattpocock/skills` on every sync. The upstream checkout lives in `skills/.mattpocock/`, outside version control; links in `skills/` expose its skills to all agents; to leave one out, add its name to `SKIPPED_UPSTREAM_SKILLS` in `sync.py`. Keep upstream files unmodified so updates can fast-forward.

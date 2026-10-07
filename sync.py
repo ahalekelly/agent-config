@@ -597,6 +597,7 @@ def main() -> bool:
             print(f"{error}\nretrying the updates in 5 minutes", file=sys.stderr)
             time.sleep(300)
             update_agents(platform)
+        print(run_quietly(["uv", "run", "--quiet", str(REPO / "bin/t3-update.py")]), end="", flush=True)
     else:
         install_pull_schedule(platform)
     return False
