@@ -388,6 +388,8 @@ def sync_repository(repo: Path) -> None:
     if upstream != default or branch != default.removeprefix("origin/"):
         raise SyncError(f"{repo}: auto-sync requires the default branch {default}")
     git(repo, "add", "--all")
+    # Fails before committing a nested repository missing from .gitmodules, such as the checkout a submodule removal leaves behind.
+    git(repo, "submodule", "status")
     if git(repo, "diff", "--cached", "--name-only"):
         git(repo, "commit", "-m", f"Sync configuration from {socket.gethostname()}")
         print(f"committed {repo}", flush=True)
