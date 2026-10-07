@@ -387,9 +387,20 @@ def sync_repository(repo: Path) -> None:
     upstream = git(repo, "rev-parse", "--abbrev-ref", "@{upstream}")
     if upstream != default or branch != default.removeprefix("origin/"):
         raise SyncError(f"{repo}: auto-sync requires the default branch {default}")
+    # A pull that removes a submodule leaves its checkout behind, and git add would commit it back as a gitlink with no .gitmodules entry, which breaks submodule commands on every machine.
+    modules = Path(git(repo, "rev-parse", "--path-format=absolute", "--git-path", "modules"))
+    for path in git(repo, "ls-files", "-z", "--others", "--exclude-standard").split("\0"):
+        if not path.endswith("/"):
+            continue
+        checkout = repo / path
+        git_dir = Path(git(checkout, "rev-parse", "--absolute-git-dir"))
+        if not git_dir.is_relative_to(modules):
+            raise SyncError(f"{checkout}: untracked nested repository; delete it or register it with git submodule add")
+        if git(checkout, "status", "--porcelain") or git(checkout, "log", "HEAD", "--branches", "--not", "--remotes", "--oneline"):
+            raise SyncError(f"{checkout}: the checkout of a removed submodule has unpushed work; save it, then delete the checkout and {git_dir}")
+        run_quietly(["trash", str(checkout), str(git_dir)])
+        print(f"removed the checkout of removed submodule {checkout}", flush=True)
     git(repo, "add", "--all")
-    # Fails before committing a nested repository missing from .gitmodules, such as the checkout a submodule removal leaves behind.
-    git(repo, "submodule", "status")
     if git(repo, "diff", "--cached", "--name-only"):
         git(repo, "commit", "-m", f"Sync configuration from {socket.gethostname()}")
         print(f"committed {repo}", flush=True)

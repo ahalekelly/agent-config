@@ -55,9 +55,7 @@ def main():
                     ["git", "merge", "--no-ff", "--no-edit", "-m", f"merge {branch}",
                      f"origin/{branch}"], cwd=worktree, capture_output=True, text=True)
                 if result.returncode:
-                    git("merge", "--abort", cwd=worktree)
-                    raise SystemExit(f"{branch} conflicts with the branches before it:\n"
-                                     f"{result.stdout}{result.stderr}")
+                    raise SystemExit(f"merging {branch} failed:\n{result.stdout}{result.stderr}")
             head = git("rev-parse", "HEAD", cwd=worktree)
         finally:
             git("worktree", "remove", "--force", str(worktree))
