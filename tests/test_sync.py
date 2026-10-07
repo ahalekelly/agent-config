@@ -249,7 +249,10 @@ def sync_module():
 
 
 @pytest.fixture
-def repositories(tmp_path, sync_module):
+def repositories(tmp_path, sync_module, monkeypatch):
+    # Keep the user's global config and gitignore, which ignores /.gitmodules, out of the test repositories.
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
     git = sync_module.git
     origin = tmp_path / "origin.git"
     first = tmp_path / "first"
@@ -307,6 +310,16 @@ def test_auto_sync_leaves_feature_branches_untouched(repositories, sync_module):
     with pytest.raises(sync_module.SyncError, match="default branch"):
         sync_module.sync_repository(first)
     assert sync_module.git(first, "diff", "--name-only") == "config.txt"
+
+
+def test_auto_sync_refuses_to_commit_a_nested_repository(repositories, sync_module):
+    first, _ = repositories
+    (first / "removed-submodule").mkdir()
+    sync_module.git(first / "removed-submodule", "init")
+    sync_module.git(first / "removed-submodule", "-c", "user.name=Sync test", "-c", "user.email=sync@example.test", "commit", "--allow-empty", "-m", "Leftover")
+    with pytest.raises(sync_module.SyncError, match="no submodule mapping found in .gitmodules for path .removed-submodule."):
+        sync_module.sync_repository(first)
+    assert sync_module.git(first, "rev-list", "--count", "origin/main..HEAD") == "0"
 
 
 @pytest.fixture
