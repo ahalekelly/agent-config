@@ -77,6 +77,8 @@ T3 jobs, scheduled or not, run on akelly-desktop, because this Mac is often asle
 
 macOS ships bash 3.2, which lacks `wait -n` — a `while jobs ≥ N; do wait -n; done` concurrency throttle busy-spins at 100% CPU. Poll with `sleep` in shell concurrency loops instead.
 
+The `fusion` MCP server runs inside Autodesk Fusion, so it fails to connect (ECONNREFUSED) whenever Fusion is closed. Ask me to open Fusion rather than debugging the server.
+
 Connect to the Linux machine over the local network first: `ssh -o ConnectTimeout=5 -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.local`. If unreachable, use `ssh -o HostKeyAlias=akelly-desktop akelly@akelly-desktop.troodon-bigeye.ts.net`. If Tailscale fails, check `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch --list` (`*` marks the active profile). The server requires personal (`ahalekelly@gmail.com`), not work (`adrian@burnbot.com`); switch with `/Applications/Tailscale.app/Contents/MacOS/Tailscale switch c085`.
 
 ### Windows (ADRIAN-DESKTOP)
