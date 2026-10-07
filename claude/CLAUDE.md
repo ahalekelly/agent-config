@@ -63,7 +63,3 @@ GPT uses a different search engine from Claude, so for difficult web research ta
 You can consult GPT Astra for a second opinion whenever you want. Do this liberally, especially on tricky tasks like debugging or code review.
 
 All non-trivial production code should go through /code-review before merging, but note that /code-review can sometimes flag nit-pick things that aren't real issues. Implement any fixes that don't add significant complexity or change behavior. If the fix would add more complexity or change behavior, they need my decision.
-
-## Pi Implementation Delegation
-
-@~/.agents/pi-for-claude/prompts/pi-for-claude-instructions.md
