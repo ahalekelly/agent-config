@@ -47,7 +47,7 @@ If you find a bug in one place in the code, look for other places where that sam
 
 ## Config Layout
 
-`~/.agents` is the git repo for shared coding-agent configuration. Agent runtime directories in `$HOME` are real directories containing links to files under `~/.agents/claude/`, `~/.agents/codex/`, and `~/.agents/pi/`. Edit the repo files, then run `uv run ~/.agents/sync.py`. `~/.agents/AGENTS.md` (this file) holds shared instructions, `~/.agents/claude/CLAUDE.md` adds Claude-specific instructions, and `~/.agents/skills/` holds shared skills. A failed scheduled sync (`sync.py pull`) opens a thread in that machine's T3, in the `~/.agents` project; `~/.agent-config-sync-failure.md` keeps later failures quiet until a sync succeeds.
+`~/.agents` is the git repo for shared coding-agent configuration. Agent runtime directories in `$HOME` are real directories containing links to files under `~/.agents/claude/`, `~/.agents/codex/`, and `~/.agents/pi/`. Edit the repo files, then run `uv run ~/.agents/sync.py`. `~/.agents/AGENTS.md` (this file) holds shared instructions, `~/.agents/claude/CLAUDE.md` adds Claude-specific instructions, and `~/.agents/skills/` holds shared skills. A scheduled sync (`sync.py pull`) that fails three times in a row opens a thread in that machine's T3, in the `~/.agents` project; `~/.agent-config-sync-failure.md` keeps later failures quiet until a sync succeeds.
 
 ## Machines
 

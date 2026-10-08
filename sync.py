@@ -604,18 +604,25 @@ def main() -> bool:
 
 
 FAILURE_REPORT = HOME / ".agent-config-sync-failure.md"
+# Consecutive failed scheduled syncs. Network drops and remote outages fail a run or two and then clear.
+FAILURE_COUNT = HOME / ".agent-config-sync-failures"
+REPORTED_FAILURES = 3
 
 
 def report_failure(error: str) -> None:
-    """Post a failed scheduled sync to a new thread in this machine's T3, once until a sync succeeds."""
+    """Post a scheduled sync that keeps failing to a new thread in this machine's T3, once until a sync succeeds."""
     if FAILURE_REPORT.exists():
+        return
+    failures = int(FAILURE_COUNT.read_text()) + 1 if FAILURE_COUNT.exists() else 1
+    FAILURE_COUNT.write_text(str(failures))
+    if failures < REPORTED_FAILURES:
         return
     host = socket.gethostname()
     model = json.loads((HOME / ".t3/userdata/settings.json").read_text(encoding="utf-8"))["defaultModelSelection"]
     pending = FAILURE_REPORT.with_suffix(".pending")
     pending.write_text(
         f"Automated alert from the scheduled agent-config sync on {host}, not a message from Adrian. "
-        f"`sync.py pull` failed:\n\n```\n{error.strip()}\n```\n\n"
+        f"`sync.py pull` failed {failures} times in a row. The last error:\n\n```\n{error.strip()}\n```\n\n"
         f"Diagnose the root cause. Fix it properly for the long term, not with a band-aid, and make sync robust to this kind of failure in the future. "
         f"Make the fix only if it clearly has no downside; otherwise explain the tradeoff and leave the decision to Adrian. "
         f"Run /code-review on the fix before committing, as CLAUDE.md describes. "
@@ -650,3 +657,4 @@ if __name__ == "__main__":
             report_failure(message)
         raise SystemExit(1)
     FAILURE_REPORT.unlink(missing_ok=True)
+    FAILURE_COUNT.unlink(missing_ok=True)
