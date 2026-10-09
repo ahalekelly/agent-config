@@ -31,6 +31,7 @@ STALE_LOCK_SECONDS = 600
 # Upstream skills that stay unlinked, by name.
 SKIPPED_UPSTREAM_SKILLS = {
     "code-review",  # shadows Claude Code's bundled skill of the same name
+    "pr",  # PR bodies follow the user's own format, not this template
 }
 
 
