@@ -12,7 +12,7 @@ analytics.enabled = false
 service_tier = "default"
 
 [permissions.workspace_sandbox.filesystem]
-"~/.ssh" = "deny"
+"~/.ssh/id_ed25519" = "deny"
 "~/.gnupg" = "deny"
 "~/.aws" = "deny"
 "~/.pgpass" = "deny"
