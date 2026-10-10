@@ -12,6 +12,23 @@ approvals_reviewer = "auto_review"
 analytics.enabled = false
 service_tier = "default"
 
+[permissions.workspace_sandbox.filesystem]
+"~/.ssh" = "deny"
+"~/.gnupg" = "deny"
+"~/.aws" = "deny"
+"~/.pgpass" = "deny"
+"~/.npmrc" = "deny"
+"~/.git-credentials" = "deny"
+"~/.docker" = "deny"
+"~/.config/gh" = "deny"
+"~/.secrets.env" = "deny"
+"~/.agents/claude-token.env" = "deny"
+"~/.agents/claudew-token.env" = "deny"
+"~/.claude.json" = "deny"
+"~/.claude/.credentials.json" = "deny"
+"~/.codex/auth.json" = "deny"
+"~/.pi/agent/auth.json" = "deny"
+
 [permissions.workspace_sandbox.filesystem.":workspace_roots"]
 "." = "read"
 "./**" = "write"
