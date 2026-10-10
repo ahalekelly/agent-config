@@ -12,6 +12,7 @@ Codex config cannot be linked because Codex edits it. Sync deep-merges `codex/co
 
 - `~/.agents/secrets.env` contains keys agents may use.
 - `~/.secrets.env` contains keys shell launchers remove before starting agents.
+- Codex can request temporary network or filesystem grants. Enabling `request_permissions_tool` grants no access by itself.
 - `hooks/` and `bin/rm` reject direct `rm` use in favor of recoverable deletion through `trash`.
 - `shell/gitignore-global` excludes common agent runtime directories inside projects.
 

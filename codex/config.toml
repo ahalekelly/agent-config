@@ -50,6 +50,7 @@ max_threads = 10
 [features]
 hooks = true
 default_mode_request_user_input = true
+request_permissions_tool = true
 terminal_resize_reflow = true
 goals = true
 js_repl = false
