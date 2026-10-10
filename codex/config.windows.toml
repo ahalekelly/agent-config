@@ -4,6 +4,10 @@ model = "gpt-6-astra"
 [windows]
 sandbox = "elevated"
 
+# The elevated sandbox enforces only full read access.
+[permissions.workspace_sandbox.filesystem]
+":root" = "read"
+
 [desktop]
 ambient-suggestions-enabled = false
 conversationDetailMode = "STEPS_COMMANDS"
